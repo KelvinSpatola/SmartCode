@@ -4,13 +4,19 @@
 
     <property file="./resources/build.properties" />
 
-    <!-- - - - - - - - - - - - - - - - - - - - - - - -->
-    <property name="src" 		value="src" />
-	<property name="bin" 		value="bin" />
-    <property name="dist" 		value="distribution" />
+    <!-- - - - - - - - - - - - - - - - - - - - - - - -
+    				   PROPERTIES
+    - - - - - - - - - - - - - - - - - - - - - - - - -->
+    <property name="project.src" 		location="src" />
+	<property name="project.bin" 		location="bin" />
+	<property name="project.data" 		location="data" />
+    <property name="project.dist" 		location="distribution" />
 	
 	<property name="line" value="------------------------------------------------------------------------------------------------" />
 
+    <!-- - - - - - - - - - - - - - - - - - - - - - - -
+    				   CLASSPATH
+    - - - - - - - - - - - - - - - - - - - - - - - - -->	
     <path id="library-classpath">
         <fileset dir="${processing.core}" >
             <include name="*.jar" />
@@ -28,23 +34,9 @@
         <fileset dir="${processing.java.mode}" >
             <include name="*.jar" />
         </fileset>
-
     </path>
 	
 	
-	<target name="init"> 
-		<echo>${line}
-	Building the Processing Mode, ${project.prettyName}
-${line}
-core.jar      ${processing.core}/core.jar
-pde.jar       ${processing.app}/pde.jar
-JavaMode.jar  ${processing.java.mode}/JavaMode.jar
-${line}
-src path   	  ${basedir}/${src}
-java version  ${java.target.version}
-${line}
-		</echo>		
-	</target>
 
     <!-- - - - - - - - - - - - - - - - - - - - - - -
         COMPILE
@@ -53,10 +45,10 @@ ${line}
         <propertyfile file="./resources/build.number" /> <!-- create the build.number file if it doesn't exist -->
         <buildnumber file="./resources/build.number" />
 
-        <mkdir dir="${bin}" />
+        <mkdir dir="${project.bin}" />
 
-        <javac srcdir="${src}" 
-        	destdir="${bin}" 
+        <javac srcdir="${project.src}" 
+        	destdir="${project.bin}" 
         	source="${java.target.version}" 
         	includeantruntime="false">
         		
@@ -71,12 +63,15 @@ ${line}
         PACKAGE
     - - - - - - - - - - - - - - - - - - - - - - - -->
     <target name="package" depends="compile">
-        <delete dir="${dist}" />
-        <property name="bundle" value="${dist}/${project.name}"/>
+    	<echo message="deleting previous ${project.dist}" />
+        <delete dir="${project.dist}" />
+    	
+        <property name="bundle" value="${project.dist}/${project.name}"/>
         <mkdir dir="${bundle}" />
         <mkdir dir="${bundle}/mode" />
 
-        <jar jarfile="${bundle}/mode/${project.name}.jar" basedir="bin"/>
+    	<echo message="creating a ${project.name}.jar file inside ${bundle}/mode/ folder ..." />
+        <jar jarfile="${bundle}/mode/${project.name}.jar" basedir="${project.bin}"/>
 
         <copy todir="${bundle}">
             <fileset dir="resources/" >
@@ -86,7 +81,7 @@ ${line}
 
         <!-- JAVA MODE: Copy Java theme resources to our extended mode -->
         <copy file="${processing.java.keywords}" todir="${bundle}" />
-    	<!-- <copy file="${processing.java.suggestions}" todir="${bundle}" /> -->
+        	
         <copy todir="${bundle}/theme/">
             <fileset dir="${processing.java.theme}" />
         </copy>
@@ -94,6 +89,10 @@ ${line}
         <copy todir="${bundle}/mode">
             <fileset dir="lib/" />
         </copy>
+            	
+    	<copy todir="${bundle}/data">
+  			<fileset dir="${project.data}" />
+		</copy>
         	
         <antcall target="parse.file">
         	<param name="file" value="${bundle}/mode.properties"/>
@@ -107,7 +106,7 @@ ${line}
         <delete dir="${sketchbook.modes}/${project.name}" />
 
         <copy todir="${sketchbook.modes}/">
-            <fileset dir="${dist}" />
+            <fileset dir="${project.dist}" />
         </copy>
     	
 		<echo>	
@@ -122,14 +121,6 @@ ${line}
     </target>
 
     <!-- - - - - - - - - - - - - - - - - - - - - - -
-        CLEAN
-    - - - - - - - - - - - - - - - - - - - - - - - -->
-    <target name="clean" >
-        <delete dir="${bin}" />
-        <delete dir="${dist}" />
-    </target>
-
-    <!-- - - - - - - - - - - - - - - - - - - - - - -
         RUN
     - - - - - - - - - - - - - - - - - - - - - - - -->
     <target name="run" depends="install">
@@ -137,8 +128,11 @@ ${line}
     </target>
     	
     	
+    <!-- - - - - - - - - - - - - - - - - - - - - - -
+    			          MISC
+    - - - - - - - - - - - - - - - - - - - - - - - -->    	
 	
-	<!-- find and replace ##placeholder## keywords in a file -->
+	<!-- find and replace @@placeholder@@ keywords in a file -->
     <target name="parse.file">
         <echo message="parsing file ${file}" />
 	
@@ -157,7 +151,27 @@ ${line}
         ]]></script>
         <replaceregexp file="${file}" match="@@lastUpdated@@" replace="${epoch.now}" flags="g" />
         <replaceregexp file="${file}" match="@@minRevision@@" replace="${project.minRevision}" flags="g" />
-        <replaceregexp file="${file}" match="@@maxRevision@@" replace="${project.maxRevision}" flags="g" />
-        
+        <replaceregexp file="${file}" match="@@maxRevision@@" replace="${project.maxRevision}" flags="g" />   
 	</target>
+
+	<target name="init"> 
+		<echo>${line}
+	Building the Processing Mode, ${project.prettyName}
+${line}
+core.jar      ${processing.core}/core.jar
+pde.jar       ${processing.app}/pde.jar
+JavaMode.jar  ${processing.java.mode}/JavaMode.jar
+${line}
+src path   	  ${project.src}
+java version  ${java.target.version}
+${line}
+		</echo>		
+	</target>
+
+    <!-- clean -->
+    <target name="clean" >
+        <delete dir="${project.bin}" />
+        <delete dir="${project.dist}" />
+    </target>
+
 </project>
