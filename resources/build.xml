@@ -1,0 +1,163 @@
+
+<project name="SmartCode Builder" default="install" basedir="../">
+    <description>Template for extending Java Mode tested in Processing 4.0</description>
+
+    <property file="./resources/build.properties" />
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - - -->
+    <property name="src" 		value="src" />
+	<property name="bin" 		value="bin" />
+    <property name="dist" 		value="distribution" />
+	
+	<property name="line" value="------------------------------------------------------------------------------------------------" />
+
+    <path id="library-classpath">
+        <fileset dir="${processing.core}" >
+            <include name="*.jar" />
+        </fileset>
+
+        <fileset dir="${processing.app}" >
+            <include name="*.jar" />
+        </fileset>
+
+        <fileset dir="lib" >
+            <include name="*.jar" />
+        </fileset>
+
+        <!-- JAVA MODE: Include Java mode source files -->
+        <fileset dir="${processing.java.mode}" >
+            <include name="*.jar" />
+        </fileset>
+
+    </path>
+	
+	
+	<target name="init"> 
+		<echo>${line}
+	Building the Processing Mode, ${project.prettyName}
+${line}
+core.jar      ${processing.core}/core.jar
+pde.jar       ${processing.app}/pde.jar
+JavaMode.jar  ${processing.java.mode}/JavaMode.jar
+${line}
+src path   	  ${basedir}/${src}
+java version  ${java.target.version}
+${line}
+		</echo>		
+	</target>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - -
+        COMPILE
+    - - - - - - - - - - - - - - - - - - - - - - - -->
+    <target name="compile" depends="init">
+        <propertyfile file="./resources/build.number" /> <!-- create the build.number file if it doesn't exist -->
+        <buildnumber file="./resources/build.number" />
+
+        <mkdir dir="${bin}" />
+
+        <javac srcdir="${src}" 
+        	destdir="${bin}" 
+        	source="${java.target.version}" 
+        	includeantruntime="false">
+        		
+            <classpath>
+                <path refid="library-classpath"/>
+            </classpath>
+        	<compilerarg value="-Xlint"/>
+        </javac>
+    </target>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - -
+        PACKAGE
+    - - - - - - - - - - - - - - - - - - - - - - - -->
+    <target name="package" depends="compile">
+        <delete dir="${dist}" />
+        <property name="bundle" value="${dist}/${project.name}"/>
+        <mkdir dir="${bundle}" />
+        <mkdir dir="${bundle}/mode" />
+
+        <jar jarfile="${bundle}/mode/${project.name}.jar" basedir="bin"/>
+
+        <copy todir="${bundle}">
+            <fileset dir="resources/" >
+	    		<exclude name="build.*"/>
+    		</fileset>
+        </copy>
+
+        <!-- JAVA MODE: Copy Java theme resources to our extended mode -->
+        <copy file="${processing.java.keywords}" todir="${bundle}" />
+    	<!-- <copy file="${processing.java.suggestions}" todir="${bundle}" /> -->
+        <copy todir="${bundle}/theme/">
+            <fileset dir="${processing.java.theme}" />
+        </copy>
+
+        <copy todir="${bundle}/mode">
+            <fileset dir="lib/" />
+        </copy>
+        	
+        <antcall target="parse.file">
+        	<param name="file" value="${bundle}/mode.properties"/>
+        </antcall>
+    </target>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - -
+        INSTALL
+    - - - - - - - - - - - - - - - - - - - - - - - -->
+    <target name="install" depends="package" >
+        <delete dir="${sketchbook.modes}/${project.name}" />
+
+        <copy todir="${sketchbook.modes}/">
+            <fileset dir="${dist}" />
+        </copy>
+    	
+		<echo>	
+${line}
+Name         ${project.prettyName}
+Version      ${project.release} (${build.number})
+Destination  ${sketchbook.modes}/${project.name}
+${line}
+done, finished.
+${line}
+		</echo>
+    </target>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - -
+        CLEAN
+    - - - - - - - - - - - - - - - - - - - - - - - -->
+    <target name="clean" >
+        <delete dir="${bin}" />
+        <delete dir="${dist}" />
+    </target>
+
+    <!-- - - - - - - - - - - - - - - - - - - - - - -
+        RUN
+    - - - - - - - - - - - - - - - - - - - - - - - -->
+    <target name="run" depends="install">
+        <exec executable="${processing.executable}" spawn="false" />
+    </target>
+    	
+    	
+	
+	<!-- find and replace ##placeholder## keywords in a file -->
+    <target name="parse.file">
+        <echo message="parsing file ${file}" />
+	
+		<replaceregexp file="${file}" match="@@name@@" replace="${project.prettyName}" flags="g" />	        	
+    	<replaceregexp file="${file}" match="@@author.name@@" replace="${author.name}" flags="g" />
+        <replaceregexp file="${file}" match="@@author.url@@" replace="${author.url}" flags="g" />
+        <replaceregexp file="${file}" match="@@project.url@@" replace="${project.url}" flags="g" />
+        <replaceregexp file="${file}" match="@@sentence@@" replace="${project.sentence}" flags="g" />
+        <replaceregexp file="${file}" match="@@paragraph@@" replace="${project.paragraph}" flags="g" />
+		<replaceregexp file="${file}" match="@@version@@" replace="${build.number}" flags="g" />
+        <replaceregexp file="${file}" match="@@prettyVersion@@" replace="${project.release}" flags="g" />
+
+        <!-- Determine the current epoch with JavaScript -->
+        <script language="javascript"><![CDATA[
+            project.setProperty("epoch.now", Date.now());
+        ]]></script>
+        <replaceregexp file="${file}" match="@@lastUpdated@@" replace="${epoch.now}" flags="g" />
+        <replaceregexp file="${file}" match="@@minRevision@@" replace="${project.minRevision}" flags="g" />
+        <replaceregexp file="${file}" match="@@maxRevision@@" replace="${project.maxRevision}" flags="g" />
+        
+	</target>
+</project>
