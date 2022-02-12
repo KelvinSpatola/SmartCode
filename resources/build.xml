@@ -1,141 +1,185 @@
 
-<project name="SmartCode Builder" default="install" basedir="../">
+<project name="SmartCode Builder" default="build" basedir="../">
     <description>Template for extending Java Mode tested in Processing 4.0</description>
-
-    <property file="./resources/build.properties" />
 
     <!-- - - - - - - - - - - - - - - - - - - - - - - -
     				   PROPERTIES
     - - - - - - - - - - - - - - - - - - - - - - - - -->
-    <property name="project.src" 		location="src" />
-	<property name="project.bin" 		location="bin" />
-	<property name="project.data" 		location="data" />
-    <property name="project.dist" 		location="distribution" />
+    <property file="./resources/build.properties" />
 	
+	<condition property="is.normal">
+		<equals arg1="${project.compile}" arg2="normal" trim="true"/>
+	</condition>
+    	
+	<property name="project.bin" 		value="bin" />
+	<property name="project.data" 		value="data" />
+    <property name="project.dist" 		value="distribution" />
+	<property name="project.lib" 		value="lib" />
+	<property name="project.resources" 	value="resources" />
+    <property name="project.src" 		value="src" />
+    <property name="project.temp" 		value="temp" />
+	<property name="install.dest" 		value="${processing.sketchbook}/modes/${project.name}"/>
 	<property name="line" value="------------------------------------------------------------------------------------------------" />
 
+	<!-- create the build.number file if it doesn't exist -->
+    <propertyfile file="./resources/build.number" /> 
+    <buildnumber file="./resources/build.number" />
+    	
+    	
     <!-- - - - - - - - - - - - - - - - - - - - - - - -
     				   CLASSPATH
     - - - - - - - - - - - - - - - - - - - - - - - - -->	
-    <path id="library-classpath">
-        <fileset dir="${processing.core}" >
-            <include name="*.jar" />
-        </fileset>
-
-        <fileset dir="${processing.app}" >
-            <include name="*.jar" />
-        </fileset>
-
-        <fileset dir="lib" >
-            <include name="*.jar" />
-        </fileset>
-
-        <!-- JAVA MODE: Include Java mode source files -->
-        <fileset dir="${processing.java.mode}" >
-            <include name="*.jar" />
-        </fileset>
+    <path id="classpath">
+        <fileset dir="${processing.core}" 		includes="*.jar" />
+        <fileset dir="${processing.app}" 		includes="*.jar" />
+        <fileset dir="${processing.java.mode}" 	includes="*.jar" /><!-- JAVA MODE: Include Java mode source files -->
+        <fileset dir="lib" 						includes="*.jar" />
     </path>
-	
-	
-
+        	
+        	
     <!-- - - - - - - - - - - - - - - - - - - - - - -
-        COMPILE
-    - - - - - - - - - - - - - - - - - - - - - - - -->
-    <target name="compile" depends="init">
-        <propertyfile file="./resources/build.number" /> <!-- create the build.number file if it doesn't exist -->
-        <buildnumber file="./resources/build.number" />
+        				BUILD
+    - - - - - - - - - - - - - - - - - - - - - - - --> 
+	<target name="build" depends="init"> 
+		<echo message="*** building the project ***" />
+	  	<antcall target="generate.structure" />
+		<antcall target="compile" />
+	  	<antcall target="generate.jar" />
+		<antcall target="copyToSketchbook" />
+		<antcall target="generate.mode.props" />
+		<antcall target="generate.distribution" />
+		<antcall target="clean" />
+	</target>
+	<!-- - - - - - - - - - - - - - - - - - - - - -->
+		
+		
+	<target name="init"> 
+		<echo>${line}
+	Building the Processing Mode, ${project.prettyName}
+${line}
+core.jar      ${processing.core}/core.jar
+pde.jar       ${processing.app}/pde.jar
+JavaMode.jar  ${processing.java.mode}/JavaMode.jar
+${line}
+src path   	  ${project.src}
+java version  ${java.target.version}
+${line}
+		</echo>		
+	</target>
+		
+	
+    <target name="generate.structure">
+    	<echo message="deleting previous ${project.dist}" />
+        <delete dir="${project.dist}" />
+        	        	
+        <echo message="creating bin folder" />
+		<mkdir dir="${project.bin}" />
+        
+        <echo message="*** creating temp folder and generating project structure ***" />
+    	<property name="project.bundle" value="${project.temp}/${project.name}"/>
+        	
+		<mkdir dir="${project.bundle}" />
+  		<mkdir dir="${project.bundle}/data" />
+	  	<mkdir dir="${project.bundle}/mode" />
+  		<mkdir dir="${project.bundle}/theme" />
+    	
+		<copy todir="${project.bundle}/data"> <!-- Copying data folder -->
+			<fileset dir="${project.data}" />
+		</copy>
+		
+        <copy todir="${project.bundle}/mode"> <!-- Copying mode folder -->
+            <fileset dir="${project.lib}" />
+        </copy>
+            	
+        <!-- JAVA MODE: Copy Java theme resources to our extended mode -->
+        <copy todir="${project.bundle}/theme">
+            <fileset dir="${processing.java.theme}" />
+        </copy>
 
-        <mkdir dir="${project.bin}" />
+        <copy file="${processing.java.keywords}" todir="${project.bundle}" />
+    </target>
 
+    	
+    <target name="compile">
         <javac srcdir="${project.src}" 
         	destdir="${project.bin}" 
         	source="${java.target.version}" 
         	includeantruntime="false">
         		
-            <classpath>
-                <path refid="library-classpath"/>
-            </classpath>
+            <classpath><path refid="classpath"/></classpath>
         	<compilerarg value="-Xlint"/>
         </javac>
-    </target>
-
-    <!-- - - - - - - - - - - - - - - - - - - - - - -
-        PACKAGE
-    - - - - - - - - - - - - - - - - - - - - - - - -->
-    <target name="package" depends="compile">
-    	<echo message="deleting previous ${project.dist}" />
-        <delete dir="${project.dist}" />
-    	
-        <property name="bundle" value="${project.dist}/${project.name}"/>
-        <mkdir dir="${bundle}" />
-        <mkdir dir="${bundle}/mode" />
-
-    	<echo message="creating a ${project.name}.jar file inside ${bundle}/mode/ folder ..." />
-        <jar jarfile="${bundle}/mode/${project.name}.jar" basedir="${project.bin}"/>
-
-        <copy todir="${bundle}">
-            <fileset dir="resources/" >
-	    		<exclude name="build.*"/>
-    		</fileset>
-        </copy>
-
-        <!-- JAVA MODE: Copy Java theme resources to our extended mode -->
-        <copy file="${processing.java.keywords}" todir="${bundle}" />
-        	
-        <copy todir="${bundle}/theme/">
-            <fileset dir="${processing.java.theme}" />
-        </copy>
-
-        <copy todir="${bundle}/mode">
-            <fileset dir="lib/" />
-        </copy>
-            	
-    	<copy todir="${bundle}/data">
-  			<fileset dir="${project.data}" />
+        		
+		<copy todir="${project.bin}/data">
+			<fileset dir="${project.data}" />
 		</copy>
-        	
-        <antcall target="parse.file">
-        	<param name="file" value="${bundle}/mode.properties"/>
-        </antcall>
     </target>
-
-    <!-- - - - - - - - - - - - - - - - - - - - - - -
-        INSTALL
-    - - - - - - - - - - - - - - - - - - - - - - - -->
-    <target name="install" depends="package" >
-        <delete dir="${sketchbook.modes}/${project.name}" />
-
-        <copy todir="${sketchbook.modes}/">
-            <fileset dir="${project.dist}" />
-        </copy>
+    
     	
+   	<target name="generate.jar">			
+		<echo message="creating a ${project.name}.jar file inside ${project.temp}/mode folder ..." />
+	    <jar jarfile="${project.temp}/${project.name}/mode/${project.name}.jar" basedir="${project.bin}"/>
+	</target> 	
+    	
+	    	
+	<target name="copyToSketchbook">
+		<echo message="creating a new ${project.name} folder inside your sketchbook folder" />
+		
+		<delete dir="${install.dest}" /> <!-- deleting old folder -->
+  	  	<mkdir dir= "${install.dest}" /> <!-- creating a new one -->
+
+  		<copy todir="${install.dest}">
+  			<fileset dir="${project.temp}/${project.name}"/>
+  		</copy> 
+	</target>	
+
+	
+    <target name="generate.mode.props">
+        <copy file="${project.resources}/mode.properties" todir="${install.dest}" />
+        <antcall target="parse.file"><param name="file" value="${install.dest}/mode.properties"/></antcall>
+	</target>	
+    
+	
+    <target name="generate.distribution" if="is.normal">
+		<mkdir dir="${project.dist}" />
+		<move file="${project.temp}/${project.name}" toDir="${project.dist}" />
+		<copy file="${install.dest}/mode.properties" todir="${project.dist}/${project.name}" />
+    	<zip destfile="${project.dist}/download/${project.name}.zip" basedir="${project.dist}" />
+		<copy file="${project.resources}/README.md" todir="${project.dist}" />
+        <delete dir="${project.dist}/${project.name}" />
+    </target>	   
+  
+  
+    <target name="clean" >
+        <!--<delete dir="${project.bin}" />-->
+        <delete dir="${project.temp}" />
+
 		<echo>	
 ${line}
 Name         ${project.prettyName}
 Version      ${project.release} (${build.number})
-Destination  ${sketchbook.modes}/${project.name}
+Destination  ${install.dest}
+Compiled     ${project.compile}
 ${line}
 done, finished.
 ${line}
 		</echo>
-    </target>
+    </target>	
 
-    <!-- - - - - - - - - - - - - - - - - - - - - - -
-        RUN
-    - - - - - - - - - - - - - - - - - - - - - - - -->
-    <target name="run" depends="install">
+
+    <target name="run" depends="build">
         <exec executable="${processing.executable}" spawn="false" />
     </target>
-    	
-    	
+
+	
     <!-- - - - - - - - - - - - - - - - - - - - - - -
     			          MISC
-    - - - - - - - - - - - - - - - - - - - - - - - -->    	
+    - - - - - - - - - - - - - - - - - - - - - - - -->   
 	
-	<!-- find and replace @@placeholder@@ keywords in a file -->
     <target name="parse.file">
         <echo message="parsing file ${file}" />
 	
+		<!-- find and replace @@placeholder@@ keywords in a file -->
 		<replaceregexp file="${file}" match="@@name@@" replace="${project.prettyName}" flags="g" />	        	
     	<replaceregexp file="${file}" match="@@author.name@@" replace="${author.name}" flags="g" />
         <replaceregexp file="${file}" match="@@author.url@@" replace="${author.url}" flags="g" />
@@ -154,24 +198,13 @@ ${line}
         <replaceregexp file="${file}" match="@@maxRevision@@" replace="${project.maxRevision}" flags="g" />   
 	</target>
 
-	<target name="init"> 
-		<echo>${line}
-	Building the Processing Mode, ${project.prettyName}
-${line}
-core.jar      ${processing.core}/core.jar
-pde.jar       ${processing.app}/pde.jar
-JavaMode.jar  ${processing.java.mode}/JavaMode.jar
-${line}
-src path   	  ${project.src}
-java version  ${java.target.version}
-${line}
-		</echo>		
-	</target>
 
-    <!-- clean -->
-    <target name="clean" >
-        <delete dir="${project.bin}" />
+	<target name="clean.all" >
+        <!--<delete dir="${project.bin}" />-->
+        <delete dir="${project.temp}" />
         <delete dir="${project.dist}" />
-    </target>
+        <delete dir="${install.dest}" />
+        <delete file="${project.resources}/build.number" />
+    </target>	
 
 </project>
