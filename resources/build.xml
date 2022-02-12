@@ -146,6 +146,7 @@ ${line}
 		<copy file="${install.dest}/mode.properties" todir="${project.dist}/${project.name}" />
     	<zip destfile="${project.dist}/download/${project.name}.zip" basedir="${project.dist}" />
 		<copy file="${project.resources}/README.md" todir="${project.dist}" />
+        <antcall target="parse.file"><param name="file" value="${project.dist}/README.md"/></antcall>
         <delete dir="${project.dist}/${project.name}" />
     </target>	   
   
