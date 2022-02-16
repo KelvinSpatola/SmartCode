@@ -1,6 +1,7 @@
 package kelvinspatola.mode.smartcode;
 
 import java.awt.Font;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -26,7 +27,8 @@ import processing.app.ui.EditorState;
 import processing.app.ui.Toolkit;
 import processing.mode.java.JavaEditor;
 
-public class SmartCodeEditor extends JavaEditor {
+
+public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected static final String COMMENT_TEXT = "^(?!.*\\\".*\\/\\*.*\\\")(?:.*\\/\\*.*|\\h*\\*.*)";
     protected static final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
     protected static final String SPLIT_STRING_TEXT = "^\\h*\\+\\s*(?:\\\".*){2}";
@@ -50,7 +52,6 @@ public class SmartCodeEditor extends JavaEditor {
 
         buildMenu();
         buildPopupMenu();
-
         printHelloMessage();
     }
 
@@ -197,121 +198,26 @@ public class SmartCodeEditor extends JavaEditor {
     /*
      * ******** METHODS ********
      */
-
+    
     @Override
-    public void handleAutoFormat() {
-        if (isSelectionActive()) {
-
-            if (getSelectedText().isBlank()) {
-                return;
-            }
-
-            Selection s = new Selection();
-
-            String selectedText;
-            boolean isSourceIntact = true;
-
-            // long string literals are formatted here
-            if (SmartCodePreferences.AUTOFORMAT_STRINGS) {
-                selectedText = refactorStringLiterals(s.getText());
-                isSourceIntact = selectedText.stripTrailing().equals(s.getText());
-            } else {
-                selectedText = s.getText();
-            }
-
-            // and everything else is formatted here
-            String formattedText = createFormatter().format(selectedText);
-
-            // but they need to be indented, anyway...
-            int brace = getSmartCodeTextArea().getMatchingBraceLine(s.getStartLine() - 1, true);
-            int indent = 0;
-
-            if (brace != -1) {
-                indent = getSmartCodeTextArea().getLineIndentation(brace) + TAB_SIZE;
-            }
-
-            formattedText = SmartCodeTextArea.indentText(formattedText, indent);
-
-            if (formattedText.equals(selectedText) && isSourceIntact) {
-                statusNotice(Language.text("editor.status.autoformat.no_changes"));
-
-            } else {
-                int start = s.getStart();
-                int end = s.getEnd() + 1;
-
-                startCompoundEdit();
-
-                setSelection(start, end);
-                setSelectedText(formattedText);
-
-                end = start + formattedText.length() - 1;
-                setSelection(start, end);
-
-                stopCompoundEdit();
-
-                getSketch().setModified(true);
-                statusNotice(Language.text("editor.status.autoformat.finished"));
-            }
-
-        } else {
-            int caretPos = getCaretOffset();
-            int scrollPos = getScrollPosition();
-
-            handleSelectAll();
-            handleAutoFormat();
-            setSelection(caretPos, caretPos);
-
-            if (scrollPos != getScrollPosition()) {
-                textarea.setVerticalScrollPosition(scrollPos);
-            }
+    public boolean handlePressed(KeyEvent e) {
+        int keyCode = e.getKeyCode();
+        
+        if (keyCode == KeyEvent.VK_ENTER) {
+            handleEnter();
+            
+        } else if (keyCode == KeyEvent.VK_TAB) {
+            handleTabulation(e.isShiftDown());
         }
+        return false;
     }
-
-    protected static String refactorStringLiterals(String text) {
-        int maxLength = SmartCodePreferences.AUTOFORMAT_LINE_LENGTH;
-
-        List<String> lines = new ArrayList<>(Arrays.asList(text.split(LF)));
-        int depth = 0;
-        int indent = 0;
-
-        for (int i = 0; i < lines.size(); i++) {
-            String lineText = lines.get(i);
-
-            if (lineText.matches(STRING_TEXT) && lineText.length() > maxLength) {
-
-                if (depth == 0) {
-                    indent = SmartCodeTextArea.getLineIndentation(lineText);
-                }
-
-                String preffix = addSpaces(indent) + TAB + "+ \"";
-
-                String currLine = lineText.substring(0, maxLength - 1) + "\"";
-                String nextLine = preffix + lineText.substring(maxLength - 1);
-
-                lines.set(i, currLine);
-                lines.add(i + 1, nextLine);
-                depth++;
-
-            } else {
-                lines.set(i, lineText);
-                depth = 0;
-                indent = 0;
-            }
-        }
-
-        StringBuilder result = new StringBuilder();
-
-        for (String line : lines) {
-            result.append(line + LF);
-        }
-
-        return result.toString();
+    
+    @Override
+    public boolean handleTyped(KeyEvent e) {
+        return false;
     }
-
+   
     public void handleEnter() {
-//        if (TemplatesManager.isReadingKeyboardInput())
-//            return;
-
         int caret = getCaretOffset();
 
         if (!isSelectionActive()) {
@@ -478,6 +384,116 @@ public class SmartCodeEditor extends JavaEditor {
         int newOffset = offset + indent + 1;
         setSelection(newOffset, newOffset);
         stopCompoundEdit();
+    }
+    
+    @Override
+    public void handleAutoFormat() {
+        if (isSelectionActive()) {
+
+            if (getSelectedText().isBlank()) {
+                return;
+            }
+
+            Selection s = new Selection();
+
+            String selectedText;
+            boolean isSourceIntact = true;
+
+            // long string literals are formatted here
+            if (SmartCodePreferences.AUTOFORMAT_STRINGS) {
+                selectedText = refactorStringLiterals(s.getText());
+                isSourceIntact = selectedText.stripTrailing().equals(s.getText());
+            } else {
+                selectedText = s.getText();
+            }
+
+            // and everything else is formatted here
+            String formattedText = createFormatter().format(selectedText);
+
+            // but they need to be indented, anyway...
+            int brace = getSmartCodeTextArea().getMatchingBraceLine(s.getStartLine() - 1, true);
+            int indent = 0;
+
+            if (brace != -1) {
+                indent = getSmartCodeTextArea().getLineIndentation(brace) + TAB_SIZE;
+            }
+
+            formattedText = SmartCodeTextArea.indentText(formattedText, indent);
+
+            if (formattedText.equals(selectedText) && isSourceIntact) {
+                statusNotice(Language.text("editor.status.autoformat.no_changes"));
+
+            } else {
+                int start = s.getStart();
+                int end = s.getEnd() + 1;
+
+                startCompoundEdit();
+
+                setSelection(start, end);
+                setSelectedText(formattedText);
+
+                end = start + formattedText.length() - 1;
+                setSelection(start, end);
+
+                stopCompoundEdit();
+
+                getSketch().setModified(true);
+                statusNotice(Language.text("editor.status.autoformat.finished"));
+            }
+
+        } else {
+            int caretPos = getCaretOffset();
+            int scrollPos = getScrollPosition();
+
+            handleSelectAll();
+            handleAutoFormat();
+            setSelection(caretPos, caretPos);
+
+            if (scrollPos != getScrollPosition()) {
+                textarea.setVerticalScrollPosition(scrollPos);
+            }
+        }
+    }
+   
+    protected static String refactorStringLiterals(String text) {
+        int maxLength = SmartCodePreferences.AUTOFORMAT_LINE_LENGTH;
+
+        List<String> lines = new ArrayList<>(Arrays.asList(text.split(LF)));
+        int depth = 0;
+        int indent = 0;
+
+        for (int i = 0; i < lines.size(); i++) {
+            String lineText = lines.get(i);
+
+            if (lineText.matches(STRING_TEXT) && lineText.length() > maxLength) {
+
+                if (depth == 0) {
+                    indent = SmartCodeTextArea.getLineIndentation(lineText);
+                }
+
+                String preffix = addSpaces(indent) + TAB + "+ \"";
+
+                String currLine = lineText.substring(0, maxLength - 1) + "\"";
+                String nextLine = preffix + lineText.substring(maxLength - 1);
+
+                lines.set(i, currLine);
+                lines.add(i + 1, nextLine);
+                depth++;
+
+            } else {
+                lines.set(i, lineText);
+                depth = 0;
+                indent = 0;
+            }
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        for (String line : lines) {
+            result.append(line + LF);
+        }
+
+        return result.toString();
     }
     
     public void deleteLine(int line) {
@@ -726,9 +742,6 @@ public class SmartCodeEditor extends JavaEditor {
     }
 
     public void handleTabulation(boolean isShiftDown) {
-//        if (TemplatesManager.isReadingKeyboardInput())
-//            return;
-
         if (isShiftDown) {
             handleOutdent();
 

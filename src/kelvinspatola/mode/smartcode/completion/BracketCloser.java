@@ -1,12 +1,14 @@
-package kelvinspatola.mode.smartcode;
+package kelvinspatola.mode.smartcode.completion;
 
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.Map;
 
+import kelvinspatola.mode.smartcode.KeyListener;
+import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import processing.app.ui.Editor;
 
-public class BracketCloser implements SmartCodeInputHandler.KeyListener {
+public class BracketCloser implements KeyListener {
     static private final Map<Character, Character> tokens = new HashMap<>();
     static private boolean isSkipped;
     private char nextToken;

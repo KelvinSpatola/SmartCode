@@ -6,10 +6,14 @@
     				   PROPERTIES
     - - - - - - - - - - - - - - - - - - - - - - - - -->
     <property file="./resources/build.properties" />
-	
+
 	<condition property="is.normal">
 		<equals arg1="${project.compile}" arg2="normal" trim="true"/>
 	</condition>
+	
+	<condition property="core-built">
+	      <available file="${processing.core}/core.jar" />
+    </condition>
     	
 	<property name="project.bin" 		value="bin" />
 	<property name="project.data" 		value="data" />
@@ -21,27 +25,28 @@
 	<property name="install.dest" 		value="${processing.sketchbook}/modes/${project.name}"/>
 	<property name="line" value="------------------------------------------------------------------------------------------------" />
 
-	<!-- create the build.number file if it doesn't exist -->
-    <propertyfile file="./resources/build.number" /> 
-    <buildnumber file="./resources/build.number" />
-    	
     	
     <!-- - - - - - - - - - - - - - - - - - - - - - - -
     				   CLASSPATH
     - - - - - - - - - - - - - - - - - - - - - - - - -->	
     <path id="classpath">
-        <fileset dir="${processing.core}" 		includes="*.jar" />
-        <fileset dir="${processing.app}" 		includes="*.jar" />
-        <fileset dir="${processing.java.mode}" 	includes="*.jar" /><!-- JAVA MODE: Include Java mode source files -->
-        <fileset dir="lib" 						includes="*.jar" />
+        <fileset dir="${processing.core}" 		includes="core.jar" />
+        <fileset dir="${processing.app}" 		includes="pde.jar" />
+        <fileset dir="${processing.java.mode}" 	includes="JavaMode.jar" />
+        <fileset dir="${project.lib}" 			includes="*.jar" />
     </path>
         	
         	
     <!-- - - - - - - - - - - - - - - - - - - - - - -
         				BUILD
     - - - - - - - - - - - - - - - - - - - - - - - --> 
-	<target name="build" depends="init"> 
-		<echo message="*** building the project ***" />
+	<target name="build" depends="init">
+		<fail unless="core-built" 
+			message="Please build the core library first and make sure it sits in ${processing.core}/core.jar" />
+		
+		<buildnumber file="./resources/build.number" />
+
+		<echo message="---------- building the project ----------" />
 	  	<antcall target="generate.structure" />
 		<antcall target="compile" />
 	  	<antcall target="generate.jar" />
@@ -55,7 +60,7 @@
 		
 	<target name="init"> 
 		<echo>${line}
-	Building the Processing Mode, ${project.prettyName}
+	Building project: ${project.prettyName}
 ${line}
 core.jar      ${processing.core}/core.jar
 pde.jar       ${processing.app}/pde.jar
@@ -69,15 +74,13 @@ ${line}
 		
 	
     <target name="generate.structure">
-    	<echo message="deleting previous ${project.dist}" />
-        <delete dir="${project.dist}" />
-        	        	
-        <echo message="creating bin folder" />
-		<mkdir dir="${project.bin}" />
-        
         <echo message="*** creating temp folder and generating project structure ***" />
     	<property name="project.bundle" value="${project.temp}/${project.name}"/>
         	
+    	<echo message="deleting previous ${project.dist}" />
+        <delete dir="${project.dist}" />
+		<mkdir dir="${project.bin}" />   
+    	
 		<mkdir dir="${project.bundle}" />
   		<mkdir dir="${project.bundle}/data" />
 	  	<mkdir dir="${project.bundle}/mode" />
@@ -104,6 +107,7 @@ ${line}
         <javac srcdir="${project.src}" 
         	destdir="${project.bin}" 
         	source="${java.target.version}" 
+        	target="${java.target.version}" 
         	includeantruntime="false">
         		
             <classpath><path refid="classpath"/></classpath>

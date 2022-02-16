@@ -3,6 +3,8 @@ package kelvinspatola.mode.smartcode;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import kelvinspatola.mode.smartcode.completion.BracketCloser;
+import kelvinspatola.mode.smartcode.completion.SnippetManager;
 import processing.app.Preferences;
 import processing.app.syntax.TextAreaDefaults;
 import processing.mode.java.JavaEditor;
@@ -10,7 +12,7 @@ import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
     public static final int TAB_SIZE = Preferences.getInteger("editor.tabs.size");
-    public static final String TAB = addSpaces(TAB_SIZE);;
+    public static final String TAB = addSpaces(TAB_SIZE);
     public static final String LF = "\n";
     
     public static final String BLOCK_OPENING = "^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$";
@@ -25,9 +27,15 @@ public class SmartCodeTextArea extends JavaTextArea {
         if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
             inputHandler.addKeyListener(new BracketCloser(editor));
         }
-//        if (SmartCodePreferences.TEMPLATES_ENABLED) {
-//            inputHandler.addKeyListener(new TemplatesManager(editor));
-//        }
+        if (SmartCodePreferences.TEMPLATES_ENABLED) {
+            SnippetManager sm = new SnippetManager((SmartCodeEditor) editor);
+            inputHandler.addKeyListener(sm);
+            addCaretListener(sm);
+        }
+        
+        // default behaviour for the textarea in regards to TAB and ENTER key
+        inputHandler.addKeyListener((SmartCodeEditor) editor);
+        
         setInputHandler(inputHandler);
         
     }
@@ -37,7 +45,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         return new SmartCodeTextAreaPainter(this, defaults);
     }
     
-    protected SmartCodeTextAreaPainter getSmartCodePainter() {
+    public SmartCodeTextAreaPainter getSmartCodePainter() {
         return (SmartCodeTextAreaPainter) painter;
     }
 

@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
 
+import kelvinspatola.mode.smartcode.completion.Snippet;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.TextAreaDefaults;
 import processing.mode.java.JavaTextArea;
@@ -24,16 +25,33 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             public void init(JEditTextArea textarea, Highlight highlight) {
             }
 
-            @Override
-            public void paintHighlight(Graphics gfx, int line, int y) {
+//            @Override
+//            public void paintHighlight(Graphics gfx, int line, int y) {
+//
+//                if (!textarea.isSelectionActive() && line == textarea.getCaretLine()) {
+//                    int x = textArea._offsetToX(0, 0);
+//                    y += getLineDisplacement();
+//                    int w = textArea._offsetToX(line, ((SmartCodeTextArea) textarea).caretPositionInsideLine()) - x;
+//                    int h = fontMetrics.getHeight();
+//
+//                    // gfx.setColor(defaults.selectionColor);
+//                    gfx.setColor(new Color(100, 255, 50));
+//                    gfx.drawRect(x, y, w, h);
+//
+//                } else {
+//                    repaint();
+//                }
+//            }
 
-                if (!textarea.isSelectionActive() && line == textarea.getCaretLine()) {
-                    int x = textArea._offsetToX(0, 0);
-                    //y += getLineDisplacement();
-                    int w = textArea._offsetToX(line, ((SmartCodeTextArea) textarea).caretPositionInsideLine()) - x;
+            @Override
+            public void paintHighlight(Graphics gfx, int l, int y) {
+
+                if (isReading && l == textarea.getCaretLine()) {
+                    int x = textArea._offsetToX(l, x1);
+                    y += getLineDisplacement();
+                    int w = textArea._offsetToX(l, x2) - x;
                     int h = fontMetrics.getHeight();
 
-                    // gfx.setColor(defaults.selectionColor);
                     gfx.setColor(new Color(100, 255, 50));
                     gfx.drawRect(x, y, w, h);
 
@@ -41,8 +59,17 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                     repaint();
                 }
             }
-        };
 
+        };
+    }
+
+    int x1, x2, line;
+    boolean isReading;
+    
+    public void hightlight(Snippet snippet, SmartCodeTextArea ta) {
+        x1 = ta.getPositionInsideLineWithOffset(snippet.leftBoundary);
+        x2 = ta.getPositionInsideLineWithOffset(snippet.rightBoundary - 1);
+        this.isReading = snippet != null;
     }
 
 }
