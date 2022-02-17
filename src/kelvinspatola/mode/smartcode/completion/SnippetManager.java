@@ -67,10 +67,12 @@ public class SnippetManager implements KeyListener, CaretListener {
                             placeholder = tempStr;
                         } else {
                             System.err.println("Clipboard does not contain a valid string"); // TODO: improve this
+                            editor.getToolkit().beep();
                         }
 
                     } catch (UnsupportedFlavorException | IOException e1) {
                         System.err.println("Clipboard does not contain a string");
+                        editor.getToolkit().beep();
                     }
 
                     if (placeholder.isBlank())

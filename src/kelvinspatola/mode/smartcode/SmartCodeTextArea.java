@@ -1,5 +1,7 @@
 package kelvinspatola.mode.smartcode;
 
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -11,19 +13,22 @@ import processing.mode.java.JavaEditor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
+    protected static final boolean INDENT = Preferences.getBoolean("editor.indent");
     public static final int TAB_SIZE = Preferences.getInteger("editor.tabs.size");
     public static final String TAB = addSpaces(TAB_SIZE);
     public static final String LF = "\n";
-    
+
     public static final String BLOCK_OPENING = "^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$";
     public static final String BLOCK_CLOSING = "^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*";
 
+    public static final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
 
+    // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, JavaEditor editor) {
         super(defaults, editor);
-        
+
         SmartCodeInputHandler inputHandler = new SmartCodeInputHandler(editor);
-        
+
         if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
             inputHandler.addKeyListener(new BracketCloser(editor));
         }
@@ -32,24 +37,113 @@ public class SmartCodeTextArea extends JavaTextArea {
             inputHandler.addKeyListener(sm);
             addCaretListener(sm);
         }
-        
         // default behaviour for the textarea in regards to TAB and ENTER key
         inputHandler.addKeyListener((SmartCodeEditor) editor);
-        
+
         setInputHandler(inputHandler);
-        
     }
-    
+
     @Override
     protected SmartCodeTextAreaPainter createPainter(final TextAreaDefaults defaults) {
         return new SmartCodeTextAreaPainter(this, defaults);
     }
-    
+
     public SmartCodeTextAreaPainter getSmartCodePainter() {
         return (SmartCodeTextAreaPainter) painter;
     }
 
-    
+    @Override
+    public void paste() {
+        if (editable) {
+            final String lineText = getLineText(getCaretLine());
+            boolean isInsideQuotes = false;
+
+            if (lineText.matches(STRING_TEXT)) {
+                final int caret = caretPositionInsideLine();
+                int leftQuotes = 0, rightQuotes = 0;
+
+                for (int i = caret - 1; i >= 0; i--) {
+                    if (lineText.charAt(i) == '"') {
+                        leftQuotes++;
+                    }
+                }
+                for (int i = caret; i < lineText.length(); i++) {
+                    if (lineText.charAt(i) == '"') {
+                        rightQuotes++;
+                    }
+                }
+                isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
+            }
+
+            Clipboard clipboard = getToolkit().getSystemClipboard();
+
+            try {
+                String selection = ((String) clipboard.getContents(this).getTransferData(DataFlavor.stringFlavor));
+
+                if (selection.contains("\r\n")) {
+                    selection = selection.replaceAll("\r\n", "\n");
+
+                } else if (selection.contains("\r")) {
+                    // The Mac OS MRJ doesn't convert \r to \n, so do it here
+                    selection = selection.replace('\r', '\n');
+                }
+
+                // Remove tabs and replace with spaces
+                if (selection.contains("\t")) {
+                    selection = selection.replaceAll("\t", TAB);
+                }
+
+                // Replace unicode x00A0 (non-breaking space) with just a plain space.
+                // Seen often on Mac OS X when pasting from Safari. [fry 030929]
+                selection = selection.replace('\u00A0', ' ');
+
+                // Remove ASCII NUL characters.
+                if (selection.indexOf('\0') != -1) {
+                    selection = selection.replaceAll("\0", "");
+                }
+
+                selection = selection.repeat(Math.max(0, inputHandler.getRepeatCount()));
+
+                if (isInsideQuotes) {
+                    selection = selection.replace("\\", "\\\\").replace("\\\"", "\\\\\"").stripTrailing();
+                    StringBuilder sb = new StringBuilder(selection);
+
+                    if (selection.contains(LF)) {
+                        int indent = 0;
+                        if (SmartCodeTextArea.INDENT) {
+                            indent = getLineIndentation(getCaretLine()) + TAB_SIZE;
+                        }
+
+                        String[] lines = selection.split(LF);
+                        sb = new StringBuilder(lines[0] + "\\n\"" + LF);
+
+                        for (int i = 1; i < lines.length - 1; i++) {
+                            sb.append(addSpaces(indent) + "+ \"" + lines[i] + "\\n\"" + LF);
+                        }
+                        sb.append(addSpaces(indent) + "+ \"" + lines[lines.length - 1]);
+                    }
+                    setSelectedText(sb.toString());
+
+                } else {
+                    setSelectedText(selection);
+                }
+
+            } catch (Exception e) {
+                getToolkit().beep();
+                System.err.println("Clipboard does not contain a string");
+                DataFlavor[] flavors = clipboard.getAvailableDataFlavors();
+                for (DataFlavor f : flavors) {
+                    try {
+                        Object o = clipboard.getContents(this).getTransferData(f);
+                        System.out.println(f + " = " + o);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
     static public int getLineIndentation(String lineText) {
         char[] chars = lineText.toCharArray();
         int index = 0;
@@ -101,7 +195,7 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         int depthUp = 0;
         int depthDown = 0;
-        int lineIndex = line; 
+        int lineIndex = line;
 
         boolean isTheFirstBlock = true;
 
@@ -259,12 +353,6 @@ public class SmartCodeTextArea extends JavaTextArea {
         return stack.isEmpty();
     }
 
-    private static String addSpaces(int length) {
-        if (length <= 0)
-            return "";
-        return String.format("%1$" + length + "s", "");
-    }
-
     public int caretPositionInsideLine() {
         return getPositionInsideLineWithOffset(getCaretPosition());
     }
@@ -309,5 +397,11 @@ public class SmartCodeTextArea extends JavaTextArea {
             index--;
         }
         return Character.UNASSIGNED;
+    }
+
+    private static String addSpaces(int length) {
+        if (length <= 0)
+            return "";
+        return String.format("%1$" + length + "s", "");
     }
 }

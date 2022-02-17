@@ -27,18 +27,17 @@ import processing.app.ui.EditorState;
 import processing.app.ui.Toolkit;
 import processing.mode.java.JavaEditor;
 
-
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected static final String COMMENT_TEXT = "^(?!.*\\\".*\\/\\*.*\\\")(?:.*\\/\\*.*|\\h*\\*.*)";
     protected static final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
     protected static final String SPLIT_STRING_TEXT = "^\\h*\\+\\s*(?:\\\".*){2}";
     protected static final String BLOCK_OPENING = "^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$";
     protected static final String BLOCK_CLOSING = "^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*";
-    
+
     protected static final int TAB_SIZE = Preferences.getInteger("editor.tabs.size");
     protected static final String TAB = addSpaces(TAB_SIZE);
     protected static final boolean INDENT = Preferences.getBoolean("editor.indent");
-    
+
     protected static final String OPEN_COMMENT = "/*";
     protected static final String CLOSE_COMMENT = "*/";
     protected static final char OPEN_BRACE = '{';
@@ -110,8 +109,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         menu.addSeparator(); // ---------------------------------------------
         updatableItems.add(createItem(menu, "Toggle block comment", "C+7", () -> toggleBlockComment()));
-        updatableItems
-                .add(createItem(menu, "Format selected text", "C+T", () -> handleAutoFormat()));
+        updatableItems.add(createItem(menu, "Format selected text", "C+T", () -> handleAutoFormat()));
         updatableItems.add(createItem(menu, "To upper case", "CS+U", () -> changeCase(true)));
         updatableItems.add(createItem(menu, "To lower case", "CS+L", () -> changeCase(false)));
         createItem(menu, "Expand Selection", "CA+RIGHT", () -> expandSelection());
@@ -198,25 +196,25 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     /*
      * ******** METHODS ********
      */
-    
+
     @Override
     public boolean handlePressed(KeyEvent e) {
         int keyCode = e.getKeyCode();
-        
+
         if (keyCode == KeyEvent.VK_ENTER) {
             handleEnter();
-            
+
         } else if (keyCode == KeyEvent.VK_TAB) {
             handleTabulation(e.isShiftDown());
         }
         return false;
     }
-    
+
     @Override
     public boolean handleTyped(KeyEvent e) {
         return false;
     }
-   
+
     public void handleEnter() {
         int caret = getCaretOffset();
 
@@ -225,12 +223,24 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             int positionInLine = getSmartCodeTextArea().getPositionInsideLineWithOffset(caret);
             int caretLine = textarea.getCaretLine();
             String lineText = getLineText(caretLine);
-
+            
             if (lineText.matches(STRING_TEXT)) {
-                int stringStart = lineText.indexOf("\"");
-                int stringStop = lineText.lastIndexOf("\"") + 1;
+                int leftQuotes = 0, rightQuotes = 0;
+                
+                for (int i = positionInLine - 1; i >= 0; i--) {
+                    if (lineText.charAt(i) == '"') {
+                        leftQuotes++;
+                    }
+                }
+                for (int i = positionInLine; i < lineText.length(); i++) {
+                    if (lineText.charAt(i) == '"') {
+                        rightQuotes++;
+                    }
+                }
+                
+                boolean isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
 
-                if (positionInLine > stringStart && positionInLine < stringStop) {
+                if (isInsideQuotes) {
                     splitString(caretLine);
                     return;
                 }
@@ -385,7 +395,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         setSelection(newOffset, newOffset);
         stopCompoundEdit();
     }
-    
+
     @Override
     public void handleAutoFormat() {
         if (isSelectionActive()) {
@@ -454,7 +464,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
         }
     }
-   
+
     protected static String refactorStringLiterals(String text) {
         int maxLength = SmartCodePreferences.AUTOFORMAT_LINE_LENGTH;
 
@@ -495,7 +505,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         return result.toString();
     }
-    
+
     public void deleteLine(int line) {
         // in case we are in the last line of text (but not when it's also first one)
         if (line == getLineCount() - 1 && line != 0) {

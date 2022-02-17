@@ -110,10 +110,7 @@ public class BracketCloser implements KeyListener {
     private void wrapSelection(char token) {
         StringBuilder selectedText = new StringBuilder(editor.getSelectedText());
 
-        if (!SmartCodePreferences.BRACKETS_REPLACE_TOKEN) {
-            selectedText.insert(0, token).append(tokens.get(token)).toString();
-
-        } else {
+        if (SmartCodePreferences.BRACKETS_REPLACE_TOKEN) {
             char firstChar = selectedText.charAt(0);
             char lastChar = selectedText.charAt(selectedText.length() - 1);
 
@@ -128,6 +125,7 @@ public class BracketCloser implements KeyListener {
                     selectedText.delete(0, 1);
                     selectedText.delete(selectedText.length() - 1, selectedText.length());
                 } else {
+                    // otherwise, wrap it with a new pair of tokens
                     selectedText.setCharAt(0, token);
                     selectedText.setCharAt(selectedText.length() - 1, tokens.get(token));
                 }
@@ -135,6 +133,9 @@ public class BracketCloser implements KeyListener {
             } else {
                 selectedText.insert(0, token).append(tokens.get(token)).toString();
             }
+
+        } else {
+            selectedText.insert(0, token).append(tokens.get(token)).toString();
         }
 
         int start = editor.getSelectionStart();
