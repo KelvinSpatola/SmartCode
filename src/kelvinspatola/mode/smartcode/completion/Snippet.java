@@ -17,8 +17,7 @@ public class Snippet {
     protected int startingPosition;
     public int leftBoundary, rightBoundary;
     protected int indent;
-        
-    
+
     // CONSTRUCTOR
     public Snippet(String source) {
         buffer = new StringBuilder();
@@ -30,7 +29,7 @@ public class Snippet {
         char[] sourceChars = source.toCharArray();
         this.sourceText = source;
         int index = 0, indexOffset = 0;
-        
+
         while (index < sourceChars.length) {
             if (sourceChars[index] == Tabstop.CURSOR) {
                 tabstops.add(new Tabstop(index - indexOffset));
@@ -38,7 +37,7 @@ public class Snippet {
             }
             index++;
         }
-        
+
         String sanitizedSource = source.replace(String.valueOf(Tabstop.CURSOR), "");
         sourceLines = sanitizedSource.split("\n");
         setIndentation(0);
@@ -103,8 +102,10 @@ public class Snippet {
         leftBoundary = startingPosition + caret + (indent * calcLine(caret)) + delta;
         rightBoundary = leftBoundary + 1;
 
-        if (stopIndex == tabstops.size() - 1)
+        if (stopIndex == tabstops.size() - 1) {
             isLastPosition = true;
+            System.out.println("isLast: " + isLastPosition);
+        }
 
         return leftBoundary;
     }
@@ -134,7 +135,7 @@ public class Snippet {
             rightBoundary++;
         }
     }
-    
+
     public boolean isLastPosition() {
         return isLastPosition;
     }
@@ -142,11 +143,11 @@ public class Snippet {
     public boolean contains(int caret) {
         return (caret >= leftBoundary && caret <= rightBoundary);
     }
-    
+
     public String getSource() {
         return sourceText;
     }
-    
+
     private static boolean isOpeningBracket(char ch) {
         String tokens = "([{\"\'";
         return tokens.contains(String.valueOf(ch));

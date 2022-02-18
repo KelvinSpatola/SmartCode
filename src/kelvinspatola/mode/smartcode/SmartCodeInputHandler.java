@@ -108,7 +108,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
 
         if (Preferences.getBoolean("editor.indent")) {
             SmartCodeTextArea textarea = (SmartCodeTextArea) editor.getTextArea();
-            
+
             int line = textarea.getCaretLine();
 
             if (editor.getLineText(line).isBlank()) {

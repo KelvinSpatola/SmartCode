@@ -24,7 +24,6 @@ public class SnippetManager implements KeyListener, CaretListener {
     protected Snippet currentSnippet;
     protected SmartCodeEditor editor;
 
-    
     // CONSTRUCTOR
     public SnippetManager(SmartCodeEditor editor) {
         this.editor = editor;
@@ -99,12 +98,12 @@ public class SnippetManager implements KeyListener, CaretListener {
                 editor.stopCompoundEdit();
             }
 
-        } else if (isReadingKeyboardInput()) {
+        } else if (isReadingKeyboardInput) {
             if (BracketCloser.isSkipped())
                 return false;
 
             if (currentSnippet.isLastPosition()) {
-                //currentSnippet = null;
+                currentSnippet = null;
                 return isReadingKeyboardInput = false;
             }
 
@@ -115,12 +114,11 @@ public class SnippetManager implements KeyListener, CaretListener {
                 return true;
             }
             currentSnippet.readInput(e);
-            highlight();
 
-        } 
-        else {
+        } else {
             currentSnippet = null;
         }
+        highlight();
 
 //        if (isReadingKeyboardInput()) {
 //            editor.statusMessage("EDITING PARAMETERS", EditorStatus.WARNING);
@@ -130,7 +128,7 @@ public class SnippetManager implements KeyListener, CaretListener {
 
     @Override
     public void caretUpdate(CaretEvent e) {
-//        println("isReading: " + isReadingKeyboardInput());
+//        println("isReading: " + isReadingKeyboardInput);
 
         if (currentSnippet == null) {
             isReadingKeyboardInput = false;
@@ -144,13 +142,8 @@ public class SnippetManager implements KeyListener, CaretListener {
         return false;
     }
 
-    public boolean isReadingKeyboardInput() {
-        return isReadingKeyboardInput;
-    }
-    
     protected void highlight() {
-        editor.getSmartCodeTextArea().getSmartCodePainter().hightlight(currentSnippet,
-                editor.getSmartCodeTextArea());
+        editor.getSmartCodeTextArea().getSmartCodePainter().hightlight(currentSnippet);
     }
 
     private String checkTrigger() {

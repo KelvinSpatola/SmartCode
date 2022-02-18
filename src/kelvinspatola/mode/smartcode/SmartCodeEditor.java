@@ -4,7 +4,9 @@ import java.awt.Font;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -20,12 +22,16 @@ import processing.app.Messages;
 import processing.app.Mode;
 import processing.app.Platform;
 import processing.app.Preferences;
+import processing.app.SketchCode;
+import processing.app.syntax.DefaultInputHandler;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextAreaDefaults;
 import processing.app.ui.EditorException;
 import processing.app.ui.EditorState;
 import processing.app.ui.Toolkit;
 import processing.mode.java.JavaEditor;
+import processing.mode.java.debug.LineHighlight;
+import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected static final String COMMENT_TEXT = "^(?!.*\\\".*\\/\\*.*\\\")(?:.*\\/\\*.*|\\h*\\*.*)";
@@ -44,7 +50,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected static final char CLOSE_BRACE = '}';
     protected static final String LF = "\n";
 
+    protected Set<LineHighlight> pinnedLines = new HashSet<>();
     static private boolean helloMessageViewed = false;
+
 
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
         super(base, path, state, mode);
@@ -52,6 +60,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         buildMenu();
         buildPopupMenu();
         printHelloMessage();
+
     }
 
     private void printHelloMessage() {
@@ -95,6 +104,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JMenu menu = new JMenu("SmartCode");
         List<JMenuItem> updatableItems = new ArrayList<>();
 
+        createItem(menu, "Pin line", null, () -> toggleLinePin(textarea.getCaretLine()));
+
+        menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Duplicate lines up", "CA+UP", () -> duplicateLines(true));
         createItem(menu, "Duplicate lines down", "CA+DOWN", () -> duplicateLines(false));
         createItem(menu, "Move lines up", "A+UP", () -> moveLines(true));
@@ -108,11 +120,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         createItem(menu, "Insert line break", "A+ENTER", () -> insertLineBreak(getCaretOffset()));
 
         menu.addSeparator(); // ---------------------------------------------
-        updatableItems.add(createItem(menu, "Toggle block comment", "C+7", () -> toggleBlockComment()));
-        updatableItems.add(createItem(menu, "Format selected text", "C+T", () -> handleAutoFormat()));
+        updatableItems.add(createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment));
+        updatableItems.add(createItem(menu, "Format selected text", "C+T", this::handleAutoFormat));
         updatableItems.add(createItem(menu, "To upper case", "CS+U", () -> changeCase(true)));
         updatableItems.add(createItem(menu, "To lower case", "CS+L", () -> changeCase(false)));
-        createItem(menu, "Expand Selection", "CA+RIGHT", () -> expandSelection());
+        createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
 
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Visit GitHub page", null, () -> Platform.openURL("https://github.com/KelvinSpatola"));
@@ -137,10 +149,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JPopupMenu popup = textarea.getRightClickPopup();
         JMenu submenu = new JMenu("SmartCode");
         List<JMenuItem> updatableItems = new ArrayList<>();
+        createItem(submenu, "Pin line", null, () -> toggleLinePin(textarea.getCaretLine()));
 
         popup.addSeparator(); // ---------------------------------------------
-        updatableItems.add(createItem(submenu, "Format selected text", null, () -> handleAutoFormat()));
-        updatableItems.add(createItem(submenu, "Toggle block comment", null, () -> toggleBlockComment()));
+        updatableItems.add(createItem(submenu, "Format selected text", null, this::handleAutoFormat));
+        updatableItems.add(createItem(submenu, "Toggle block comment", null, this::toggleBlockComment));
         updatableItems.add(createItem(submenu, "To upper case", null, () -> changeCase(true)));
         updatableItems.add(createItem(submenu, "To lower case", null, () -> changeCase(false)));
 
@@ -162,7 +175,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JMenuItem item = new MenuItem(title);
         item.addActionListener(a -> action.run());
         if (keyBinding != null)
-            item.setAccelerator(SmartCodeInputHandler.parseKeyStroke(keyBinding));
+            item.setAccelerator(DefaultInputHandler.parseKeyStroke(keyBinding));
         menu.add(item);
         return item;
     }
@@ -179,7 +192,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
-    abstract class MenuAdapter implements MenuListener {
+    abstract static class MenuAdapter implements MenuListener {
         @Override
         public void menuCanceled(MenuEvent e) {
         }
@@ -223,10 +236,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             int positionInLine = getSmartCodeTextArea().getPositionInsideLineWithOffset(caret);
             int caretLine = textarea.getCaretLine();
             String lineText = getLineText(caretLine);
-            
+
             if (lineText.matches(STRING_TEXT)) {
                 int leftQuotes = 0, rightQuotes = 0;
-                
+
                 for (int i = positionInLine - 1; i >= 0; i--) {
                     if (lineText.charAt(i) == '"') {
                         leftQuotes++;
@@ -237,7 +250,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                         rightQuotes++;
                     }
                 }
-                
+
                 boolean isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
 
                 if (isInsideQuotes) {
@@ -880,5 +893,75 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         if (length <= 0)
             return "";
         return String.format("%1$" + length + "s", "");
+    }
+
+    public Set<LineHighlight> getPinnedLines() {
+        return pinnedLines;
+    }
+
+    public void toggleLinePin(int line) {
+        if (!isDebuggerEnabled()) {
+            if (isLinePinned(line)) {
+                removePinnededLine(line);
+            } else {
+                addPinnededLine(line);
+            }
+        }
+        System.out.println("pins: " + pinnedLines.size());
+    }
+
+    /** Add highlight for a pinned line. */
+    public void addPinnededLine(int line) {
+        LineID lineID = getLineIDInCurrentTab(line);
+        LineHighlight hl = new LineHighlight(lineID, this);
+        hl.setMarker(SmartCodeTextArea.PIN_MARKER);
+        pinnedLines.add(hl);
+    }
+
+    /** Clear the highlight for the pinned line. */
+    public void removePinnededLine(int line) {
+        LineID lineID = getLineIDInCurrentTab(line);
+        LineHighlight foundLine = null;
+
+        for (LineHighlight hl : pinnedLines) {
+            if (hl.getLineID().equals(lineID)) {
+                foundLine = hl;
+                break;
+            }
+        }
+        if (foundLine != null) {
+            foundLine.clear();
+            pinnedLines.remove(foundLine);
+            foundLine.dispose();
+            // repaint current line if it's on this line
+            if (currentLine != null && currentLine.getLineID().equals(lineID)) {
+                currentLine.paint();
+            }
+        }
+    }
+
+    @Override
+    public void setCode(SketchCode code) {
+        super.setCode(code);
+        // send information to SmartCodeTextAreaPainter.paintLeftGutter() 
+        // to paint these lines
+        if (pinnedLines != null) {
+            for (LineHighlight hl : pinnedLines) {
+                if (isInCurrentTab(hl.getLineID())) {
+                    hl.paint();
+                }
+            }
+        }
+    }
+
+    public boolean isLinePinned(int line) {
+        LineID lineID = getLineIDInCurrentTab(line);
+
+        for (LineHighlight hl : pinnedLines) {
+            if (hl.getLineID().equals(lineID)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

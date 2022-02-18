@@ -7,14 +7,14 @@ import processing.app.Preferences;
 
 public class SmartCodePreferences {
     static private final String[] attributes = { 
-            "SmartCode.autoformat.comments",
+            "SmartCode.autoformat.comments", 
             "SmartCode.autoformat.strings",
-            "SmartCode.autoformat.line_length",
-            "SmartCode.brackets.auto_close",
+            "SmartCode.autoformat.line_length", 
+            "SmartCode.brackets.auto_close", 
             "SmartCode.brackets.replace_token",
-            "SmartCode.move_lines_auto_indent",
-            "SmartCode.templates.enabled"
-    };
+            "SmartCode.move_lines_auto_indent", 
+            "SmartCode.templates.enabled" 
+            };
 
     static protected Map<String, String> defaultPrefs = new HashMap<>();
     static {
@@ -26,7 +26,7 @@ public class SmartCodePreferences {
         defaultPrefs.put(attributes[5], "true");
         defaultPrefs.put(attributes[6], "true");
     }
-    
+
     static public boolean AUTOFORMAT_COMMENTS;
     static public boolean AUTOFORMAT_STRINGS;
     static public int     AUTOFORMAT_LINE_LENGTH;
@@ -37,21 +37,21 @@ public class SmartCodePreferences {
 
     static public void init() {
         checkDefaultPreferences();
-         
-        AUTOFORMAT_COMMENTS    = Preferences.getBoolean(attributes[0]);
-        AUTOFORMAT_STRINGS     = Preferences.getBoolean(attributes[1]);
+
+        AUTOFORMAT_COMMENTS = Preferences.getBoolean(attributes[0]);
+        AUTOFORMAT_STRINGS = Preferences.getBoolean(attributes[1]);
         AUTOFORMAT_LINE_LENGTH = Preferences.getInteger(attributes[2]);
-        BRACKETS_AUTO_CLOSE    = Preferences.getBoolean(attributes[3]);
+        BRACKETS_AUTO_CLOSE = Preferences.getBoolean(attributes[3]);
         BRACKETS_REPLACE_TOKEN = Preferences.getBoolean(attributes[4]);
         MOVE_LINES_AUTO_INDENT = Preferences.getBoolean(attributes[5]);
-        TEMPLATES_ENABLED      = Preferences.getBoolean(attributes[6]);
+        TEMPLATES_ENABLED = Preferences.getBoolean(attributes[6]);
     }
 
-    protected static void checkDefaultPreferences() {        
+    protected static void checkDefaultPreferences() {
         for (String att : defaultPrefs.keySet()) {
             if (Preferences.get(att) == null) {
                 Preferences.set(att, defaultPrefs.get(att));
-            } 
+            }
         }
     }
 }

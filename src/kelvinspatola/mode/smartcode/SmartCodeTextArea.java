@@ -22,6 +22,8 @@ public class SmartCodeTextArea extends JavaTextArea {
     public static final String BLOCK_CLOSING = "^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*";
 
     public static final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
+    
+    public static final String PIN_MARKER = "pin";
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, JavaEditor editor) {

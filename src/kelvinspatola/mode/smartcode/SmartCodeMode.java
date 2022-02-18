@@ -1,18 +1,18 @@
 package kelvinspatola.mode.smartcode;
 
-import processing.app.Base;
-import processing.app.Platform;
-import processing.app.ui.Editor;
-import processing.app.ui.EditorException;
-import processing.app.ui.EditorState;
-import processing.mode.java.JavaMode;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import processing.app.Base;
+import processing.app.Platform;
+import processing.app.ui.Editor;
+import processing.app.ui.EditorException;
+import processing.app.ui.EditorState;
+import processing.mode.java.JavaMode;
 
 public class SmartCodeMode extends JavaMode {
     static public boolean bracketClosingEnabled;
