@@ -14,7 +14,6 @@ import processing.mode.java.JavaEditor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
- 
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, JavaEditor editor) {
@@ -136,6 +135,7 @@ public class SmartCodeTextArea extends JavaTextArea {
             }
         }
     }
+
 
     static public int getLineIndentation(String lineText) {
         char[] chars = lineText.toCharArray();

@@ -36,9 +36,8 @@ import processing.mode.java.debug.LineHighlight;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
-    protected Set<LineHighlight> pinnedLines = new HashSet<>();
+    protected final Set<LineHighlight> pinnedLines = new HashSet<>();
     static private boolean helloMessageViewed = false;
-
 
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
         super(base, path, state, mode);
@@ -881,55 +880,77 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         return String.format("%1$" + length + "s", "");
     }
 
-    public Set<LineHighlight> getPinnedLines() {
-        return pinnedLines;
-    }
+    /****************
+     * 
+     * LINE PINS
+     * 
+     */
 
     public void toggleLinePin(int line) {
         if (!isDebuggerEnabled()) {
-            if (isLinePinned(line)) {
-                removePinnededLine(line);
+            final LineID lineID = getLineIDInCurrentTab(line);
+            
+            if (isLinePinned(lineID)) {
+                removePinnededLine(lineID);
             } else {
-                addPinnededLine(line);
+                addPinnededLine(lineID);
             }
         }
         System.out.println("pins: " + pinnedLines.size());
     }
 
     /** Add highlight for a pinned line. */
-    public void addPinnededLine(int line) {
-        LineID lineID = getLineIDInCurrentTab(line);
+    protected void addPinnededLine(LineID lineID) {
         LineHighlight hl = new LineHighlight(lineID, this);
         hl.setMarker(PIN_MARKER);
         pinnedLines.add(hl);
     }
 
     /** Clear the highlight for the pinned line. */
-    public void removePinnededLine(int line) {
-        LineID lineID = getLineIDInCurrentTab(line);
-        LineHighlight foundLine = null;
+    protected void removePinnededLine(LineID lineID) {
+        LineHighlight pin = getPinnedLine(lineID);
 
-        for (LineHighlight hl : pinnedLines) {
-            if (hl.getLineID().equals(lineID)) {
-                foundLine = hl;
-                break;
-            }
-        }
-        if (foundLine != null) {
-            foundLine.clear();
-            pinnedLines.remove(foundLine);
-            foundLine.dispose();
+        if (pin != null) {
+            pin.clear();
+            pinnedLines.remove(pin);
+            pin.dispose();
             // repaint current line if it's on this line
             if (currentLine != null && currentLine.getLineID().equals(lineID)) {
                 currentLine.paint();
             }
         }
     }
+    
+    public boolean isLinePinned(int line) {
+        return isLinePinned(getLineIDInCurrentTab(line));
+    }
+
+    public boolean isLinePinned(LineID lineID) {
+        for (LineHighlight pin : pinnedLines) {
+            if (pin.getLineID().equals(lineID)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected LineHighlight getPinnedLine(LineID lineID) {
+        for (LineHighlight pin : pinnedLines) {
+            if (pin.getLineID().equals(lineID)) {
+                return pin;
+            }
+        }
+        return null;
+    }
+
+    public Set<LineHighlight> getPinnedLines() {
+        return pinnedLines;
+    }
 
     @Override
     public void setCode(SketchCode code) {
         super.setCode(code);
-        // send information to SmartCodeTextAreaPainter.paintLeftGutter() 
+        // send information to SmartCodeTextAreaPainter.paintLeftGutter()
         // to paint these lines
         if (pinnedLines != null) {
             for (LineHighlight hl : pinnedLines) {
@@ -938,16 +959,5 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
         }
-    }
-
-    public boolean isLinePinned(int line) {
-        LineID lineID = getLineIDInCurrentTab(line);
-
-        for (LineHighlight hl : pinnedLines) {
-            if (hl.getLineID().equals(lineID)) {
-                return true;
-            }
-        }
-        return false;
     }
 }

@@ -3,9 +3,11 @@ package kelvinspatola.mode.smartcode;
 import static kelvinspatola.mode.smartcode.Constants.*;
 
 import java.awt.Color;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.geom.GeneralPath;
@@ -20,13 +22,15 @@ import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextArea;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
+import processing.app.ui.Theme;
 import processing.mode.java.JavaTextArea;
 import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<Painter> painters = new ArrayList<>();
+    protected Color pinnedLineColor = SmartCodePreferences.BOOKMARK_LINE_COLOR;
+    protected Color leftGutterPinColor;
 
-    
     public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
@@ -60,26 +64,42 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         addMouseListener(new MouseAdapter() {
             long lastTime; // OS X seems to be firing multiple mouse events
 
-            public void mousePressed(MouseEvent event) {
-                long thisTime = event.getWhen();
+            public void mousePressed(MouseEvent e) {
+                long thisTime = e.getWhen();
 
                 if (thisTime - lastTime > 100) {
-                    if (event.getX() < Editor.LEFT_GUTTER) {
-                        int offset = textArea.xyToOffset(event.getX(), event.getY());
+                    int lineIndex = yToLine(e.getY());
+                    int lastLine = textArea.getLineCount();
 
-                        if (offset >= 0) {
-                            int lineIndex = textArea.getLineOfOffset(offset);
-                            getSmartCodeEditor().toggleLinePin(lineIndex);
-                        }
+                    if (e.getX() < Editor.LEFT_GUTTER && lineIndex < lastLine) {
+                        getSmartCodeEditor().toggleLinePin(lineIndex);
                     }
                     lastTime = thisTime;
                 }
             }
         });
     }
+    
+    @Override
+    protected void updateTheme() {
+        super.updateTheme();
+        leftGutterPinColor = Theme.getColor("footer.icon.selected.color");
+    }
 
     public SmartCodeEditor getSmartCodeEditor() {
         return (SmartCodeEditor) getEditor();
+    }
+
+    /**
+     * Converts a y co-ordinate to a line index. Rewriting this because i need it to
+     * not clamp the returned value as the original JEditTextArea.yToLine() method
+     * does.
+     * 
+     * @param y The y co-ordinate
+     */
+    public int yToLine(int y) {
+        FontMetrics fm = getFontMetrics();
+        return Math.max(0, (y / fm.getHeight() + textArea.getFirstLine()));
     }
 
     int x1, x2, line;
@@ -144,13 +164,11 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     class PinnedLines extends Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
-
-            if (!getEditor().isDebuggerEnabled() && getSmartCodeEditor().isLinePinned(line)) {
+            if (SmartCodePreferences.BOOKMARK_HIGHLIGHT && !getEditor().isDebuggerEnabled()
+                    && getSmartCodeEditor().isLinePinned(line)) {
                 y += getLineDisplacement();
-                int h = fontMetrics.getHeight();
-
-                gfx.setColor(new Color(255, 130, 210));
-                gfx.fillRect(0, y, getWidth(), h);
+                gfx.setColor(pinnedLineColor);
+                gfx.fillRect(0, y, getWidth(), fontMetrics.getHeight());
 
                 return true;
             }
@@ -161,7 +179,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     @Override
     protected void paintLeftGutter(Graphics gfx, int line, int x) {
         int y = textArea.lineToY(line) + getLineDisplacement();
-        
+
         if (line == textArea.getSelectionStopLine()) {
             gfx.setColor(gutterLineHighlightColor);
             gfx.fillRect(0, y, Editor.LEFT_GUTTER, fontMetrics.getHeight());
@@ -175,12 +193,12 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         String text = null;
         if (getEditor().isDebuggerEnabled()) {
             text = getPdeTextArea().getGutterText(line);
-            
+
             if (text != null && text.equals(PIN_MARKER)) {
                 text = null;
             }
-            
-        } else if(getSmartCodeEditor().isLinePinned(line)) {
+
+        } else if (getSmartCodeEditor().isLinePinned(line)) {
             text = PIN_MARKER;
         }
 
@@ -188,7 +206,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
         int textRight = Editor.LEFT_GUTTER - Editor.GUTTER_MARGIN;
         int textBaseline = textArea.lineToY(line) + fontMetrics.getHeight();
-        
 
         if (text != null) {
             if (text.equals(PdeTextArea.BREAK_MARKER)) {
@@ -198,14 +215,12 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 drawRightArrow(gfx, textRight - 7, textBaseline - 7.5f, 7, 7);
 
             } else if (text.equals(PIN_MARKER)) {
-//                gfx.fillOval(textRight - 10, textBaseline - 10, 8, 8);
-                
-                char[] txt = text.toCharArray();
-                int tx = textRight - gfx.getFontMetrics().charsWidth(txt, 0, txt.length);
-                
-                gfx.setFont(gutterTextFont);
-                Utilities.drawTabbedText(new Segment(txt, 0, text.length()), (float) tx, (float) textBaseline,
-                        (Graphics2D) gfx, this, 0);
+                gfx.setColor(leftGutterPinColor);
+                float w = 9f;
+                float xx = Editor.LEFT_GUTTER - Editor.GUTTER_MARGIN - w;
+                float h = w * 1.4f;
+                float yy = y + (fontMetrics.getHeight() - h) / 2;
+                drawBookmark(gfx, xx, yy, w, h);
             }
         } else {
             // if no special text for a breakpoint, just show the line number
@@ -220,6 +235,20 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             Utilities.drawTabbedText(new Segment(txt, 0, text.length()), (float) tx, (float) textBaseline,
                     (Graphics2D) gfx, this, 0);
         }
+    }
+
+    static private void drawBookmark(Graphics g, float x, float y, float w, float h) {
+        Graphics2D g2 = (Graphics2D) g;
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        GeneralPath path = new GeneralPath();
+        path.moveTo(x, y);
+        path.lineTo(x + w, y);
+        path.lineTo(x + w, y + h);
+        path.lineTo(x + w/2, y + h * 0.65f);
+        path.lineTo(x, y + h);
+        path.closePath();
+        g2.fill(path);
     }
 
     static private void drawDiamond(Graphics g, float x, float y, float w, float h) {
