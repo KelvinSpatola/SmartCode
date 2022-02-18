@@ -1,5 +1,7 @@
 package kelvinspatola.mode.smartcode;
 
+import static kelvinspatola.mode.smartcode.Constants.*;
+
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -24,6 +26,7 @@ import processing.mode.java.JavaTextAreaPainter;
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<Painter> painters = new ArrayList<>();
 
+    
     public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
@@ -173,12 +176,12 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         if (getEditor().isDebuggerEnabled()) {
             text = getPdeTextArea().getGutterText(line);
             
-            if (text != null && text.equals(SmartCodeTextArea.PIN_MARKER)) {
+            if (text != null && text.equals(PIN_MARKER)) {
                 text = null;
             }
             
         } else if(getSmartCodeEditor().isLinePinned(line)) {
-            text = SmartCodeTextArea.PIN_MARKER;
+            text = PIN_MARKER;
         }
 
         gfx.setColor(line < textArea.getLineCount() ? gutterTextColor : gutterPastColor);
@@ -194,7 +197,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             } else if (text.equals(PdeTextArea.STEP_MARKER)) {
                 drawRightArrow(gfx, textRight - 7, textBaseline - 7.5f, 7, 7);
 
-            } else if (text.equals(SmartCodeTextArea.PIN_MARKER)) {
+            } else if (text.equals(PIN_MARKER)) {
 //                gfx.fillOval(textRight - 10, textBaseline - 10, 8, 8);
                 
                 char[] txt = text.toCharArray();

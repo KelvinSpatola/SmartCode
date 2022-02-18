@@ -24,6 +24,7 @@ public class SnippetManager implements KeyListener, CaretListener {
     protected Snippet currentSnippet;
     protected SmartCodeEditor editor;
 
+    
     // CONSTRUCTOR
     public SnippetManager(SmartCodeEditor editor) {
         this.editor = editor;

@@ -1,5 +1,7 @@
 package kelvinspatola.mode.smartcode;
 
+import static kelvinspatola.mode.smartcode.Constants.*;
+
 import java.awt.Font;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
@@ -34,22 +36,6 @@ import processing.mode.java.debug.LineHighlight;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
-    protected static final String COMMENT_TEXT = "^(?!.*\\\".*\\/\\*.*\\\")(?:.*\\/\\*.*|\\h*\\*.*)";
-    protected static final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
-    protected static final String SPLIT_STRING_TEXT = "^\\h*\\+\\s*(?:\\\".*){2}";
-    protected static final String BLOCK_OPENING = "^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$";
-    protected static final String BLOCK_CLOSING = "^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*";
-
-    protected static final int TAB_SIZE = Preferences.getInteger("editor.tabs.size");
-    protected static final String TAB = addSpaces(TAB_SIZE);
-    protected static final boolean INDENT = Preferences.getBoolean("editor.indent");
-
-    protected static final String OPEN_COMMENT = "/*";
-    protected static final String CLOSE_COMMENT = "*/";
-    protected static final char OPEN_BRACE = '{';
-    protected static final char CLOSE_BRACE = '}';
-    protected static final String LF = "\n";
-
     protected Set<LineHighlight> pinnedLines = new HashSet<>();
     static private boolean helloMessageViewed = false;
 
@@ -306,7 +292,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     private void splitString(int caretLine) {
         int indent = 0;
-        if (SmartCodeEditor.INDENT) {
+        if (INDENT) {
             indent = getSmartCodeTextArea().getLineIndentation(caretLine);
 
             if (!getLineText(caretLine).matches(SPLIT_STRING_TEXT))
@@ -320,7 +306,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     private void splitComment(int caretLine) {
         int indent = 0;
-        if (SmartCodeEditor.INDENT) {
+        if (INDENT) {
             indent = getSmartCodeTextArea().getLineIndentation(caretLine);
         }
 
@@ -347,7 +333,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         int line = textarea.getLineOfOffset(offset);
 
         int indent = 0;
-        if (SmartCodeEditor.INDENT) {
+        if (INDENT) {
             indent = getSmartCodeTextArea().getLineIndentation(line) + TAB_SIZE;
         }
 
@@ -382,7 +368,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             stopCompoundEdit();
 
         }
-        if (SmartCodeEditor.INDENT) {
+        if (INDENT) {
             int line = textarea.getLineOfOffset(offset);
             String lineText = getLineText(line);
 
@@ -692,7 +678,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void insertNewLineBellow(int line) {
         int indent = 0;
 
-        if (SmartCodeEditor.INDENT) {
+        if (INDENT) {
             if (getLineText(line).matches(BLOCK_CLOSING)) {
                 indent = getSmartCodeTextArea().getLineIndentation(line);
 
@@ -731,7 +717,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         int indent = 0;
         int caretPos = ta.caretPositionInsideLine();
 
-        if (SmartCodeEditor.INDENT) {
+        if (INDENT) {
 
             if (lineText.matches(BLOCK_OPENING)) {
                 indent = ta.getLineIndentation(line);
@@ -914,7 +900,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void addPinnededLine(int line) {
         LineID lineID = getLineIDInCurrentTab(line);
         LineHighlight hl = new LineHighlight(lineID, this);
-        hl.setMarker(SmartCodeTextArea.PIN_MARKER);
+        hl.setMarker(PIN_MARKER);
         pinnedLines.add(hl);
     }
 

@@ -17,6 +17,7 @@ public class Snippet {
     protected int startingPosition;
     public int leftBoundary, rightBoundary;
     protected int indent;
+    
 
     // CONSTRUCTOR
     public Snippet(String source) {

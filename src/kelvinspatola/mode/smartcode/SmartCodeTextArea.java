@@ -1,5 +1,7 @@
 package kelvinspatola.mode.smartcode;
 
+import static kelvinspatola.mode.smartcode.Constants.*;
+
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.util.ArrayDeque;
@@ -7,23 +9,12 @@ import java.util.Deque;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
-import processing.app.Preferences;
 import processing.app.syntax.TextAreaDefaults;
 import processing.mode.java.JavaEditor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
-    protected static final boolean INDENT = Preferences.getBoolean("editor.indent");
-    public static final int TAB_SIZE = Preferences.getInteger("editor.tabs.size");
-    public static final String TAB = addSpaces(TAB_SIZE);
-    public static final String LF = "\n";
-
-    public static final String BLOCK_OPENING = "^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$";
-    public static final String BLOCK_CLOSING = "^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*";
-
-    public static final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
-    
-    public static final String PIN_MARKER = "pin";
+ 
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, JavaEditor editor) {
@@ -112,7 +103,7 @@ public class SmartCodeTextArea extends JavaTextArea {
 
                     if (selection.contains(LF)) {
                         int indent = 0;
-                        if (SmartCodeTextArea.INDENT) {
+                        if (INDENT) {
                             indent = getLineIndentation(getCaretLine()) + TAB_SIZE;
                         }
 
