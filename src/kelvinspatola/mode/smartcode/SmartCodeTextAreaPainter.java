@@ -28,13 +28,14 @@ import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<Painter> painters = new ArrayList<>();
-    protected Color pinnedLineColor = SmartCodePreferences.BOOKMARK_LINE_COLOR;
-    protected Color leftGutterPinColor;
+    protected Color bookmarkLineColor = new Color(255, 0, 0, 60);//SmartCodePreferences.BOOKMARK_LINE_COLOR;
+    protected Color bookmarkIconColor;
 
+    
     public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
-        painters.add(new PinnedLines());
+        painters.add(new LineBookmark());
         painters.add(new Occurrences());
         painters.add(new SnippetMarker());
 
@@ -72,7 +73,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                     int lastLine = textArea.getLineCount();
 
                     if (e.getX() < Editor.LEFT_GUTTER && lineIndex < lastLine) {
-                        getSmartCodeEditor().toggleLinePin(lineIndex);
+                        getSmartCodeEditor().toggleLineBookmark(lineIndex);
                     }
                     lastTime = thisTime;
                 }
@@ -83,7 +84,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     @Override
     protected void updateTheme() {
         super.updateTheme();
-        leftGutterPinColor = Theme.getColor("footer.icon.selected.color");
+        bookmarkIconColor = Theme.getColor("footer.icon.selected.color");
     }
 
     public SmartCodeEditor getSmartCodeEditor() {
@@ -161,13 +162,13 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    class PinnedLines extends Painter {
+    class LineBookmark extends Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
             if (SmartCodePreferences.BOOKMARK_HIGHLIGHT && !getEditor().isDebuggerEnabled()
-                    && getSmartCodeEditor().isLinePinned(line)) {
+                    && getSmartCodeEditor().isLineBookmark(line)) {
                 y += getLineDisplacement();
-                gfx.setColor(pinnedLineColor);
+                gfx.setColor(bookmarkLineColor);
                 gfx.fillRect(0, y, getWidth(), fontMetrics.getHeight());
 
                 return true;
@@ -198,7 +199,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 text = null;
             }
 
-        } else if (getSmartCodeEditor().isLinePinned(line)) {
+        } else if (getSmartCodeEditor().isLineBookmark(line)) {
             text = PIN_MARKER;
         }
 
@@ -215,7 +216,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 drawRightArrow(gfx, textRight - 7, textBaseline - 7.5f, 7, 7);
 
             } else if (text.equals(PIN_MARKER)) {
-                gfx.setColor(leftGutterPinColor);
+                gfx.setColor(bookmarkIconColor);
                 float w = 9f;
                 float xx = Editor.LEFT_GUTTER - Editor.GUTTER_MARGIN - w;
                 float h = w * 1.4f;

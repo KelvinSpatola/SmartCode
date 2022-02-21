@@ -36,7 +36,7 @@ import processing.mode.java.debug.LineHighlight;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
-    protected final Set<LineHighlight> pinnedLines = new HashSet<>();
+    protected final Set<LineHighlight> bookmarkedLines = new HashSet<>();
     static private boolean helloMessageViewed = false;
 
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -65,6 +65,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         return (SmartCodeTextArea) textarea;
     }
 
+    // TODO: lembrete de que é preciso trabalhar aqui
     @Override
     public JMenu buildFileMenu() {
         // JAVA MODE ITEMS
@@ -89,7 +90,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JMenu menu = new JMenu("SmartCode");
         List<JMenuItem> updatableItems = new ArrayList<>();
 
-        createItem(menu, "Pin line", null, () -> toggleLinePin(textarea.getCaretLine()));
+        createItem(menu, "Add line bookmark", null, () -> toggleLineBookmark(textarea.getCaretLine()));
 
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Duplicate lines up", "CA+UP", () -> duplicateLines(true));
@@ -134,7 +135,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JPopupMenu popup = textarea.getRightClickPopup();
         JMenu submenu = new JMenu("SmartCode");
         List<JMenuItem> updatableItems = new ArrayList<>();
-        createItem(submenu, "Pin line", null, () -> toggleLinePin(textarea.getCaretLine()));
+        createItem(submenu, "Add line bookmark", null, () -> toggleLineBookmark(textarea.getCaretLine()));
 
         popup.addSeparator(); // ---------------------------------------------
         updatableItems.add(createItem(submenu, "Format selected text", null, this::handleAutoFormat));
@@ -199,7 +200,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public boolean handlePressed(KeyEvent e) {
         int keyCode = e.getKeyCode();
 
-        if (keyCode == KeyEvent.VK_ENTER) {
+        boolean noModifiers = (e.getModifiersEx()
+                & (KeyEvent.CTRL_DOWN_MASK | KeyEvent.ALT_DOWN_MASK | KeyEvent.SHIFT_DOWN_MASK)) == 0;
+
+        if (keyCode == KeyEvent.VK_ENTER && noModifiers) {
             handleEnter();
 
         } else if (keyCode == KeyEvent.VK_TAB) {
@@ -217,7 +221,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         int caret = getCaretOffset();
 
         if (!isSelectionActive()) {
-
             int positionInLine = getSmartCodeTextArea().getPositionInsideLineWithOffset(caret);
             int caretLine = textarea.getCaretLine();
             String lineText = getLineText(caretLine);
@@ -358,13 +361,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         startCompoundEdit();
 
         // erase any selection content
-        if (isSelectionActive()) { // TOOD: ha um bug aqui quando temos muito texto selecionado
-            offset = getSelectionStart() + 1;
+        if (isSelectionActive()) {
             setSelectedText("");
             setSelectedText(LF);
-
-            setSelection(offset, offset);
             stopCompoundEdit();
+            return;
 
         }
         if (INDENT) {
@@ -465,8 +466,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     protected static String refactorStringLiterals(String text) {
         int maxLength = SmartCodePreferences.AUTOFORMAT_LINE_LENGTH;
+        
+        // Concatenate every multiline split-string into a single one-line string before doing anything else.
+        String preformattedText = text.replaceAll("\\\"\\\n\\h*\\+\\s*\\\"", "");
 
-        List<String> lines = new ArrayList<>(Arrays.asList(text.split(LF)));
+        List<String> lines = new ArrayList<>(Arrays.asList(preformattedText.split(LF)));
         int depth = 0;
         int indent = 0;
 
@@ -474,13 +478,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             String lineText = lines.get(i);
 
             if (lineText.matches(STRING_TEXT) && lineText.length() > maxLength) {
-
                 if (depth == 0) {
                     indent = SmartCodeTextArea.getLineIndentation(lineText);
                 }
 
                 String preffix = addSpaces(indent) + TAB + "+ \"";
-
                 String currLine = lineText.substring(0, maxLength - 1) + "\"";
                 String nextLine = preffix + lineText.substring(maxLength - 1);
 
@@ -496,15 +498,21 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
 
         StringBuilder result = new StringBuilder();
+        lines.forEach(line -> result.append(line + LF));
 
-        for (String line : lines) {
-            result.append(line + LF);
-        }
+//        for (String line : lines) {
+//            result.append(line + LF);
+//        }
 
         return result.toString();
     }
 
     public void deleteLine(int line) {
+        final LineID lineID = getCurrentLineID();
+        if (isLineBookmark(lineID)) {
+            removeLineBookmark(lineID);
+        }
+
         // in case we are in the last line of text (but not when it's also first one)
         if (line == getLineCount() - 1 && line != 0) {
             // subtracting 1 from getLineStartOffset() will delete the line break prior
@@ -613,8 +621,18 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         setSelection(s.getStart(), s.getEnd());
 
         int newSelectionStart, newSelectionEnd;
+        int selectionStartLine = s.getStartLine();
+        int selectionEndLine = s.getEndLine();
 
         // SWAP LINES
+
+        stopBookmarkTracking();
+
+        LineID lineID = getLineIDInCurrentTab(targetLine);
+        boolean isTargetLineBookmarked;
+        if (isTargetLineBookmarked = isLineBookmark(lineID))
+            removeLineBookmark(lineID);
+
         if (moveUp) {
             setSelection(target_start, s.getEnd());
             setSelectedText(selectedText + LF + replacedText);
@@ -622,13 +640,24 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             newSelectionStart = getLineStartOffset(targetLine);
             newSelectionEnd = getLineStopOffset(s.getEndLine() - 1) - 1;
 
+            for (int line = selectionStartLine; line <= selectionEndLine; line++)
+                moveBookmarkTo(line, line - 1);
+
         } else {
             setSelection(s.getStart(), target_end);
             setSelectedText(replacedText + LF + selectedText);
 
             newSelectionStart = getLineStartOffset(s.getStartLine() + 1);
             newSelectionEnd = getLineStopOffset(targetLine) - 1;
+
+            for (int line = selectionEndLine; line >= selectionStartLine; line--)
+                moveBookmarkTo(line, line + 1);
         }
+
+        if (isTargetLineBookmarked)
+            addLineBookmark(getLineIDInCurrentTab(moveUp ? selectionEndLine : selectionStartLine));
+
+        startBookmarkTracking();
 
         // UPDATE SELECTION
         setSelection(newSelectionStart, newSelectionEnd);
@@ -886,33 +915,33 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
      * 
      */
 
-    public void toggleLinePin(int line) {
+    public void toggleLineBookmark(int line) {
         if (!isDebuggerEnabled()) {
             final LineID lineID = getLineIDInCurrentTab(line);
-            
-            if (isLinePinned(lineID)) {
-                removePinnededLine(lineID);
+
+            if (isLineBookmark(lineID)) {
+                removeLineBookmark(lineID);
             } else {
-                addPinnededLine(lineID);
+                addLineBookmark(lineID);
             }
+            System.out.println("bookmarks: " + bookmarkedLines.size());
         }
-        System.out.println("pins: " + pinnedLines.size());
     }
 
     /** Add highlight for a pinned line. */
-    protected void addPinnededLine(LineID lineID) {
+    protected void addLineBookmark(LineID lineID) {
         LineHighlight hl = new LineHighlight(lineID, this);
         hl.setMarker(PIN_MARKER);
-        pinnedLines.add(hl);
+        bookmarkedLines.add(hl);
     }
 
     /** Clear the highlight for the pinned line. */
-    protected void removePinnededLine(LineID lineID) {
-        LineHighlight pin = getPinnedLine(lineID);
+    protected void removeLineBookmark(LineID lineID) {
+        LineHighlight pin = getLineBookmark(lineID);
 
         if (pin != null) {
             pin.clear();
-            pinnedLines.remove(pin);
+            bookmarkedLines.remove(pin);
             pin.dispose();
             // repaint current line if it's on this line
             if (currentLine != null && currentLine.getLineID().equals(lineID)) {
@@ -920,31 +949,53 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
         }
     }
-    
-    public boolean isLinePinned(int line) {
-        return isLinePinned(getLineIDInCurrentTab(line));
+
+    public boolean isLineBookmark(int line) {
+        return isLineBookmark(getLineIDInCurrentTab(line));
     }
 
-    public boolean isLinePinned(LineID lineID) {
-        for (LineHighlight pin : pinnedLines) {
-            if (pin.getLineID().equals(lineID)) {
+    public boolean isLineBookmark(LineID lineID) {
+        for (LineHighlight pin : bookmarkedLines) {
+            if (pin.isOnLine(lineID)) {
                 return true;
             }
         }
         return false;
     }
 
-    protected LineHighlight getPinnedLine(LineID lineID) {
-        for (LineHighlight pin : pinnedLines) {
-            if (pin.getLineID().equals(lineID)) {
+    protected LineHighlight getLineBookmark(LineID lineID) {
+        for (LineHighlight pin : bookmarkedLines) {
+            if (pin.isOnLine(lineID)) {
                 return pin;
             }
         }
         return null;
     }
 
-    public Set<LineHighlight> getPinnedLines() {
-        return pinnedLines;
+    protected boolean moveBookmarkTo(int oldLinePos, int newLinePos) {
+        LineID lineID = getLineIDInCurrentTab(oldLinePos);
+        if (isLineBookmark(lineID)) {
+            removeLineBookmark(lineID);
+            addLineBookmark(getLineIDInCurrentTab(newLinePos));
+            return true;
+        }
+        return false;
+    }
+
+    public Set<LineHighlight> getBookmarkedLines() {
+        return bookmarkedLines;
+    }
+
+    public void stopBookmarkTracking() {
+        for (LineHighlight pin : bookmarkedLines) {
+            pin.getLineID().stopTracking();
+        }
+    }
+
+    public void startBookmarkTracking() {
+        for (LineHighlight pin : bookmarkedLines) {
+            pin.getLineID().startTracking(getCurrentTab().getDocument());
+        }
     }
 
     @Override
@@ -952,8 +1003,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super.setCode(code);
         // send information to SmartCodeTextAreaPainter.paintLeftGutter()
         // to paint these lines
-        if (pinnedLines != null) {
-            for (LineHighlight hl : pinnedLines) {
+        if (bookmarkedLines != null) {
+            for (LineHighlight hl : bookmarkedLines) {
                 if (isInCurrentTab(hl.getLineID())) {
                     hl.paint();
                 }
