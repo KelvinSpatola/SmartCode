@@ -35,7 +35,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
-        painters.add(new LineBookmark());
+        painters.add(new Bookmarks());
         painters.add(new Occurrences());
         painters.add(new SnippetMarker());
 
@@ -162,7 +162,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    class LineBookmark extends Painter {
+    class Bookmarks extends Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
             if (SmartCodePreferences.BOOKMARK_HIGHLIGHT && !getEditor().isDebuggerEnabled()

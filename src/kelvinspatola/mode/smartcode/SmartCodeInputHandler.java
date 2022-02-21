@@ -4,10 +4,13 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import kelvinspatola.mode.smartcode.SmartCodeEditor.Selection;
 import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.syntax.PdeInputHandler;
 import processing.app.ui.Editor;
+import processing.mode.java.JavaEditor;
+import processing.mode.java.debug.LineID;
 
 public class SmartCodeInputHandler extends PdeInputHandler {
     protected List<KeyListener> listeners;
@@ -31,13 +34,24 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         addKeyBinding("S+ENTER", e -> editor.insertNewLineBellow(getTextArea(e).getCaretLine()));
 
         // for testing purposes
-        addKeyBinding("CA+P", e -> {
-//                System.out.println(((SmartCodeMode) editor.getMode()).checkTemplateFolder());
-//                System.out.println(((SmartCodeMode) editor.getMode()).getTemplateFolder());
-            System.out.println(this.hashCode());
+        addKeyBinding("C+B", e -> {
+            nextBookmarker();
+            System.out.println("index: " + index);
         });
 
         listeners = new ArrayList<>();
+    }
+
+    int index = 0;
+
+    void nextBookmarker() {
+        int length = ((SmartCodeEditor) editor).getBookmarkedLines().size();
+        if (length == 0)
+            return;
+
+        LineID lineID = ((SmartCodeEditor) editor).getBookmarkedLines().get(index).getLineID();
+        ((JavaEditor) editor).setCurrentLine(lineID);
+        index = (index + 1) % length;
     }
 
     public void addKeyListener(KeyListener listener) {
