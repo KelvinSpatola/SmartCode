@@ -1,4 +1,4 @@
-package kelvinspatola.mode.smartcode;
+package kelvinspatola.mode.smartcode.ui;
 
 import java.awt.Color;
 import java.awt.Cursor;
@@ -9,7 +9,6 @@ import java.awt.event.MouseMotionAdapter;
 import java.util.ArrayList;
 import java.util.List;
 
-import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import processing.app.ui.Editor;
 import processing.app.ui.MarkerColumn;
 import processing.core.PApplet;

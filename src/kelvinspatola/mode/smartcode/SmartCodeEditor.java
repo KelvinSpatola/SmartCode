@@ -25,6 +25,7 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
+import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
 
 import javax.swing.JSplitPane;
 
