@@ -7,7 +7,7 @@ import processing.app.SketchCode;
 import processing.mode.java.debug.LineHighlight;
 import processing.mode.java.debug.LineID;
 
-public class LineBookmark implements Comparable<LineBookmark> {
+public class LineBookmark implements LineMarker, Comparable<LineBookmark> {
     private SmartCodeEditor editor;
     private LineHighlight highlight;
 
@@ -24,9 +24,9 @@ public class LineBookmark implements Comparable<LineBookmark> {
 
     @Override
     public int compareTo(LineBookmark other) {
-        if (this.getTab() - other.getTab() < 0)
+        if (this.getTabIndex() - other.getTabIndex() < 0)
             return -1;
-        else if (this.getTab() - other.getTab() > 0)
+        else if (this.getTabIndex() - other.getTabIndex() > 0)
             return 1;
 
         return this.getLine() - other.getLine();
@@ -48,8 +48,13 @@ public class LineBookmark implements Comparable<LineBookmark> {
         highlight.clear();
         highlight.dispose();
     }
+    
+    public LineID getLineID() {
+        return highlight.getLineID();
+    }
 
-    public int getTab() {
+    @Override
+    public int getTabIndex() {
         SketchCode[] code = editor.getSketch().getCode();
         for (int i = 0; i < code.length; i++) {
             String tabName = code[i].getFileName();
@@ -59,14 +64,22 @@ public class LineBookmark implements Comparable<LineBookmark> {
         return -1;
     }
     
+    @Override
     public int getLine() {
         return highlight.getLineID().lineIdx();
     }
-    
-    public LineID getLineID() {
-        return highlight.getLineID();
-    }
 
+    @Override
+    public int getStartOffset() {
+        return editor.getLineStartOffset(getLine());
+    }
+    
+    @Override
+    public int getStopOffset() {
+        return editor.getLineStopOffset(getLine()) - 1;
+    }
+    
+    @Override
     public String getText() {
         return editor.getLineText(getLine());
     }

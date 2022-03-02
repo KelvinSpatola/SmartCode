@@ -36,7 +36,6 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         // for testing purposes
         addKeyBinding("C+B", e -> {
             nextBookmarker();
-            System.out.println("index: " + index);
         });
 
         listeners = new ArrayList<>();

@@ -7,14 +7,9 @@ import java.awt.Font;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.stream.Collectors;
 
-import javax.swing.Box;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -25,17 +20,14 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
+import kelvinspatola.mode.smartcode.ui.LineMarker;
 import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
-
-import javax.swing.JSplitPane;
-
 import processing.app.Base;
 import processing.app.Language;
 import processing.app.Messages;
 import processing.app.Mode;
 import processing.app.Platform;
 import processing.app.Preferences;
-import processing.app.Sketch;
 import processing.app.SketchCode;
 import processing.app.syntax.DefaultInputHandler;
 import processing.app.syntax.JEditTextArea;
@@ -43,12 +35,12 @@ import processing.app.syntax.PdeTextAreaDefaults;
 import processing.app.ui.EditorException;
 import processing.app.ui.EditorState;
 import processing.app.ui.Toolkit;
+import processing.core.PApplet;
 import processing.mode.java.JavaEditor;
-import processing.mode.java.debug.LineHighlight;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
-    protected final List<LineBookmark> bookmarkedLines = new ArrayList<>();
+    protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     static private boolean helloMessageViewed = false;
 
     // CONSTRUCTOR
@@ -63,7 +55,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JPanel editorPanel = (JPanel) textarea.getParent();
         // remove the text area temporarily
         editorPanel.remove(1);
-
         editorPanel.setLayout(new BorderLayout());
         errorColumn = new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height, bookmarkedLines);
         editorPanel.add(errorColumn, BorderLayout.EAST);
@@ -231,22 +222,22 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         } else if (keyCode == KeyEvent.VK_TAB) {
             handleTabulation(e.isShiftDown());
-            
+
         } else if (keyCode == KeyEvent.VK_DELETE) {
             if (bookmarkedLines.isEmpty())
                 return false;
-            
+
             int line = textarea.getCaretLine();
             if (getCaretOffset() == textarea.getLineStopOffset(line) - 1) {
                 if (isLineBookmark(line + 1)) {
                     if (getLineText(line + 1).isBlank()) {
-                        removeLineBookmark(getLineIDInCurrentTab(line + 1));                        
+                        removeLineBookmark(getLineIDInCurrentTab(line + 1));
                     } else {
-                        removeLineBookmark(getLineIDInCurrentTab(line));                        
+                        removeLineBookmark(getLineIDInCurrentTab(line));
                     }
                 }
             }
-            
+
         } else if (keyCode == KeyEvent.VK_BACK_SPACE) { // let's deal with bookmarks deletion here
             if (bookmarkedLines.isEmpty())
                 return false;
@@ -270,9 +261,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                     int lineIndent = 0;
                     int brace = getSmartCodeTextArea().getMatchingBraceLine(line, true);
                     if (brace != -1) {
-                        lineIndent = getSmartCodeTextArea().getLineIndentation(brace) + TAB_SIZE;                        
+                        lineIndent = getSmartCodeTextArea().getLineIndentation(brace) + TAB_SIZE;
                     }
-                    
+
                     String lineText = getLineText(line);
                     if (lineText.isBlank() && lineText.length() <= lineIndent) {
                         removeLineBookmark(getCurrentLineID());
@@ -362,6 +353,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
         // if none of the above, then insert a new line
         insertNewLine(caret);
+        errorColumn.repaint();
     }
 
     private void splitString(int caretLine) {
@@ -455,7 +447,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             stopCompoundEdit();
             return;
         }
-        
+
         if (INDENT) {
             int line = textarea.getLineOfOffset(offset);
             String lineText = getLineText(line);
@@ -1018,7 +1010,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         bookmarkedLines.add(new LineBookmark(this, lineID));
         bookmarkedLines.sort(null);
         errorColumn.repaint();
-        System.out.println("bookmarks: " + bookmarkedLines.size());
     }
 
     protected void removeLineBookmark(LineID lineID) {
@@ -1027,12 +1018,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         if (bm != null) {
             bm.dispose();
             bookmarkedLines.remove(bm);
-            errorColumn.repaint();
             // repaint current line if it's on this line
             if (currentLine != null && currentLine.getLineID().equals(lineID)) {
                 currentLine.paint();
             }
-            System.out.println("bookmarks: " + bookmarkedLines.size());
+            errorColumn.repaint();
         }
     }
 
@@ -1041,7 +1031,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     public boolean isLineBookmark(LineID lineID) {
-        for (LineBookmark bm : bookmarkedLines) {
+        for (LineMarker lm : bookmarkedLines) {
+            LineBookmark bm = (LineBookmark) lm;
             if (bm.isOnLine(lineID)) {
                 return true;
             }
@@ -1050,7 +1041,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     protected LineBookmark getLineBookmark(LineID lineID) {
-        for (LineBookmark bm : bookmarkedLines) {
+        for (LineMarker lm : bookmarkedLines) {
+            LineBookmark bm = (LineBookmark) lm;
             if (bm.isOnLine(lineID)) {
                 return bm;
             }
@@ -1069,15 +1061,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     public List<LineBookmark> getBookmarkedLines() {
-        return bookmarkedLines;
+        return bookmarkedLines.stream().map(bm -> (LineBookmark) bm).collect(Collectors.toList());
     }
 
     public void stopBookmarkTracking() {
-        bookmarkedLines.forEach(LineBookmark::stopTracking);
+        bookmarkedLines.forEach(bm -> ((LineBookmark) bm).stopTracking());
     }
 
     public void startBookmarkTracking() {
-        bookmarkedLines.forEach(bm -> bm.startTracking());
+        bookmarkedLines.forEach(bm -> ((LineBookmark) bm).startTracking());
     }
 
     @Override
@@ -1086,11 +1078,45 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         // send information to SmartCodeTextAreaPainter.paintLeftGutter()
         // to paint these lines
         if (bookmarkedLines != null) {
-            for (LineBookmark bm : bookmarkedLines) {
+            for (LineMarker lm : bookmarkedLines) {
+                LineBookmark bm = (LineBookmark) lm;
                 if (isInCurrentTab(bm.getLineID())) {
                     bm.paint();
                 }
             }
         }
+    }
+
+    @Override
+    public void highlight(int tabIndex, int startOffset, int stopOffset) {
+        // Switch to tab
+        toFront();
+        sketch.setCurrentCode(tabIndex);
+
+        // Make sure offsets are in bounds
+        int length = textarea.getDocumentLength();
+        startOffset = PApplet.constrain(startOffset, 0, length);
+        stopOffset = PApplet.constrain(stopOffset, 0, length);
+        
+        int firstLine = textarea.getFirstLine();
+
+        // Highlight the code
+        textarea.select(startOffset, stopOffset);
+
+        // Scroll to error line
+        int targetLine = textarea.getLineOfOffset(startOffset);
+        int visibleLines = textarea.getVisibleLines();
+
+        if (targetLine < firstLine) {
+            targetLine -= (visibleLines / 2);
+            if (targetLine <= 0)
+                targetLine = 0;
+        } else {
+            targetLine += (visibleLines / 2);
+            if (targetLine >= getLineCount())
+                targetLine = getLineCount() - 1;
+        }
+        textarea.scrollTo(targetLine, 0);
+        repaint();
     }
 }
