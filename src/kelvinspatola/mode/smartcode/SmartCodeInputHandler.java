@@ -4,7 +4,6 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import kelvinspatola.mode.smartcode.SmartCodeEditor.Selection;
 import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.syntax.PdeInputHandler;
@@ -36,6 +35,9 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         // for testing purposes
         addKeyBinding("C+B", e -> {
             nextBookmarker();
+        });
+        addKeyBinding("C+M", e -> {
+            System.out.println("teste");
         });
 
         listeners = new ArrayList<>();

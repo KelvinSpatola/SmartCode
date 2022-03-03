@@ -19,6 +19,7 @@ import javax.swing.KeyStroke;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 
+import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import kelvinspatola.mode.smartcode.ui.LineMarker;
 import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
@@ -41,7 +42,10 @@ import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
-    static private boolean helloMessageViewed = false;
+    protected CodeOccurrences occurrences;
+    
+    static private boolean helloMessageViewed;
+    
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -60,6 +64,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         editorPanel.add(errorColumn, BorderLayout.EAST);
         textarea.setBounds(0, 0, errorColumn.getX() - 1, textarea.getHeight());
         editorPanel.add(textarea);
+        
+        occurrences = new CodeOccurrences(this, preprocService);
+        textarea.addCaretListener(occurrences);
     }
 
     private void printHelloMessage() {
@@ -545,7 +552,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     protected static String refactorStringLiterals(String text) {
-        int maxLength = SmartCodePreferences.AUTOFORMAT_LINE_LENGTH;
+        int maxLength = SmartCodePreferences.AUTOFORMAT_STRINGS_LENGTH;
 
         // Concatenate every multiline split-string into a single one-line string before
         // doing anything else.
@@ -1119,4 +1126,18 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         textarea.scrollTo(targetLine, 0);
         repaint();
     }
+
+    /****************
+     * 
+     * CODE OCCURRENCES
+     * 
+     */
+    
+    public List<LineMarker> getOccurrences() {
+        return occurrences.getOccurrences();
+    } 
+    
+    public boolean hasOccurrences() {
+        return occurrences.getOccurrences().size() > 0;
+    } 
 }

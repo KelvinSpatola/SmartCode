@@ -9,6 +9,7 @@ import java.util.Deque;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
+import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import processing.app.syntax.TextAreaDefaults;
 import processing.mode.java.JavaEditor;
 import processing.mode.java.JavaTextArea;
@@ -31,8 +32,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
         // default behaviour for the textarea in regards to TAB and ENTER key
         inputHandler.addKeyListener((SmartCodeEditor) editor);
-
-        setInputHandler(inputHandler);
+        setInputHandler(inputHandler);  
     }
 
     @Override
@@ -43,7 +43,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     public SmartCodeTextAreaPainter getSmartCodePainter() {
         return (SmartCodeTextAreaPainter) painter;
     }
-
+    
     @Override
     public void paste() {
         if (editable) {
@@ -397,4 +397,5 @@ public class SmartCodeTextArea extends JavaTextArea {
             return "";
         return String.format("%1$" + length + "s", "");
     }
+
 }

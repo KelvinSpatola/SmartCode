@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import processing.app.Problem;
 import processing.app.syntax.PdeTextArea;
 import processing.app.ui.Editor;
@@ -23,6 +24,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     private Color errorColor;
     private Color warningColor;
     private Color bookmarkColor;
+    private Color occurrenceColor;
 
     private final int lineHeight;
 
@@ -47,9 +49,13 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
 
     @Override
     protected void updateTheme() {
-        errorColor = Theme.getColor("editor.column.error.color");
-        warningColor = Theme.getColor("editor.column.warning.color");
-        bookmarkColor = new Color(255, 255, 0);
+//        errorColor = Theme.getColor("editor.column.error.color");
+//        warningColor = Theme.getColor("editor.column.warning.color");
+//        bookmarkColor = new Color(255, 255, 0);
+        bookmarkColor = SmartCodePreferences.COLUMN_BOOKMARK_COLOR;
+        errorColor = SmartCodePreferences.COLUMN_ERROR_COLOR;
+        occurrenceColor = SmartCodePreferences.COLUMN_OCCURRENCE_COLOR;
+        warningColor = SmartCodePreferences.COLUMN_WARNING_COLOR;
     }
     
     @Override
@@ -78,7 +84,8 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
                     g.setColor(warningColor);
                 }
                 int y = lineToY(lm.getLine() + 1);
-                g.drawRect(2, y, getWidth() - 4, 2);
+                g.fillRect(1, y, getWidth() - 2, 2);
+//                g.drawRect(2, y, getWidth() - 4, 2);
             }
         }
 
@@ -86,7 +93,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
             if (currentTabIndex == lm.getTabIndex()) {
                 int y = lineToY(lm.getLine() + 1);
                 g.setColor(bookmarkColor);
-                g.drawRect(2, y, getWidth() - 4, 2);
+                g.drawRect(1, y, getWidth() - 2, 2);
             }
         }
     }

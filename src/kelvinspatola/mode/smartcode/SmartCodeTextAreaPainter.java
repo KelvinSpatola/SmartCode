@@ -14,10 +14,13 @@ import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.swing.event.CaretEvent;
+import javax.swing.event.CaretListener;
 import javax.swing.text.Segment;
 import javax.swing.text.Utilities;
 
 import kelvinspatola.mode.smartcode.completion.Snippet;
+import kelvinspatola.mode.smartcode.ui.LineMarker;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextArea;
 import processing.app.syntax.TextAreaDefaults;
@@ -28,7 +31,8 @@ import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<Painter> painters = new ArrayList<>();
-    protected Color bookmarkLineColor = new Color(255, 0, 0, 60);//SmartCodePreferences.BOOKMARK_LINE_COLOR;
+    protected Color occurrencesColor = SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR;
+    protected Color bookmarkLineColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR;
     protected Color bookmarkIconColor;
 
     
@@ -113,38 +117,60 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    abstract static class Painter {
-        abstract boolean canPaint(Graphics gfx, int line, int y);
+    interface Painter {
+        boolean canPaint(Graphics gfx, int line, int y);
     }
 
-    class Occurrences extends Painter {
+    class Occurrences implements Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
-            if (textArea.isSelectionActive()) {
-                String selection = textArea.getSelectedText();
+            if (SmartCodePreferences.OCCURRENCES_HIGHLIGHT && getSmartCodeEditor().hasOccurrences()) {
+                for (LineMarker occurrence : getSmartCodeEditor().getOccurrences()) {
+                    if (occurrence.getLine() == line) {      
+                        int lineStartOffset = textArea.getLineStartOffset(line);
+                        int wordStart = occurrence.getStartOffset() - lineStartOffset;
+                        int wordEnd = occurrence.getStopOffset() - lineStartOffset;
+                        
+                        int x = textArea._offsetToX(line, wordStart);
+                        y += getLineDisplacement(); // TODO: corrigir isto
+                        int w = textArea._offsetToX(line, wordEnd) - x;
+                        int h = fontMetrics.getHeight();
 
-                String lineText = textArea.getLineText(line);
-                boolean hasText = lineText.contains(selection);
-
-                if (hasText) {
-                    int x1 = lineText.indexOf(selection);
-                    int x2 = x1 + selection.length();
-
-                    int x = textArea._offsetToX(line, x1);
-                    y += getLineDisplacement();
-                    int w = textArea._offsetToX(line, x2) - x;
-                    int h = fontMetrics.getHeight();
-
-                    gfx.setColor(defaults.lineHighlightColor);
-                    gfx.fillRect(x, y, w, h);
+                        gfx.setColor(new Color(165, 205, 255));
+                        gfx.fillRect(x, y, w, h);
+                    }
                 }
                 return true;
             }
             return false;
         }
+//        @Override
+//        public boolean canPaint(Graphics gfx, int line, int y) {
+//            if (SmartCodePreferences.OCCURRENCES_HIGHLIGHT && textArea.isSelectionActive()) {
+//                String selection = textArea.getSelectedText();
+//                
+//                String lineText = textArea.getLineText(line);
+//                boolean hasText = lineText.contains(selection);
+//                
+//                if (hasText) {
+//                    int x1 = lineText.indexOf(selection);
+//                    int x2 = x1 + selection.length();
+//                    
+//                    int x = textArea._offsetToX(line, x1);
+//                    y += getLineDisplacement();
+//                    int w = textArea._offsetToX(line, x2) - x;
+//                    int h = fontMetrics.getHeight();
+//                    
+//                    gfx.setColor(occurrencesColor);
+//                    gfx.fillRect(x, y, w, h);
+//                }
+//                return true;
+//            }
+//            return false;
+//        }
     }
 
-    class SnippetMarker extends Painter {
+    class SnippetMarker implements Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
             if (isReading && line == textArea.getCaretLine()) {
@@ -162,10 +188,10 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    class Bookmarks extends Painter {
+    class Bookmarks implements Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
-            if (SmartCodePreferences.BOOKMARK_HIGHLIGHT && !getEditor().isDebuggerEnabled()
+            if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT && !getEditor().isDebuggerEnabled()
                     && getSmartCodeEditor().isLineBookmark(line)) {
                 y += getLineDisplacement();
                 gfx.setColor(bookmarkLineColor);
@@ -217,7 +243,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
             } else if (text.equals(PIN_MARKER)) {
                 gfx.setColor(bookmarkIconColor);
-                float w = 9f;
+                float w = 8f;
                 float xx = Editor.LEFT_GUTTER - Editor.GUTTER_MARGIN - w;
                 float h = w * 1.4f;
                 float yy = y + (fontMetrics.getHeight() - h) / 2;
@@ -272,4 +298,5 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         path.closePath();
         g2.fill(path);
     }
+
 }
