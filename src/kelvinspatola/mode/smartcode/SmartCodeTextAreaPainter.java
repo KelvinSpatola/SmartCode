@@ -35,7 +35,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected Color bookmarkLineColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR;
     protected Color bookmarkIconColor;
 
-    
     public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
@@ -65,7 +64,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             }
         };
 
-        // Handle mouse clicks to toggle line pins
+        // Handle mouse clicks to toggle line bookmarks
         addMouseListener(new MouseAdapter() {
             long lastTime; // OS X seems to be firing multiple mouse events
 
@@ -84,7 +83,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             }
         });
     }
-    
+
     @Override
     protected void updateTheme() {
         super.updateTheme();
@@ -121,53 +120,35 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         boolean canPaint(Graphics gfx, int line, int y);
     }
 
+    public static float delta;
+
     class Occurrences implements Painter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y) {
             if (SmartCodePreferences.OCCURRENCES_HIGHLIGHT && getSmartCodeEditor().hasOccurrences()) {
+                delta++;
+                if (delta < 10000)
+                    return false;
+
+                int currentTabIndex = getSmartCodeEditor().getSketch().getCurrentCodeIndex();
                 for (LineMarker occurrence : getSmartCodeEditor().getOccurrences()) {
-                    if (occurrence.getLine() == line) {      
+                    if (occurrence.getTabIndex() == currentTabIndex && occurrence.getLine() == line) {
                         int lineStartOffset = textArea.getLineStartOffset(line);
                         int wordStart = occurrence.getStartOffset() - lineStartOffset;
                         int wordEnd = occurrence.getStopOffset() - lineStartOffset;
-                        
                         int x = textArea._offsetToX(line, wordStart);
-                        y += getLineDisplacement(); // TODO: corrigir isto
                         int w = textArea._offsetToX(line, wordEnd) - x;
                         int h = fontMetrics.getHeight();
 
-                        gfx.setColor(new Color(165, 205, 255));
-                        gfx.fillRect(x, y, w, h);
+                        gfx.setColor(new Color(190, 220, 255));
+                        gfx.fillRect(x, y + getLineDisplacement(), w, h);
                     }
                 }
                 return true;
             }
+            delta = 0;
             return false;
         }
-//        @Override
-//        public boolean canPaint(Graphics gfx, int line, int y) {
-//            if (SmartCodePreferences.OCCURRENCES_HIGHLIGHT && textArea.isSelectionActive()) {
-//                String selection = textArea.getSelectedText();
-//                
-//                String lineText = textArea.getLineText(line);
-//                boolean hasText = lineText.contains(selection);
-//                
-//                if (hasText) {
-//                    int x1 = lineText.indexOf(selection);
-//                    int x2 = x1 + selection.length();
-//                    
-//                    int x = textArea._offsetToX(line, x1);
-//                    y += getLineDisplacement();
-//                    int w = textArea._offsetToX(line, x2) - x;
-//                    int h = fontMetrics.getHeight();
-//                    
-//                    gfx.setColor(occurrencesColor);
-//                    gfx.fillRect(x, y, w, h);
-//                }
-//                return true;
-//            }
-//            return false;
-//        }
     }
 
     class SnippetMarker implements Painter {
@@ -266,13 +247,12 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
     static private void drawBookmark(Graphics g, float x, float y, float w, float h) {
         Graphics2D g2 = (Graphics2D) g;
-        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         GeneralPath path = new GeneralPath();
         path.moveTo(x, y);
         path.lineTo(x + w, y);
         path.lineTo(x + w, y + h);
-        path.lineTo(x + w/2, y + h * 0.65f);
+        path.lineTo(x + w / 2, y + h * 0.65f);
         path.lineTo(x, y + h);
         path.closePath();
         g2.fill(path);

@@ -1,6 +1,8 @@
 package kelvinspatola.mode.smartcode.ui;
 
 public interface LineMarker {
+    Class<?> getParent();
+    
     int getTabIndex();
 
     int getLine();

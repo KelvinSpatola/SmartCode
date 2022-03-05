@@ -83,4 +83,8 @@ public class LineBookmark implements LineMarker, Comparable<LineBookmark> {
     public String getText() {
         return editor.getLineText(getLine());
     }
+    
+    public Class<?> getParent() {
+        return this.getClass();
+    }
 }

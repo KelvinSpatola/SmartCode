@@ -60,7 +60,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         // remove the text area temporarily
         editorPanel.remove(1);
         editorPanel.setLayout(new BorderLayout());
-        errorColumn = new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height, bookmarkedLines);
+        errorColumn = new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height);
         editorPanel.add(errorColumn, BorderLayout.EAST);
         textarea.setBounds(0, 0, errorColumn.getX() - 1, textarea.getHeight());
         editorPanel.add(textarea);
@@ -1016,7 +1016,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected void addLineBookmark(LineID lineID) {
         bookmarkedLines.add(new LineBookmark(this, lineID));
         bookmarkedLines.sort(null);
-        errorColumn.repaint();
+        updateColumnPoints(bookmarkedLines, LineBookmark.class);
     }
 
     protected void removeLineBookmark(LineID lineID) {
@@ -1029,7 +1029,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             if (currentLine != null && currentLine.getLineID().equals(lineID)) {
                 currentLine.paint();
             }
-            errorColumn.repaint();
+            updateColumnPoints(bookmarkedLines, LineBookmark.class);
         }
     }
 
@@ -1092,6 +1092,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
         }
+        errorColumn.repaint();
     }
 
     @Override
@@ -1140,4 +1141,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public boolean hasOccurrences() {
         return occurrences.getOccurrences().size() > 0;
     } 
+    
+    public void updateColumnPoints(List<LineMarker> points, Class<?> parent) {
+        ((SmartCodeMarkerColumn) errorColumn).updatePoints(points, parent);
+    }
 }

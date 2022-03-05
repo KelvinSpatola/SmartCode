@@ -11,16 +11,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import kelvinspatola.mode.smartcode.SmartCodePreferences;
+import kelvinspatola.mode.smartcode.ui.CodeOccurrences.Occurrence;
 import processing.app.Problem;
 import processing.app.syntax.PdeTextArea;
 import processing.app.ui.Editor;
 import processing.app.ui.MarkerColumn;
-import processing.app.ui.Theme;
 import processing.core.PApplet;
 
 public class SmartCodeMarkerColumn extends MarkerColumn {
-    private List<LineMarker> errors = new ArrayList<>();
-    private List<LineMarker> bookmarks = new ArrayList<>();
+    private List<LineMarker> allMarkers = new ArrayList<>();
     private Color errorColor;
     private Color warningColor;
     private Color bookmarkColor;
@@ -28,9 +27,8 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
 
     private final int lineHeight;
 
-    public SmartCodeMarkerColumn(Editor editor, int height, List<LineMarker> bookmarks) {
+    public SmartCodeMarkerColumn(Editor editor, int height) {
         super(editor, height);
-        this.bookmarks = bookmarks;
 
         updateTheme();
         lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
@@ -57,43 +55,58 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         occurrenceColor = SmartCodePreferences.COLUMN_OCCURRENCE_COLOR;
         warningColor = SmartCodePreferences.COLUMN_WARNING_COLOR;
     }
-    
+
     @Override
     public void updateErrorPoints(final List<Problem> problems) {
-        errors = problems.stream().map(ErrorsAndWarnings::new).collect(Collectors.toList());
+        List<LineMarker> errors = problems.stream().map(ErrorsAndWarnings::new).collect(Collectors.toList());
+        updatePoints(errors, ErrorsAndWarnings.class);
+    }
+
+    public void updatePoints(List<LineMarker> points, Class<?> parent) {
+        if (points == null)
+            return;
+        
+        for (int i = allMarkers.size() - 1; i >= 0; i--) {
+            if (allMarkers.get(i).getParent() == parent) {
+                allMarkers.remove(i);
+            }
+        }
+
+        allMarkers.addAll(points);
         repaint();
     }
-    
+
     @Override
     public void paintComponent(Graphics g) {
         PdeTextArea pta = editor.getPdeTextArea();
         if (pta != null) {
             g.drawImage(pta.getGutterGradient(), 0, 0, getWidth(), getHeight(), this);
         }
-        
+
         if (editor.isDebuggerEnabled())
             return;
 
         int currentTabIndex = editor.getSketch().getCurrentCodeIndex();
 
-        for (LineMarker lm : errors) {
+        for (LineMarker lm : allMarkers) {
             if (currentTabIndex == lm.getTabIndex()) {
-                if (((ErrorsAndWarnings) lm).problem.isError()) {
-                    g.setColor(errorColor);
-                } else {
-                    g.setColor(warningColor);
-                }
                 int y = lineToY(lm.getLine() + 1);
-                g.fillRect(1, y, getWidth() - 2, 2);
-//                g.drawRect(2, y, getWidth() - 4, 2);
-            }
-        }
 
-        for (LineMarker lm : bookmarks) {
-            if (currentTabIndex == lm.getTabIndex()) {
-                int y = lineToY(lm.getLine() + 1);
-                g.setColor(bookmarkColor);
-                g.drawRect(1, y, getWidth() - 2, 2);
+                if (lm.getParent() == ErrorsAndWarnings.class) {
+                    boolean isError = ((ErrorsAndWarnings) lm).problem.isError();
+                    g.setColor(isError ? errorColor : warningColor);
+                    g.fillRect(1, y, getWidth() - 2, 2);
+
+                } else if (lm.getParent() == Occurrence.class) {
+                    g.setColor(occurrenceColor);
+                    g.fillRect(1, y, getWidth() - 2, 2);
+
+                } else if (lm.getParent() == LineBookmark.class) {
+                    g.setColor(bookmarkColor);
+                    g.drawRect(1, y, getWidth() - 2, 2);
+
+                }
+
             }
         }
     }
@@ -110,33 +123,22 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         }
         return (int) PApplet.map(line, 1, lineCount, top, bottom);
     }
+    
 
     private LineMarker findClosestMarker(final int mouseY) {
-        List<LineMarker> candidates = new ArrayList<>();
-        int currentTabIndex = editor.getSketch().getCurrentCodeIndex();
-
-        for (LineMarker lm : errors) {
-            if (lm.getTabIndex() == currentTabIndex) {
-                candidates.add(lm);
-            }
-        }
-
-        for (LineMarker lm : bookmarks) {
-            if (lm.getTabIndex() == currentTabIndex) {
-                candidates.add(lm);
-            }
-        }
-
         LineMarker closest = null;
         int closestDist = Integer.MAX_VALUE;
+        int currentTabIndex = editor.getSketch().getCurrentCodeIndex();
 
-        for (LineMarker lm : candidates) {
-            int y = lineToY(lm.getLine() + 1);
+        for (LineMarker lm : allMarkers) {
+            if (lm.getTabIndex() == currentTabIndex) {
+                int y = lineToY(lm.getLine() + 1);
 
-            int dist = Math.abs(mouseY - y);
-            if (dist < 3 && dist < closestDist) {
-                closest = lm;
-                closestDist = dist;
+                int dist = Math.abs(mouseY - y);
+                if (dist < 3 && dist < closestDist) {
+                    closest = lm;
+                    closestDist = dist;
+                }
             }
         }
         return closest;
@@ -196,6 +198,9 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         public String getText() {
             return problem.getMessage();
         }
+        
+        public Class<?> getParent() {
+            return this.getClass();
+        }
     }
-    
 }

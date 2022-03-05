@@ -25,6 +25,7 @@
 	</classpathentry>
 	<classpathentry kind="lib" path="C:/Users/kelvi/OneDrive/Coding/Eclipse-Workspace/SmartCode/lib/org.eclipse.jdt.core.jar">
 		<attributes>
+			<attribute name="javadoc_location" value="https://www.ibm.com/docs/api/v1/content/SS5JSH_9.5.0/org.eclipse.jdt.doc.isv/reference/api/org/eclipse/jdt/core/dom/package-summary.html"/>
 			<attribute name="module" value="true"/>
 		</attributes>
 	</classpathentry>
