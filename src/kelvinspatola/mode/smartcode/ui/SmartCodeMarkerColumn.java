@@ -124,7 +124,6 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         return (int) PApplet.map(line, 1, lineCount, top, bottom);
     }
     
-
     private LineMarker findClosestMarker(final int mouseY) {
         LineMarker closest = null;
         int closestDist = Integer.MAX_VALUE;

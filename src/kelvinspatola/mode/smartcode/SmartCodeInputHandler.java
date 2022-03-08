@@ -37,7 +37,8 @@ public class SmartCodeInputHandler extends PdeInputHandler {
             nextBookmarker();
         });
         addKeyBinding("C+M", e -> {
-            System.out.println("teste");
+            System.out.println(Platform.getContentFile("modes/java/keywords.txt"));
+            System.out.println(editor.getMode().getReferenceFolder());
         });
 
         listeners = new ArrayList<>();

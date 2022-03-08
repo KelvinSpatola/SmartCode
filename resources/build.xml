@@ -98,8 +98,8 @@ ${line}
         <copy todir="${project.bundle}/theme">
             <fileset dir="${processing.java.theme}" />
         </copy>
-
-        <copy file="${processing.java.keywords}" todir="${project.bundle}" />
+    	
+        <antcall target="generate.references"><param name="folder" value="${project.bundle}"/></antcall>
     </target>
 
     	
@@ -142,6 +142,12 @@ ${line}
         <copy file="${project.resources}/mode.properties" todir="${install.dest}" />
         <antcall target="parse.file"><param name="file" value="${install.dest}/mode.properties"/></antcall>
 	</target>	
+	
+	
+	<target name="generate.references" if="is.normal">
+		<echo message="Unzipping file ${file}" />
+		<unzip src="${processing.java.reference}" dest="${folder}" />
+	</target>
     
 	
     <target name="generate.distribution" if="is.normal">

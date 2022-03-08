@@ -128,6 +128,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             if (SmartCodePreferences.OCCURRENCES_HIGHLIGHT && getSmartCodeEditor().hasOccurrences()) {
                 delta++;
                 if (delta < 10000)
+                    if (delta < 10000)
                     return false;
 
                 int currentTabIndex = getSmartCodeEditor().getSketch().getCurrentCodeIndex();

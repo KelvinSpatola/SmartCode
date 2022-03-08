@@ -13,6 +13,7 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
 
@@ -76,44 +77,47 @@ public class CodeOccurrences implements CaretListener {
     private void handleCollectOccurrences(PreprocSketch ps, int startTabOffset, int stopTabOffset) {
         occurrences.clear();
         SmartCodeTextAreaPainter.delta = 0;
-        
+
         // Map offsets
         int tab = editor.getSketch().getCurrentCodeIndex();
         int startJavaOffset = ps.tabOffsetToJavaOffset(tab, startTabOffset);
         int stopJavaOffset = ps.tabOffsetToJavaOffset(tab, stopTabOffset);
 
         CompilationUnit root = ps.compilationUnit;
-        SimpleName name = ASTUtils.getSimpleNameAt(root, startJavaOffset, stopJavaOffset);        
+        SimpleName name = ASTUtils.getSimpleNameAt(root, startJavaOffset, stopJavaOffset);
         if (name == null) {
             return;
         }
 
         // Find binding
         IBinding binding = ASTUtils.resolveBinding(name);
-        System.err.println("name: " + binding.getName() + " - type: " + getBindingTypeLabel(binding));
-
-        if (binding.getKind() == IBinding.METHOD) {
-            IMethodBinding method = (IMethodBinding) binding;
-            System.err.println("parent: " + method.getDeclaringClass().getName());
-            System.err.println("params: " + method.getParameterTypes());
-            System.err.println("return: " + method.getReturnType().getName());
-        }
+//        System.err.println("name: " + binding.getName() + " - type: " + getBindingTypeLabel(binding));
+//
+//        if (binding.getKind() == IBinding.METHOD) {
+//            IMethodBinding method = (IMethodBinding) binding;
+//            System.out.println("parent: " + method.getDeclaringClass().getName());
+//            System.out.print("params: ");                
+//            for(ITypeBinding type : method.getParameterTypes()) {
+//                System.out.print(type.getName() + ", ");                
+//            }
+//            System.out.println("\nreturn: " + method.getReturnType().getName());
+//        }
 
         List<SketchInterval> intervals = findAllOccurrences(root, binding.getKey()).stream().map(ps::mapJavaToSketch)
                 .collect(Collectors.toList());
 
-        for (SketchInterval in : intervals) {
+        for (SketchInterval si : intervals) {
             try {
-                final Field tabIndexInterval = in.getClass().getDeclaredField("tabIndex");
+                final Field tabIndexInterval = si.getClass().getDeclaredField("tabIndex");
                 tabIndexInterval.setAccessible(true);
-                final Field startTabOffsetInterval = in.getClass().getDeclaredField("startTabOffset");
+                final Field startTabOffsetInterval = si.getClass().getDeclaredField("startTabOffset");
                 startTabOffsetInterval.setAccessible(true);
-                final Field stopTabOffsetInterval = in.getClass().getDeclaredField("stopTabOffset");
+                final Field stopTabOffsetInterval = si.getClass().getDeclaredField("stopTabOffset");
                 stopTabOffsetInterval.setAccessible(true);
 
-                int tabIndex = (Integer) tabIndexInterval.get(in);
-                int startOffset = (Integer) startTabOffsetInterval.get(in);
-                int stopOffset = (Integer) stopTabOffsetInterval.get(in);
+                int tabIndex = (Integer) tabIndexInterval.get(si);
+                int startOffset = (Integer) startTabOffsetInterval.get(si);
+                int stopOffset = (Integer) stopTabOffsetInterval.get(si);
                 int line = editor.getTextArea().getLineOfOffset(startOffset);
 
                 occurrences.add(new Occurrence(tabIndex, line, startOffset, stopOffset, name.toString()));
@@ -124,7 +128,7 @@ public class CodeOccurrences implements CaretListener {
         }
     }
 
-    static List<SimpleName> findAllOccurrences(ASTNode root, String bindingKey) {
+    static private List<SimpleName> findAllOccurrences(ASTNode root, String bindingKey) {
         List<SimpleName> occurrences = new ArrayList<>();
         root.getRoot().accept(new ASTVisitor() {
             @Override
@@ -159,12 +163,10 @@ public class CodeOccurrences implements CaretListener {
         return Character.isLetterOrDigit(code.charAt(offset));
     }
 
-    private String getBindingTypeLabel(IBinding binding) {
-        String bindingType = "";
+    static private String getBindingTypeLabel(IBinding binding) {
         switch (binding.getKind()) {
         case IBinding.METHOD:
-            IMethodBinding method = (IMethodBinding) binding;
-            if (method.isConstructor())
+            if (((IMethodBinding) binding).isConstructor())
                 return "Constructor";
             return "Method";
         case IBinding.TYPE:

@@ -24,6 +24,7 @@ public class SmartCodeMode extends JavaMode {
         SmartCodePreferences.init();
 
         examplesFolder = Platform.getContentFile("modes/java/examples");
+//        referenceFolder = Platform.getContentFile("modes/java/");
         dataFolder = getContentFile("data");
         loadSnippetsFile();
     }
@@ -41,6 +42,11 @@ public class SmartCodeMode extends JavaMode {
     @Override
     public Editor createEditor(Base base, String path, EditorState state) throws EditorException {
         return new SmartCodeEditor(base, path, state, this);
+    }
+
+    @Override
+    public File[] getKeywordFiles() {
+        return new File[] { Platform.getContentFile("modes/java/keywords.txt") };
     }
 
     public File checkTemplateFolder() {
