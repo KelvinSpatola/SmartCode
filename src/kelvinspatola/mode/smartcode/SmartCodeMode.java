@@ -24,7 +24,6 @@ public class SmartCodeMode extends JavaMode {
         SmartCodePreferences.init();
 
         examplesFolder = Platform.getContentFile("modes/java/examples");
-//        referenceFolder = Platform.getContentFile("modes/java/");
         dataFolder = getContentFile("data");
         loadSnippetsFile();
     }

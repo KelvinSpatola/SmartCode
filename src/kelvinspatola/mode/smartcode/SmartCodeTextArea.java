@@ -7,9 +7,13 @@ import java.awt.datatransfer.DataFlavor;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
+
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
+import processing.app.SketchCode;
 import processing.app.syntax.TextAreaDefaults;
 import processing.mode.java.JavaEditor;
 import processing.mode.java.JavaTextArea;
@@ -32,7 +36,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
         // default behaviour for the textarea in regards to TAB and ENTER key
         inputHandler.addKeyListener((SmartCodeEditor) editor);
-        setInputHandler(inputHandler);  
+        setInputHandler(inputHandler);
     }
 
     @Override
@@ -43,7 +47,33 @@ public class SmartCodeTextArea extends JavaTextArea {
     public SmartCodeTextAreaPainter getSmartCodePainter() {
         return (SmartCodeTextAreaPainter) painter;
     }
-    
+
+    public int getLineStartOffset(int tabIndex, int line) {
+        SketchCode code = editor.getSketch().getCode(tabIndex);
+        Element lineElement = code.getDocument().getDefaultRootElement().getElement(line);
+        return (lineElement == null) ? -1 : lineElement.getStartOffset();
+    }
+
+    public int getLineStopOffset(int tabIndex, int line) {
+        SketchCode code = editor.getSketch().getCode(tabIndex);
+        Element lineElement = code.getDocument().getDefaultRootElement().getElement(line);
+        return (lineElement == null) ? -1 : lineElement.getEndOffset();
+    }
+
+    public String getLineText(int tabIndex, int line) {
+        int start = getLineStartOffset(tabIndex, line);
+        int len = getLineStopOffset(tabIndex, line) - start - 1;
+
+        try {
+            SketchCode code = editor.getSketch().getCode(tabIndex);
+            return code.getDocument().getText(start, len);
+
+        } catch (BadLocationException bl) {
+            bl.printStackTrace();
+            return null;
+        }
+    }
+
     @Override
     public void paste() {
         if (editable) {
@@ -135,7 +165,6 @@ public class SmartCodeTextArea extends JavaTextArea {
             }
         }
     }
-
 
     static public int getLineIndentation(String lineText) {
         char[] chars = lineText.toCharArray();

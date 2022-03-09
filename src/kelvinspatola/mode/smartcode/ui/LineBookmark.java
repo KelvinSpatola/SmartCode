@@ -71,17 +71,17 @@ public class LineBookmark implements LineMarker, Comparable<LineBookmark> {
 
     @Override
     public int getStartOffset() {
-        return editor.getLineStartOffset(getLine());
+        return editor.getSmartCodeTextArea().getLineStartOffset(getTabIndex(), getLine());
     }
     
     @Override
     public int getStopOffset() {
-        return editor.getLineStopOffset(getLine()) - 1;
+        return editor.getSmartCodeTextArea().getLineStopOffset(getTabIndex(), getLine()) - 1;
     }
     
     @Override
     public String getText() {
-        return editor.getLineText(getLine());
+        return editor.getSmartCodeTextArea().getLineText(getTabIndex(), getLine());
     }
     
     public Class<?> getParent() {

@@ -8,8 +8,10 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import javax.swing.JComponent;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -18,10 +20,13 @@ import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import kelvinspatola.mode.smartcode.ui.LineMarker;
+import kelvinspatola.mode.smartcode.ui.ShowBookmarks;
 import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
 import processing.app.Base;
 import processing.app.Language;
@@ -43,13 +48,16 @@ import processing.mode.java.debug.LineID;
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     protected CodeOccurrences occurrences;
-    
+
+    protected ShowBookmarks showBookmarks;
+
     static private boolean helloMessageViewed;
-    
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
         super(base, path, state, mode);
+
+        showBookmarks = new ShowBookmarks(this, bookmarkedLines);
 
         buildMenu();
         buildPopupMenu();
@@ -64,7 +72,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         editorPanel.add(errorColumn, BorderLayout.EAST);
         textarea.setBounds(0, 0, errorColumn.getX() - 1, textarea.getHeight());
         editorPanel.add(textarea);
-        
+
         occurrences = new CodeOccurrences(this, preprocService);
         textarea.addCaretListener(occurrences);
     }
@@ -111,8 +119,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JMenu menu = new JMenu("SmartCode");
         List<JMenuItem> updatableItems = new ArrayList<>();
 
-        createItem(menu, "Add line bookmark", null, () -> toggleLineBookmark(textarea.getCaretLine()));
-
+        JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Duplicate lines up", "CA+UP", () -> duplicateLines(true));
         createItem(menu, "Duplicate lines down", "CA+DOWN", () -> duplicateLines(false));
@@ -134,12 +141,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
 
         menu.addSeparator(); // ---------------------------------------------
-        createItem(menu, "Visit GitHub page", null, () -> Platform.openURL("https://github.com/KelvinSpatola"));
+        createItem(menu, "Visit GitHub page", null,
+                () -> Platform.openURL("https://github.com/KelvinSpatola/SmartCode"));
 
         // Update state on selection/de-selection
         menu.addMenuListener(new MenuAdapter() {
             @Override
             public void menuSelected(MenuEvent e) {
+                showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
+
                 for (JMenuItem item : updatableItems) {
                     item.setEnabled(isSelectionActive());
                 }
@@ -155,20 +165,44 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     private void buildPopupMenu() {
         JPopupMenu popup = textarea.getRightClickPopup();
         JMenu submenu = new JMenu("SmartCode");
-        List<JMenuItem> updatableItems = new ArrayList<>();
-        createItem(submenu, "Add line bookmark", null, () -> toggleLineBookmark(textarea.getCaretLine()));
+
+        List<JMenuItem> selectableItems = new ArrayList<>();
+        Predicate<Integer> isBookmarked = line -> isLineBookmark(line);
 
         popup.addSeparator(); // ---------------------------------------------
-        updatableItems.add(createItem(submenu, "Format selected text", null, this::handleAutoFormat));
-        updatableItems.add(createItem(submenu, "Toggle block comment", null, this::toggleBlockComment));
-        updatableItems.add(createItem(submenu, "To upper case", null, () -> changeCase(true)));
-        updatableItems.add(createItem(submenu, "To lower case", null, () -> changeCase(false)));
+        JMenuItem lineBookmarkItem = createItem(popup, "", null, () -> toggleLineBookmark(textarea.getCaretLine()));
+        JMenuItem showBookmarksItem = createItem(popup, "Show bookmarks", null, showBookmarks::handleShowBookmarks); 
+
+        popup.addSeparator(); // ---------------------------------------------
+        selectableItems.add(createItem(submenu, "Format selected text", null, this::handleAutoFormat));
+        selectableItems.add(createItem(submenu, "Toggle block comment", null, this::toggleBlockComment));
+        selectableItems.add(createItem(submenu, "To upper case", null, () -> changeCase(true)));
+        selectableItems.add(createItem(submenu, "To lower case", null, () -> changeCase(false)));
+
+        popup.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent arg0) {
+            }
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent arg0) {
+            }
+
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent arg0) {
+                lineBookmarkItem.setText(
+                        isBookmarked.test(textarea.getCaretLine()) ? "Remove line bookmark" : "Add line bookmark");
+                
+                showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
+            }
+
+        });
 
         // Update state on selection/de-selection
         submenu.addMenuListener(new MenuAdapter() {
             @Override
             public void menuSelected(MenuEvent e) {
-                for (JMenuItem item : updatableItems) {
+                for (JMenuItem item : selectableItems) {
                     item.setEnabled(isSelectionActive());
                 }
             }
@@ -178,7 +212,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         popup.add(submenu);
     }
 
-    protected static JMenuItem createItem(JMenu menu, String title, String keyBinding, Runnable action) {
+    protected static JMenuItem createItem(JComponent menu, String title, String keyBinding, Runnable action) {
         JMenuItem item = new MenuItem(title);
         item.addActionListener(a -> action.run());
         if (keyBinding != null)
@@ -1017,6 +1051,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         bookmarkedLines.add(new LineBookmark(this, lineID));
         bookmarkedLines.sort(null);
         updateColumnPoints(bookmarkedLines, LineBookmark.class);
+        showBookmarks.updateTree();
     }
 
     protected void removeLineBookmark(LineID lineID) {
@@ -1030,6 +1065,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 currentLine.paint();
             }
             updateColumnPoints(bookmarkedLines, LineBookmark.class);
+            showBookmarks.updateTree();
         }
     }
 
@@ -1095,6 +1131,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         errorColumn.repaint();
     }
 
+    public void highlight(LineMarker lm) {
+        highlight(lm.getTabIndex(), lm.getStartOffset(), lm.getStopOffset());
+    }
+
     @Override
     public void highlight(int tabIndex, int startOffset, int stopOffset) {
         // Switch to tab
@@ -1105,7 +1145,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         int length = textarea.getDocumentLength();
         startOffset = PApplet.constrain(startOffset, 0, length);
         stopOffset = PApplet.constrain(stopOffset, 0, length);
-        
+
         int firstLine = textarea.getFirstLine();
 
         // Highlight the code
@@ -1128,20 +1168,26 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         repaint();
     }
 
+    @Override
+    public void dispose() {
+        showBookmarks.dispose();
+        super.dispose();
+    }
+
     /****************
      * 
      * CODE OCCURRENCES
      * 
      */
-    
+
     public List<LineMarker> getOccurrences() {
         return occurrences.getOccurrences();
-    } 
-    
+    }
+
     public boolean hasOccurrences() {
         return occurrences.getOccurrences().size() > 0;
-    } 
-    
+    }
+
     public void updateColumnPoints(List<LineMarker> points, Class<?> parent) {
         ((SmartCodeMarkerColumn) errorColumn).updatePoints(points, parent);
     }

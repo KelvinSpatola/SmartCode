@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences.Occurrence;
 import processing.app.Problem;
@@ -148,10 +149,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         try {
             LineMarker lm = findClosestMarker(mouseY);
             if (lm != null) {
-                int tab = lm.getTabIndex();
-                int start = lm.getStartOffset();
-                int stop = lm.getStopOffset();
-                editor.highlight(tab, start, stop);
+                ((SmartCodeEditor) editor).highlight(lm);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
