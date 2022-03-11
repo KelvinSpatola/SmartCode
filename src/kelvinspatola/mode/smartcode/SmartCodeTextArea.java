@@ -12,7 +12,6 @@ import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
-import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import processing.app.SketchCode;
 import processing.app.syntax.TextAreaDefaults;
 import processing.mode.java.JavaEditor;

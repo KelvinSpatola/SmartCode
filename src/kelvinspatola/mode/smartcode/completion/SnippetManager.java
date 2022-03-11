@@ -184,10 +184,4 @@ public class SnippetManager implements KeyListener, CaretListener {
             snippets.put(key, new Snippet(source.toString()));
         }
     }
-
-    static private void println(Object... what) {
-        for (Object s : what) {
-            System.out.println(s == null ? "null" : s.toString());
-        }
-    }
 }

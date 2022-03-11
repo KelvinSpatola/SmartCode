@@ -13,7 +13,6 @@ import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
 
@@ -163,7 +162,7 @@ public class CodeOccurrences implements CaretListener {
         return Character.isLetterOrDigit(code.charAt(offset));
     }
 
-    static private String getBindingTypeLabel(IBinding binding) {
+    static String getBindingTypeLabel(IBinding binding) {
         switch (binding.getKind()) {
         case IBinding.METHOD:
             if (((IMethodBinding) binding).isConstructor())

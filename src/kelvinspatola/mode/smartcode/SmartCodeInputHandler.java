@@ -4,11 +4,11 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.syntax.PdeInputHandler;
 import processing.app.ui.Editor;
-import processing.mode.java.JavaEditor;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeInputHandler extends PdeInputHandler {
@@ -34,7 +34,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
 
         // for testing purposes
         addKeyBinding("C+B", e -> {
-            nextBookmarker();
+            testing();
         });
         addKeyBinding("C+M", e -> {
             System.out.println(Platform.getContentFile("modes/java/keywords.txt"));
@@ -44,16 +44,14 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         listeners = new ArrayList<>();
     }
 
-    int index = 0;
-
-    void nextBookmarker() {
-        int length = ((SmartCodeEditor) editor).getBookmarkedLines().size();
-        if (length == 0)
-            return;
-
-        LineID lineID = ((SmartCodeEditor) editor).getBookmarkedLines().get(index).getLineID();
-        ((JavaEditor) editor).setCurrentLine(lineID);
-        index = (index + 1) % length;
+    void testing() {
+        int size = ((SmartCodeEditor) editor).getBookmarkedLines().size();
+        
+        for (LineBookmark lm : ((SmartCodeEditor) editor).getBookmarkedLines()) {
+            LineID lineID = lm.getLineID();
+            System.out.println(lineID + " - tab: " + lm.getTabIndex());
+        }
+        System.out.println("size: " + size);
     }
 
     public void addKeyListener(KeyListener listener) {

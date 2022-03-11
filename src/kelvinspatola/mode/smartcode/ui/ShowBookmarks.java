@@ -26,9 +26,10 @@ import processing.app.ui.ZoomTreeCellRenderer;
 public class ShowBookmarks {
     private List<LineMarker> bookmarks = new ArrayList<>();
     private SmartCodeEditor editor;
+    private boolean showWindow;
 
-    JDialog window;
-    JTree tree;
+    private JDialog window;
+    private JTree tree;
 
     // CONSTRUCTOR
     public ShowBookmarks(SmartCodeEditor editor, List<LineMarker> bookmarks) {
@@ -43,6 +44,7 @@ public class ShowBookmarks {
             @Override
             public void componentHidden(ComponentEvent e) {
                 tree.setModel(null);
+                showWindow = false;
             }
 
             @Override
@@ -81,7 +83,7 @@ public class ShowBookmarks {
     }
 
     public void handleShowBookmarks() {
-        
+        showWindow = true;
         updateTree();
     }
 
@@ -120,34 +122,32 @@ public class ShowBookmarks {
                     return tabNode;
                 }).forEach(rootNode::add);
 
-        // Update tree
-        EventQueue.invokeLater(() -> {
-            tree.setModel(new DefaultTreeModel(rootNode));
+        if (showWindow) {
+            // Update tree
+            EventQueue.invokeLater(() -> {
+                tree.setModel(new DefaultTreeModel(rootNode));
 
-            // Expand all nodes
-            for (int i = 0; i < tree.getRowCount(); i++) {
-                tree.expandRow(i);
-            }
+                // Expand all nodes
+                for (int i = 0; i < tree.getRowCount(); i++) {
+                    tree.expandRow(i);
+                }
 
-            tree.setRootVisible(true);
+                tree.setRootVisible(true);
 
-            if (!window.isVisible()) {
-                window.setVisible(true);
-                GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-                GraphicsDevice defaultScreen = ge.getDefaultScreenDevice();
-                Rectangle rect = defaultScreen.getDefaultConfiguration().getBounds();
-                int maxX = (int) rect.getMaxX() - window.getWidth();
-                int x = Math.min(editor.getX() + editor.getWidth(), maxX);
-                int y = (x == maxX) ? 10 : editor.getY();
-                window.setLocation(x, y);
-            }
-            window.toFront();
-            window.setTitle("Bookmarks encoutered: " + bookmarks.size());
-        });
-    }
-
-    void hide() {
-        window.setVisible(false);
+                if (!window.isVisible()) {
+                    window.setVisible(true);
+                    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                    GraphicsDevice defaultScreen = ge.getDefaultScreenDevice();
+                    Rectangle rect = defaultScreen.getDefaultConfiguration().getBounds();
+                    int maxX = (int) rect.getMaxX() - window.getWidth();
+                    int x = Math.min(editor.getX() + editor.getWidth(), maxX);
+                    int y = (x == maxX) ? 10 : editor.getY();
+                    window.setLocation(x, y);
+                }
+                window.toFront();
+                window.setTitle("Bookmarks encoutered: " + bookmarks.size());
+            });
+        }
     }
 
     public void dispose() {
@@ -156,7 +156,7 @@ public class ShowBookmarks {
         }
     }
 
-    static class BookmarkTreeNode {
+    class BookmarkTreeNode {
         final int tabIndex;
         final int startOffset;
         final int stopOffset;

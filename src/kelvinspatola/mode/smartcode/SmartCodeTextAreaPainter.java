@@ -14,8 +14,6 @@ import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.event.CaretEvent;
-import javax.swing.event.CaretListener;
 import javax.swing.text.Segment;
 import javax.swing.text.Utilities;
 

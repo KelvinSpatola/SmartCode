@@ -122,7 +122,8 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         } else {
             bottom = (lineCount * lineHeight) - top;
         }
-        return (int) PApplet.map(line, 1, lineCount, top, bottom);
+        
+        return (lineCount == 1) ? top : (int) PApplet.map(line, 1, lineCount, top, bottom);
     }
     
     private LineMarker findClosestMarker(final int mouseY) {
