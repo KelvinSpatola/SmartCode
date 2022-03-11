@@ -60,8 +60,9 @@ public class SmartCodeTextArea extends JavaTextArea {
     }
 
     public String getLineText(int tabIndex, int line) {
-        int start = getLineStartOffset(tabIndex, line);
-        int len = getLineStopOffset(tabIndex, line) - start - 1;
+        int start = Math.max(0, getLineStartOffset(tabIndex, line));
+        int len = Math.max(0, getLineStopOffset(tabIndex, line) - start - 1);
+        System.out.println("start: " + start + " len: " + len);
 
         try {
             SketchCode code = editor.getSketch().getCode(tabIndex);

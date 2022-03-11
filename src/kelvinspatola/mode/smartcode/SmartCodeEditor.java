@@ -558,6 +558,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 int end = s.getEnd() + 1;
 
                 startCompoundEdit();
+//                stopBookmarkTracking();
 
                 setSelection(start, end);
                 setSelectedText(formattedText);
@@ -566,6 +567,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 setSelection(start, end);
 
                 stopCompoundEdit();
+//                startBookmarkTracking();
 
                 getSketch().setModified(true);
                 statusNotice(Language.text("editor.status.autoformat.finished"));
@@ -797,7 +799,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         String lineText = getLineText(line);
 
         int blockIndent = 0;
-        int brace = getSmartCodeTextArea().getMatchingBraceLineAlt(line);
+        int brace = ta.getMatchingBraceLineAlt(line);
 
         if (brace != -1) { // we are inside a block here
             if (lineText.matches(BLOCK_OPENING)) {
