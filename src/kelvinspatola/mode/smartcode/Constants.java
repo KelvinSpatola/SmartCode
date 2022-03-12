@@ -19,7 +19,7 @@ public final class Constants {
     static public final char CLOSE_BRACE = '}';
     static public final String LF = "\n";
     
-    static public final String PIN_MARKER = "pin";
+    static public final String PIN_MARKER = " //<bookmark>//";
 
     private Constants() {
     }

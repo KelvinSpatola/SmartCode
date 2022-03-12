@@ -23,6 +23,7 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
+import javax.swing.text.BadLocationException;
 
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
@@ -525,16 +526,41 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
 
             Selection s = new Selection();
+            String selectedText = s.getText();
 
-            String selectedText;
+            final List<Integer> removedLines = new ArrayList<>();
+            boolean isBookmarksRemoved = false;
+
+            if (!bookmarkedLines.isEmpty()) {
+                final int currTabIndex = getSketch().getCurrentCodeIndex();
+
+                for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
+                    LineBookmark bm = (LineBookmark) bookmarkedLines.get(i);
+                    int bmLine = bm.getLineID().lineIdx();
+
+                    if (bm.getTabIndex() == currTabIndex && bmLine >= s.getStartLine() && bmLine <= s.getEndLine()) {
+                        removedLines.add(bmLine);
+                    }
+                }
+
+                if (!removedLines.isEmpty()) {
+                    String[] textLines = selectedText.split("\n");
+
+                    for (int line : removedLines) {
+                        textLines[line - s.getStartLine()] += PIN_MARKER;
+                    }
+                    selectedText = PApplet.join(textLines, "\n");
+                    isBookmarksRemoved = true;
+                }
+            }
+
             boolean isSourceIntact = true;
 
             // long string literals are formatted here
             if (SmartCodePreferences.AUTOFORMAT_STRINGS) {
-                selectedText = refactorStringLiterals(s.getText());
-                isSourceIntact = selectedText.stripTrailing().equals(s.getText());
-            } else {
-                selectedText = s.getText();
+                String sourceText = selectedText;
+                selectedText = refactorStringLiterals(sourceText);
+                isSourceIntact = selectedText.stripTrailing().equals(sourceText);
             }
 
             // and everything else is formatted here
@@ -558,17 +584,32 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 int end = s.getEnd() + 1;
 
                 startCompoundEdit();
-//                stopBookmarkTracking();
 
+                for (int line : removedLines) {
+                    removeLineBookmark(getLineIDInCurrentTab(line));
+                }
+                
                 setSelection(start, end);
                 setSelectedText(formattedText);
 
                 end = start + formattedText.length() - 1;
                 setSelection(start, end);
 
+                if (isBookmarksRemoved) {
+                    String[] textLines = formattedText.split("\n");
+                    
+                    int line = s.getStartLine();
+                    for (String textLine : textLines) {
+                        if (textLine.endsWith(PIN_MARKER)) {
+                            textarea.select(getLineStartOffset(line), getLineStopOffset(line) - 1);
+                            textarea.setSelectedText(textLine.replaceAll(PIN_MARKER, ""));
+                            addLineBookmark(getLineIDInCurrentTab(line));
+                        }
+                        line++;
+                    }
+                }
+                
                 stopCompoundEdit();
-//                startBookmarkTracking();
-
                 getSketch().setModified(true);
                 statusNotice(Language.text("editor.status.autoformat.finished"));
             }
@@ -1046,6 +1087,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             } else {
                 addLineBookmark(lineID);
             }
+            getSketch().setModified(true);
         }
     }
 
@@ -1117,7 +1159,114 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void startBookmarkTracking() {
         bookmarkedLines.forEach(bm -> ((LineBookmark) bm).startTracking());
     }
-    
+
+    protected void clearBookmarksFromTab(int tabIndex) {
+        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
+            LineBookmark bm = (LineBookmark) bookmarkedLines.get(i);
+            if (bm.getTabIndex() == tabIndex) {
+                removeLineBookmark(bm.getLineID());
+            }
+        }
+    }
+
+    protected List<LineID> stripLineMarkerComments() {
+        return null;
+    }
+
+    protected void addBookmarkComments(String tabFilename) {
+        final List<Integer> removedLines = new ArrayList<>();
+
+        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
+            LineBookmark bm = (LineBookmark) bookmarkedLines.get(i);
+            if (bm.getLineID().fileName().equals(tabFilename)) {
+                removedLines.add(bm.getLineID().lineIdx());
+                removeLineBookmark(bm.getLineID());
+            }
+        }
+
+        // String[] textLines = tab.getDocumentText().split("\r\n");
+        String[] textLines = getText().split("\n");
+
+        for (int line : removedLines) {
+            textLines[line] += PIN_MARKER;
+            System.out.println("line: " + textLines[line]);
+        }
+
+        String markedCode = PApplet.join(textLines, "\n");
+        // System.out.println(markedCode);
+        setText(markedCode);
+        handleSelectAll();
+    }
+
+//    @Override
+//    public boolean handleSave(boolean immediately) {
+//        // note modified tabs
+////        final List<String> modified = new ArrayList<>();
+////        for (int i = 0; i < getSketch().getCodeCount(); i++) {
+////            SketchCode tab = getSketch().getCode(i);
+////            if (tab.isModified()) {
+////                modified.add(tab.getFileName());
+////            }
+////        }
+//        
+////        if (bookmarkedLines.isEmpty()) {
+////            System.out.println("No bookmarks. Saving now");
+////            return super.handleSave(immediately);
+////        }
+////        
+////        List<Integer> removedLines = new ArrayList<>();
+////
+////        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
+////            LineBookmark bm = getBookmarkedLines().get(i);
+////            if (bm.getTabIndex() == 0) {
+////                removedLines.add(bm.getLineID().lineIdx());
+////                removeLineBookmark(bm.getLineID());
+////            }
+////        }
+//
+//        boolean saved = super.handleSave(immediately);
+//        
+////        for (Integer line : removedLines) 
+////            addLineBookmark(getLineIDInCurrentTab(line));
+//
+//        System.out.println("Saving");
+//        return saved;
+//    }
+
+    public boolean handleSaveAs() {
+        if (bookmarkedLines.isEmpty()) {
+            System.out.println("No bookmarks. Saving now");
+            return super.handleSaveAs();
+        }
+//        String oldName = getSketch().getCode(0).getFileName();
+        List<Integer> removedLines = new ArrayList<>();
+
+        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
+            LineBookmark bm = getBookmarkedLines().get(i);
+            if (bm.getTabIndex() == 0) {
+                removedLines.add(bm.getLineID().lineIdx());
+                removeLineBookmark(bm.getLineID());
+            }
+        }
+
+        boolean saved = super.handleSaveAs();
+
+        if (saved) {
+            String newName = getSketch().getCode(0).getFileName();
+            for (Integer line : removedLines)
+                addLineBookmark(new LineID(newName, line));
+
+            System.out.println("Saving As");
+        }
+        return saved;
+    }
+
+    /****************
+     * 
+     * MISC
+     * 
+     */
+
     @Override
     public void setCode(SketchCode code) {
         super.setCode(code);
@@ -1153,16 +1302,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         header.rebuild();
         updateTitle();
     }
-    
-    protected void deleteBookmarksFromTab(int tabIndex) {
-        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
-            LineBookmark bm = (LineBookmark) bookmarkedLines.get(i);
-            if(bm.getTabIndex() == tabIndex) {
-                removeLineBookmark(bm.getLineID());
-            }
-        }
-    }
-    
+
     public void highlight(LineMarker lm) {
         highlight(lm.getTabIndex(), lm.getStartOffset(), lm.getStopOffset());
     }
