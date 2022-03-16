@@ -21,6 +21,9 @@ public class Snippet {
 
     // CONSTRUCTOR
     public Snippet(String source) {
+        if (source == null)
+            return;
+        
         buffer = new StringBuilder();
         tabstops = new ArrayList<>();
         processSourceText(source);
@@ -189,4 +192,5 @@ public class Snippet {
             System.out.println(s.toString());
         }
     }
+    
 }

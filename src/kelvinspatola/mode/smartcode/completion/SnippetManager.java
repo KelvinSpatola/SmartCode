@@ -1,5 +1,7 @@
 package kelvinspatola.mode.smartcode.completion;
 
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.KeyEvent;
@@ -12,19 +14,22 @@ import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
 import kelvinspatola.mode.smartcode.KeyListener;
+import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodeMode;
+import kelvinspatola.mode.smartcode.SmartCodeTextArea;
+import processing.app.ui.Theme;
 import processing.core.PApplet;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
 
-public class SnippetManager implements KeyListener, CaretListener {
+public class SnippetManager implements KeyListener, CaretListener, LinePainter {
+    private Color boundingBoxColor = Theme.getColor("editor.eolmarkers.color");
     protected final Map<String, Snippet> snippets = new HashMap<>();
     protected boolean isReadingKeyboardInput;
     protected Snippet currentSnippet;
     protected SmartCodeEditor editor;
 
-    
     // CONSTRUCTOR
     public SnippetManager(SmartCodeEditor editor) {
         this.editor = editor;
@@ -66,7 +71,7 @@ public class SnippetManager implements KeyListener, CaretListener {
                         if (tempStr.matches("\\w+")) {
                             placeholder = tempStr;
                         } else {
-                            System.err.println("Clipboard does not contain a valid string"); // TODO: improve this
+                            System.err.println("Clipboard does not contain a valid string");
                             editor.getToolkit().beep();
                         }
 
@@ -111,7 +116,6 @@ public class SnippetManager implements KeyListener, CaretListener {
             if (keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_TAB) {
                 int caret = currentSnippet.nextPosition();
                 editor.setSelection(caret, caret);
-                highlight();
                 return true;
             }
             currentSnippet.readInput(e);
@@ -119,7 +123,6 @@ public class SnippetManager implements KeyListener, CaretListener {
         } else {
             currentSnippet = null;
         }
-        highlight();
 
 //        if (isReadingKeyboardInput()) {
 //            editor.statusMessage("EDITING PARAMETERS", EditorStatus.WARNING);
@@ -129,8 +132,6 @@ public class SnippetManager implements KeyListener, CaretListener {
 
     @Override
     public void caretUpdate(CaretEvent e) {
-//        println("isReading: " + isReadingKeyboardInput);
-
         if (currentSnippet == null) {
             isReadingKeyboardInput = false;
             return;
@@ -143,8 +144,20 @@ public class SnippetManager implements KeyListener, CaretListener {
         return false;
     }
 
-    protected void highlight() {
-        editor.getSmartCodeTextArea().getSmartCodePainter().hightlight(currentSnippet);
+    @Override
+    public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
+        if (isReadingKeyboardInput && line == ta.getCaretLine()) {
+            int lineStart = ta.getLineStartOffset(line);
+            int start = currentSnippet.leftBoundary - lineStart;
+            int end = currentSnippet.rightBoundary - lineStart - 1;
+            int x = ta._offsetToX(line, start);
+            int w = ta._offsetToX(line, end) - x;
+
+            gfx.setColor(boundingBoxColor);
+            gfx.drawRect(x, y, w, h);
+            return true;
+        }
+        return false;
     }
 
     private String checkTrigger() {

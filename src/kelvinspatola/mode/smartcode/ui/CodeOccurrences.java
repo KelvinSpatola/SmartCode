@@ -1,5 +1,6 @@
 package kelvinspatola.mode.smartcode.ui;
 
+import java.awt.Graphics;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,18 +13,19 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
-import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
 
+import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
-import kelvinspatola.mode.smartcode.SmartCodeTextAreaPainter;
+import kelvinspatola.mode.smartcode.SmartCodePreferences;
+import kelvinspatola.mode.smartcode.SmartCodeTextArea;
 import processing.mode.java.ASTUtils;
 import processing.mode.java.PreprocService;
 import processing.mode.java.PreprocSketch;
 import processing.mode.java.SketchInterval;
 
-public class CodeOccurrences implements CaretListener {
+public class CodeOccurrences implements CaretListener, LinePainter {
+//    private Color occurrencesColor = SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR;
     private List<LineMarker> occurrences = new ArrayList<>();
     private SmartCodeEditor editor;
     private PreprocService pps;
@@ -31,6 +33,8 @@ public class CodeOccurrences implements CaretListener {
     private String code;
     private String prevCandidate;
     private int prevLine = -1;
+
+//    private float delta;
 
     // CONSTRUCTOR
     public CodeOccurrences(SmartCodeEditor editor, PreprocService pps) {
@@ -65,7 +69,6 @@ public class CodeOccurrences implements CaretListener {
                 pps.whenDoneBlocking(ps -> handleCollectOccurrences(ps, startOffset, stopOffset));
                 prevCandidate = candidate;
             }
-
         } else {
             occurrences.clear();
             prevCandidate = null;
@@ -75,7 +78,6 @@ public class CodeOccurrences implements CaretListener {
 
     private void handleCollectOccurrences(PreprocSketch ps, int startTabOffset, int stopTabOffset) {
         occurrences.clear();
-        SmartCodeTextAreaPainter.delta = 0;
 
         // Map offsets
         int tab = editor.getSketch().getCurrentCodeIndex();
@@ -84,9 +86,8 @@ public class CodeOccurrences implements CaretListener {
 
         CompilationUnit root = ps.compilationUnit;
         SimpleName name = ASTUtils.getSimpleNameAt(root, startJavaOffset, stopJavaOffset);
-        if (name == null) {
+        if (name == null) 
             return;
-        }
 
         // Find binding
         IBinding binding = ASTUtils.resolveBinding(name);
@@ -118,7 +119,6 @@ public class CodeOccurrences implements CaretListener {
                 int startOffset = (Integer) startTabOffsetInterval.get(si);
                 int stopOffset = (Integer) stopTabOffsetInterval.get(si);
                 int line = editor.getTextArea().getLineOfOffset(startOffset);
-
                 occurrences.add(new Occurrence(tabIndex, line, startOffset, stopOffset, name.toString()));
 
             } catch (final ReflectiveOperationException e) {
@@ -162,30 +162,25 @@ public class CodeOccurrences implements CaretListener {
         return Character.isLetterOrDigit(code.charAt(offset));
     }
 
-    static String getBindingTypeLabel(IBinding binding) {
-        switch (binding.getKind()) {
-        case IBinding.METHOD:
-            if (((IMethodBinding) binding).isConstructor())
-                return "Constructor";
-            return "Method";
-        case IBinding.TYPE:
-            return "Type";
-        case IBinding.VARIABLE:
-            IVariableBinding variable = (IVariableBinding) binding;
-            if (variable.isField())
-                return "Field";
-            else if (variable.isParameter())
-                return "Parameter";
-            else if (variable.isEnumConstant())
-                return "Enum constant";
-            else
-                return "Local variable";
-        }
-        return "none";
-    }
+    @Override
+    public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
+        if (occurrences.isEmpty() || !SmartCodePreferences.OCCURRENCES_HIGHLIGHT)
+            return false;
 
-    public List<LineMarker> getOccurrences() {
-        return occurrences;
+        int currentTab = editor.getSketch().getCurrentCodeIndex();
+        for (LineMarker occurrence : occurrences) {
+            if (occurrence.getTabIndex() == currentTab && occurrence.getLine() == line) {
+                int lineStart = ta.getLineStartOffset(line);
+                int wordStart = occurrence.getStartOffset() - lineStart;
+                int wordEnd = occurrence.getStopOffset() - lineStart;
+                int x = ta._offsetToX(line, wordStart);
+                int w = ta._offsetToX(line, wordEnd) - x;
+
+                gfx.setColor(SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR);
+                gfx.fillRect(x, y, w, h);
+            }
+        }
+        return true;
     }
 
     class Occurrence implements LineMarker {
@@ -224,4 +219,26 @@ public class CodeOccurrences implements CaretListener {
             return this.getClass();
         }
     }
+
+//    static String getBindingTypeLabel(IBinding binding) {
+//        switch (binding.getKind()) {
+//        case IBinding.METHOD:
+//            if (((IMethodBinding) binding).isConstructor())
+//                return "Constructor";
+//            return "Method";
+//        case IBinding.TYPE:
+//            return "Type";
+//        case IBinding.VARIABLE:
+//            IVariableBinding variable = (IVariableBinding) binding;
+//            if (variable.isField())
+//                return "Field";
+//            else if (variable.isParameter())
+//                return "Parameter";
+//            else if (variable.isEnumConstant())
+//                return "Enum constant";
+//            else
+//                return "Local variable";
+//        }
+//        return "none";
+//    }
 }

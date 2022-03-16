@@ -23,7 +23,6 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
-import javax.swing.text.BadLocationException;
 
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
@@ -42,6 +41,7 @@ import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextAreaDefaults;
 import processing.app.ui.EditorException;
 import processing.app.ui.EditorState;
+import processing.app.ui.MarkerColumn;
 import processing.app.ui.Toolkit;
 import processing.core.PApplet;
 import processing.mode.java.JavaEditor;
@@ -59,23 +59,17 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super(base, path, state, mode);
 
         showBookmarks = new ShowBookmarks(this, bookmarkedLines);
+        getSmartCodePainter().addLinePainter(bookmarkLinePainter);
 
         buildMenu();
         buildPopupMenu();
-        printHelloMessage();
-
-        // hack to add a JPanel to the right-hand side of the text area
-        JPanel editorPanel = (JPanel) textarea.getParent();
-        // remove the text area temporarily
-        editorPanel.remove(1);
-        editorPanel.setLayout(new BorderLayout());
-        errorColumn = new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height);
-        editorPanel.add(errorColumn, BorderLayout.EAST);
-        textarea.setBounds(0, 0, errorColumn.getX() - 1, textarea.getHeight());
-        editorPanel.add(textarea);
+        buildMarkerColumn(new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height));
 
         occurrences = new CodeOccurrences(this, preprocService);
         textarea.addCaretListener(occurrences);
+        getSmartCodePainter().addLinePainter(occurrences);
+
+        printHelloMessage();
     }
 
     private void printHelloMessage() {
@@ -93,6 +87,26 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     public SmartCodeTextArea getSmartCodeTextArea() {
         return (SmartCodeTextArea) textarea;
+    }
+
+    public SmartCodeTextAreaPainter getSmartCodePainter() {
+        return getSmartCodeTextArea().getSmartCodePainter();
+    }
+    
+    protected void buildMarkerColumn(MarkerColumn errorColumn) {
+        // hack to add a JPanel to the right-hand side of the text area
+        JPanel editorPanel = (JPanel) textarea.getParent();
+        // remove the original errorColumn and textarea objects
+        editorPanel.removeAll();
+        // creating a new BorderLayout
+        editorPanel.setLayout(new BorderLayout());
+        // replacing the original MarkerColumn object with our custom
+        // SmartCodeMarkerColumn object
+        this.errorColumn = errorColumn;
+        editorPanel.add(errorColumn, BorderLayout.EAST);
+        textarea.setBounds(0, 0, errorColumn.getX() - 1, textarea.getHeight());
+        // let's put textarea back in the game
+        editorPanel.add(textarea);
     }
 
     // TODO: lembrete de que é preciso trabalhar aqui
@@ -588,7 +602,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 for (int line : removedLines) {
                     removeLineBookmark(getLineIDInCurrentTab(line));
                 }
-                
+
                 setSelection(start, end);
                 setSelectedText(formattedText);
 
@@ -597,7 +611,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
                 if (isBookmarksRemoved) {
                     String[] textLines = formattedText.split("\n");
-                    
+
                     int line = s.getStartLine();
                     for (String textLine : textLines) {
                         if (textLine.endsWith(PIN_MARKER)) {
@@ -608,7 +622,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                         line++;
                     }
                 }
-                
+
                 stopCompoundEdit();
                 getSketch().setModified(true);
                 statusNotice(Language.text("editor.status.autoformat.finished"));
@@ -1198,6 +1212,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         handleSelectAll();
     }
 
+    LinePainter bookmarkLinePainter = (gfx, line, y, h, textarea) -> {
+        if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT && !isDebuggerEnabled() && isLineBookmark(line)) {
+            gfx.setColor(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR);
+            gfx.fillRect(0, y, getWidth(), h);
+            return true;
+        }
+        return false;
+    };
+
 //    @Override
 //    public boolean handleSave(boolean immediately) {
 //        // note modified tabs
@@ -1280,7 +1303,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
         }
-        errorColumn.repaint();
+//        errorColumn.repaint();
     }
 
     @Override
@@ -1344,20 +1367,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void dispose() {
         showBookmarks.dispose();
         super.dispose();
-    }
-
-    /****************
-     * 
-     * CODE OCCURRENCES
-     * 
-     */
-
-    public List<LineMarker> getOccurrences() {
-        return occurrences.getOccurrences();
-    }
-
-    public boolean hasOccurrences() {
-        return occurrences.getOccurrences().size() > 0;
     }
 
     public void updateColumnPoints(List<LineMarker> points, Class<?> parent) {

@@ -17,8 +17,6 @@ import java.util.List;
 import javax.swing.text.Segment;
 import javax.swing.text.Utilities;
 
-import kelvinspatola.mode.smartcode.completion.Snippet;
-import kelvinspatola.mode.smartcode.ui.LineMarker;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextArea;
 import processing.app.syntax.TextAreaDefaults;
@@ -28,17 +26,11 @@ import processing.mode.java.JavaTextArea;
 import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
-    protected List<Painter> painters = new ArrayList<>();
-    protected Color occurrencesColor = SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR;
-    protected Color bookmarkLineColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR;
+    protected List<LinePainter> painters = new ArrayList<>();
     protected Color bookmarkIconColor;
 
     public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
-
-        painters.add(new Bookmarks());
-        painters.add(new Occurrences());
-        painters.add(new SnippetMarker());
 
         highlights = new Highlight() {
             @Override
@@ -52,8 +44,9 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
             @Override
             public void paintHighlight(Graphics gfx, int line, int y) {
-                for (Painter painter : painters) {
-                    if (painter.canPaint(gfx, line, y)) {
+                for (LinePainter painter : painters) {
+                    if (painter.canPaint(gfx, line, y + getLineDisplacement(), fontMetrics.getHeight(),
+                            (SmartCodeTextArea) textArea)) {
                         //
                     } else {
                         repaint();
@@ -92,6 +85,11 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         return (SmartCodeEditor) getEditor();
     }
 
+    public void addLinePainter(LinePainter painter) {
+        painters.add(painter);
+        System.out.println("painters.size(): " + painters.size());
+    }
+
     /**
      * Converts a y co-ordinate to a line index. Rewriting this because i need it to
      * not clamp the returned value as the original JEditTextArea.yToLine() method
@@ -104,83 +102,9 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         return Math.max(0, (y / fm.getHeight() + textArea.getFirstLine()));
     }
 
-    int x1, x2, line;
-    boolean isReading;
-
-    public void hightlight(Snippet snippet) {
-        if (isReading = snippet != null) {
-            x1 = ((SmartCodeTextArea) textArea).getPositionInsideLineWithOffset(snippet.leftBoundary);
-            x2 = ((SmartCodeTextArea) textArea).getPositionInsideLineWithOffset(snippet.rightBoundary - 1);
-        }
-    }
-
-    interface Painter {
-        boolean canPaint(Graphics gfx, int line, int y);
-    }
-
-    public static float delta;
-
-    class Occurrences implements Painter {
-        @Override
-        public boolean canPaint(Graphics gfx, int line, int y) {
-            if (SmartCodePreferences.OCCURRENCES_HIGHLIGHT && getSmartCodeEditor().hasOccurrences()) {
-                delta++;
-                if (delta < 10000)
-                    if (delta < 10000)
-                    return false;
-
-                int currentTabIndex = getSmartCodeEditor().getSketch().getCurrentCodeIndex();
-                for (LineMarker occurrence : getSmartCodeEditor().getOccurrences()) {
-                    if (occurrence.getTabIndex() == currentTabIndex && occurrence.getLine() == line) {
-                        int lineStartOffset = textArea.getLineStartOffset(line);
-                        int wordStart = occurrence.getStartOffset() - lineStartOffset;
-                        int wordEnd = occurrence.getStopOffset() - lineStartOffset;
-                        int x = textArea._offsetToX(line, wordStart);
-                        int w = textArea._offsetToX(line, wordEnd) - x;
-                        int h = fontMetrics.getHeight();
-
-                        gfx.setColor(new Color(190, 220, 255));
-                        gfx.fillRect(x, y + getLineDisplacement(), w, h);
-                    }
-                }
-                return true;
-            }
-            delta = 0;
-            return false;
-        }
-    }
-
-    class SnippetMarker implements Painter {
-        @Override
-        public boolean canPaint(Graphics gfx, int line, int y) {
-            if (isReading && line == textArea.getCaretLine()) {
-                int x = textArea._offsetToX(line, x1);
-                y += getLineDisplacement();
-                int w = textArea._offsetToX(line, x2) - x;
-                int h = fontMetrics.getHeight();
-
-                gfx.setColor(defaults.eolMarkerColor);
-                gfx.drawRect(x, y, w, h);
-
-                return true;
-            }
-            return false;
-        }
-    }
-
-    class Bookmarks implements Painter {
-        @Override
-        public boolean canPaint(Graphics gfx, int line, int y) {
-            if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT && !getEditor().isDebuggerEnabled()
-                    && getSmartCodeEditor().isLineBookmark(line)) {
-                y += getLineDisplacement();
-                gfx.setColor(bookmarkLineColor);
-                gfx.fillRect(0, y, getWidth(), fontMetrics.getHeight());
-
-                return true;
-            }
-            return false;
-        }
+    @Override
+    public int getLineDisplacement() {
+        return super.getLineDisplacement();
     }
 
     @Override

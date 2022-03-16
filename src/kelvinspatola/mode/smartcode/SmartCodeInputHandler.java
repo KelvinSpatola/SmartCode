@@ -2,22 +2,22 @@ package kelvinspatola.mode.smartcode;
 
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.syntax.PdeInputHandler;
-import processing.app.ui.Editor;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeInputHandler extends PdeInputHandler {
     protected List<KeyListener> listeners;
 
-    public SmartCodeInputHandler(Editor _editor) {
-        super(_editor);
+    public SmartCodeInputHandler(SmartCodeEditor editor) {
+        super(editor);
 
-        SmartCodeEditor editor = (SmartCodeEditor) _editor;
         addKeyBinding("CA+RIGHT", e -> editor.expandSelection());
         addKeyBinding("C+7", e -> editor.toggleBlockComment());
         addKeyBinding("CS+U", e -> editor.changeCase(true));
@@ -52,6 +52,14 @@ public class SmartCodeInputHandler extends PdeInputHandler {
             System.out.println(lineID + " - tab: " + lm.getTabIndex());
         }
         System.out.println("size: " + size);
+        
+        String[] words = {"kelvin", "clark", "magalhaes", "spatola", "ana", "noah", "genoveva"};
+        
+        List<String> list2 = new ArrayList<>();
+        List<String> list = Arrays.asList(words);
+        list.stream().collect(Collectors.groupingBy(str -> str.length()))
+        .entrySet().stream().map(e -> e.getValue())
+        .forEach(s -> list2.addAll(s));
     }
 
     public void addKeyListener(KeyListener listener) {

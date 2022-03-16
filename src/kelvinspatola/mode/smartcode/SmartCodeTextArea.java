@@ -23,7 +23,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     public SmartCodeTextArea(TextAreaDefaults defaults, JavaEditor editor) {
         super(defaults, editor);
 
-        SmartCodeInputHandler inputHandler = new SmartCodeInputHandler(editor);
+        SmartCodeInputHandler inputHandler = new SmartCodeInputHandler((SmartCodeEditor) editor);
 
         if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
             inputHandler.addKeyListener(new BracketCloser(editor));
@@ -32,6 +32,7 @@ public class SmartCodeTextArea extends JavaTextArea {
             SnippetManager sm = new SnippetManager((SmartCodeEditor) editor);
             inputHandler.addKeyListener(sm);
             addCaretListener(sm);
+            getSmartCodePainter().addLinePainter(sm);
         }
         // default behaviour for the textarea in regards to TAB and ENTER key
         inputHandler.addKeyListener((SmartCodeEditor) editor);
