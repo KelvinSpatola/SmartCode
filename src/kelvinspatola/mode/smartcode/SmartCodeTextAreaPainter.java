@@ -87,7 +87,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
     public void addLinePainter(LinePainter painter) {
         painters.add(painter);
-        System.out.println("painters.size(): " + painters.size());
     }
 
     /**
@@ -100,11 +99,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     public int yToLine(int y) {
         FontMetrics fm = getFontMetrics();
         return Math.max(0, (y / fm.getHeight() + textArea.getFirstLine()));
-    }
-
-    @Override
-    public int getLineDisplacement() {
-        return super.getLineDisplacement();
     }
 
     @Override

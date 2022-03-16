@@ -108,10 +108,23 @@ public class Snippet {
 
         if (stopIndex == tabstops.size() - 1) {
             isLastPosition = true;
-            System.out.println("isLast: " + isLastPosition);
         }
 
         return leftBoundary;
+    }
+        
+    public int getNextStopPosition() {
+        if (stopIndex == tabstops.size() - 1)
+            return -1;
+        
+        int caret = 0, delta = 0;
+
+        for (int i = 0; i < stopIndex && i < tabstops.size(); i++) {
+            delta += tabstops.get(i).delta();
+        }
+        
+        caret = tabstops.get(stopIndex + 1).startOffset;
+        return startingPosition + caret + (indent * calcLine(caret)) + delta + (rightBoundary - leftBoundary - 1);
     }
 
     public void readInput(KeyEvent e) {
@@ -186,11 +199,4 @@ public class Snippet {
             currentOffset = startOffset;
         }
     }
-
-    public static void println(Object... what) {
-        for (Object s : what) {
-            System.out.println(s.toString());
-        }
-    }
-    
 }

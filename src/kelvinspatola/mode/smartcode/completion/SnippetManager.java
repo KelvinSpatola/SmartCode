@@ -93,6 +93,7 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
 
                 if (placeholder != null) {
                     String source = currentSnippet.getSource().replaceAll("#", placeholder);
+//                    source = source.replaceAll("@", "kelvin");
                     currentSnippet = new Snippet(source);
                 }
                 editor.startCompoundEdit();
@@ -146,15 +147,29 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
 
     @Override
     public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
-        if (isReadingKeyboardInput && line == ta.getCaretLine()) {
+        if (isReadingKeyboardInput) {
             int lineStart = ta.getLineStartOffset(line);
-            int start = currentSnippet.leftBoundary - lineStart;
-            int end = currentSnippet.rightBoundary - lineStart - 1;
-            int x = ta._offsetToX(line, start);
-            int w = ta._offsetToX(line, end) - x;
+            if (line == ta.getCaretLine()) {
+                int start = currentSnippet.leftBoundary - lineStart;
+                int end = currentSnippet.rightBoundary - lineStart - 1;
+                int x = ta._offsetToX(line, start);
+                int w = ta._offsetToX(line, end) - x;
 
-            gfx.setColor(boundingBoxColor);
-            gfx.drawRect(x, y, w, h);
+                gfx.setColor(boundingBoxColor);
+                gfx.drawRect(x, y, w, h);
+            }
+
+            int nextStopOffset = currentSnippet.getNextStopPosition();
+            if (nextStopOffset != -1) {
+                int stopLine = ta.getLineOfOffset(nextStopOffset);
+                if (line == stopLine) {
+                    int start = currentSnippet.getNextStopPosition() - lineStart;
+                    int x = ta._offsetToX(line, start);
+
+                    gfx.setColor(boundingBoxColor);
+                    gfx.fillRect(x, y, 1, h);
+                }
+            }
             return true;
         }
         return false;

@@ -109,7 +109,7 @@
 			"key": "instanceof:",
 			"code": [
 				"if ($ instanceof #) {",
-				"    # obj = (#) $;",
+				"    # obj = (#) @;",
 				"    $",
 				"}"
 			]

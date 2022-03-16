@@ -12,23 +12,10 @@ import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-import javax.swing.JComponent;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.KeyStroke;
-import javax.swing.event.MenuEvent;
-import javax.swing.event.MenuListener;
-import javax.swing.event.PopupMenuEvent;
-import javax.swing.event.PopupMenuListener;
+import javax.swing.*;
+import javax.swing.event.*;
 
-import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
-import kelvinspatola.mode.smartcode.ui.LineBookmark;
-import kelvinspatola.mode.smartcode.ui.LineMarker;
-import kelvinspatola.mode.smartcode.ui.ShowBookmarks;
-import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
+import kelvinspatola.mode.smartcode.ui.*;
 import processing.app.Base;
 import processing.app.Language;
 import processing.app.Messages;
