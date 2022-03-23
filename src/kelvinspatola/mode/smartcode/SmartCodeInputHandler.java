@@ -45,21 +45,18 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     }
 
     void testing() {
-        int size = ((SmartCodeEditor) editor).getBookmarkedLines().size();
-        
-        for (LineBookmark lm : ((SmartCodeEditor) editor).getBookmarkedLines()) {
-            LineID lineID = lm.getLineID();
-            System.out.println(lineID + " - tab: " + lm.getTabIndex());
+//        int size = ((SmartCodeEditor) editor).getBookmarkedLines().size();
+//        
+//        for (LineBookmark lm : ((SmartCodeEditor) editor).getBookmarkedLines()) {
+//            LineID lineID = lm.getLineID();
+//            System.out.println(lineID + " - tab: " + lm.getTabIndex());
+//        }
+//        System.out.println("size: " + size);
+
+        for (int i = 0; i < ((SmartCodeEditor) editor).getSmartCodePainter().painters.size(); i++) {
+            LinePainter p = ((SmartCodeEditor) editor).getSmartCodePainter().painters.get(i);
+            System.out.println("index: " + i + p.getClass().getSimpleName());
         }
-        System.out.println("size: " + size);
-        
-        String[] words = {"kelvin", "clark", "magalhaes", "spatola", "ana", "noah", "genoveva"};
-        
-        List<String> list2 = new ArrayList<>();
-        List<String> list = Arrays.asList(words);
-        list.stream().collect(Collectors.groupingBy(str -> str.length()))
-        .entrySet().stream().map(e -> e.getValue())
-        .forEach(s -> list2.addAll(s));
     }
 
     public void addKeyListener(KeyListener listener) {

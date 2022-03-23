@@ -5,6 +5,7 @@ import static kelvinspatola.mode.smartcode.Constants.*;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import java.awt.event.KeyEvent;
+import java.awt.EventQueue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,6 +23,7 @@ import processing.app.Messages;
 import processing.app.Mode;
 import processing.app.Platform;
 import processing.app.Preferences;
+import processing.app.Sketch;
 import processing.app.SketchCode;
 import processing.app.syntax.DefaultInputHandler;
 import processing.app.syntax.JEditTextArea;
@@ -46,7 +48,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super(base, path, state, mode);
 
         showBookmarks = new ShowBookmarks(this, bookmarkedLines);
-        getSmartCodePainter().addLinePainter(bookmarkLinePainter);
+        if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT) {
+            getSmartCodePainter().addLinePainter(getBookmarkLinePainter());
+        }
 
         buildMenu();
         buildPopupMenu();
@@ -55,6 +59,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         occurrences = new CodeOccurrences(this, preprocService);
         textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
+
+        // get bookmarkers from marker comments
+        for (LineID lineID : stripBookmarkComments()) {
+            addLineBookmark(lineID);
+        }
+        getSketch().setModified(false);
 
         printHelloMessage();
     }
@@ -79,7 +89,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public SmartCodeTextAreaPainter getSmartCodePainter() {
         return getSmartCodeTextArea().getSmartCodePainter();
     }
-    
+
     protected void buildMarkerColumn(MarkerColumn errorColumn) {
         // hack to add a JPanel to the right-hand side of the text area
         JPanel editorPanel = (JPanel) textarea.getParent();
@@ -532,6 +542,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             final List<Integer> removedLines = new ArrayList<>();
             boolean isBookmarksRemoved = false;
 
+            //
             if (!bookmarkedLines.isEmpty()) {
                 final int currTabIndex = getSketch().getCurrentCodeIndex();
 
@@ -545,7 +556,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
 
                 if (!removedLines.isEmpty()) {
-                    String[] textLines = selectedText.split("\n");
+                    String[] textLines = selectedText.split("\\r?\\n");
 
                     for (int line : removedLines) {
                         textLines[line - s.getStartLine()] += PIN_MARKER;
@@ -597,7 +608,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 setSelection(start, end);
 
                 if (isBookmarksRemoved) {
-                    String[] textLines = formattedText.split("\n");
+                    String[] textLines = formattedText.split("\\r?\\n");
 
                     int line = s.getStartLine();
                     for (String textLine : textLines) {
@@ -665,10 +676,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         StringBuilder result = new StringBuilder();
         lines.forEach(line -> result.append(line + LF));
-
-//        for (String line : lines) {
-//            result.append(line + LF);
-//        }
 
         return result.toString();
     }
@@ -1170,106 +1177,69 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
-    protected List<LineID> stripLineMarkerComments() {
-        return null;
+    protected LinePainter getBookmarkLinePainter() {
+        return (gfx, line, y, h, textarea) -> {
+            if (!isDebuggerEnabled() && isLineBookmark(line)) {
+                gfx.setColor(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR);
+                gfx.fillRect(0, y, getWidth(), h);
+                return true;
+            }
+            return false;
+        };
     }
-
+    
     protected void addBookmarkComments(String tabFilename) {
-        final List<Integer> removedLines = new ArrayList<>();
-
-        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
-            LineBookmark bm = (LineBookmark) bookmarkedLines.get(i);
-            if (bm.getLineID().fileName().equals(tabFilename)) {
-                removedLines.add(bm.getLineID().lineIdx());
-                removeLineBookmark(bm.getLineID());
+        final List<Integer> bms = new ArrayList<>();
+        for (LineBookmark bm : getBookmarkedLines()) {
+            LineID lineID = bm.getLineID();
+            if (lineID.fileName().equals(tabFilename)) {
+                bms.add(lineID.lineIdx());
             }
         }
-
-        // String[] textLines = tab.getDocumentText().split("\r\n");
-        String[] textLines = getText().split("\n");
-
-        for (int line : removedLines) {
-            textLines[line] += PIN_MARKER;
-            System.out.println("line: " + textLines[line]);
-        }
-
-        String markedCode = PApplet.join(textLines, "\n");
-        // System.out.println(markedCode);
-        setText(markedCode);
-        handleSelectAll();
-    }
-
-    LinePainter bookmarkLinePainter = (gfx, line, y, h, textarea) -> {
-        if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT && !isDebuggerEnabled() && isLineBookmark(line)) {
-            gfx.setColor(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR);
-            gfx.fillRect(0, y, getWidth(), h);
-            return true;
-        }
-        return false;
-    };
-
-//    @Override
-//    public boolean handleSave(boolean immediately) {
-//        // note modified tabs
-////        final List<String> modified = new ArrayList<>();
-////        for (int i = 0; i < getSketch().getCodeCount(); i++) {
-////            SketchCode tab = getSketch().getCode(i);
-////            if (tab.isModified()) {
-////                modified.add(tab.getFileName());
-////            }
-////        }
-//        
-////        if (bookmarkedLines.isEmpty()) {
-////            System.out.println("No bookmarks. Saving now");
-////            return super.handleSave(immediately);
-////        }
-////        
-////        List<Integer> removedLines = new ArrayList<>();
-////
-////        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
-////            LineBookmark bm = getBookmarkedLines().get(i);
-////            if (bm.getTabIndex() == 0) {
-////                removedLines.add(bm.getLineID().lineIdx());
-////                removeLineBookmark(bm.getLineID());
-////            }
-////        }
-//
-//        boolean saved = super.handleSave(immediately);
-//        
-////        for (Integer line : removedLines) 
-////            addLineBookmark(getLineIDInCurrentTab(line));
-//
-//        System.out.println("Saving");
-//        return saved;
-//    }
-
-    public boolean handleSaveAs() {
-        if (bookmarkedLines.isEmpty()) {
-            System.out.println("No bookmarks. Saving now");
-            return super.handleSaveAs();
-        }
-//        String oldName = getSketch().getCode(0).getFileName();
-        List<Integer> removedLines = new ArrayList<>();
-
-        for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
-            LineBookmark bm = getBookmarkedLines().get(i);
-            if (bm.getTabIndex() == 0) {
-                removedLines.add(bm.getLineID().lineIdx());
-                removeLineBookmark(bm.getLineID());
+        
+        SketchCode tab = getTab(tabFilename);
+        try {
+            tab.load();
+            String code = tab.getProgram();
+            String[] codeLines = code.split("\\r?\\n");
+            for (int line : bms) {
+                // to avoid duplication, do it only if this line is not already marked
+                if (!codeLines[line].endsWith(PIN_MARKER)) {
+                    codeLines[line] += PIN_MARKER;
+                }
             }
+            code = PApplet.join(codeLines, "\n");
+            tab.setProgram(code);
+            tab.save();
+        } catch (IOException ex) {
+            Messages.err(null, ex);
         }
-
-        boolean saved = super.handleSaveAs();
-
-        if (saved) {
-            String newName = getSketch().getCode(0).getFileName();
-            for (Integer line : removedLines)
-                addLineBookmark(new LineID(newName, line));
-
-            System.out.println("Saving As");
-        }
-        return saved;
     }
+
+    protected List<LineID> stripBookmarkComments() {
+        List<LineID> bms = new ArrayList<>();
+        // iterate over all tabs
+        Sketch sketch = getSketch();
+        for (SketchCode tab : sketch.getCode()) {
+            String code = tab.getProgram();
+            String[] codeLines = code.split("\\r?\\n");
+
+            // scan code for bookmark comments
+            int line = 0;
+            for (String textLine : codeLines) {
+                if (textLine.endsWith(PIN_MARKER)) {
+                    bms.add(new LineID(tab.getFileName(), line));
+                    codeLines[line] = textLine.replaceAll(PIN_MARKER, "");
+                }
+                line++;
+            }
+            code = PApplet.join(codeLines, "\n");
+            tab.setProgram(code);
+            setTabContents(tab.getFileName(), code);
+        }
+        return bms;
+    }
+
 
     /****************
      * 

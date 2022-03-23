@@ -108,7 +108,7 @@
 		{
 			"key": "instanceof:",
 			"code": [
-				"if ($ instanceof #) {",
+				"if (@ instanceof #) {",
 				"    # obj = (#) @;",
 				"    $",
 				"}"

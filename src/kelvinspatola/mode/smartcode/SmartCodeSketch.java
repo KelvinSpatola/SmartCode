@@ -4,10 +4,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import processing.app.Mode;
 import processing.app.Sketch;
 import processing.app.SketchCode;
+import processing.mode.java.debug.LineID;
 
 public class SmartCodeSketch extends Sketch {
     private final SmartCodeEditor editor;
@@ -40,42 +40,82 @@ public class SmartCodeSketch extends Sketch {
 
     @Override
     protected void nameCode(String newName) {
-        System.out.println("renaming!");
         if (renaming) {
-            List<Integer> removedLines = new ArrayList<>();
-
-            for (int i = editor.getBookmarkedLines().size() - 1; i >= 0; i--) {
-                LineBookmark bm = editor.getBookmarkedLines().get(i);
-                if (bm.getTabIndex() == getCurrentCodeIndex()) {
-                    removedLines.add(bm.getLineID().lineIdx());
-                    editor.removeLineBookmark(bm.getLineID());
-                }
-            }
+            String oldName = getCurrentCode().getFileName();
+            List<Integer> removedLines = removeBookmarksAndRetrieveLineNumbers(oldName);
             super.nameCode(newName);
-
-            for (Integer line : removedLines)
-                editor.addLineBookmark(editor.getLineIDInCurrentTab(line));
+            generateBookmarksAt(getCurrentCode().getFileName(), removedLines);
 
         } else {
             super.nameCode(newName);
         }
-
     }
 
-//    @Override
-//    public boolean saveAs() throws IOException {
-//        if (editor.getBookmarkedLines().isEmpty()) {
-//            System.out.println("No bookmarks. Saving now");
-//            return super.saveAs();
-//        }
-//        
-//        String oldName = getCode(0).getFileName();
-//        
-//        boolean save = super.saveAs();
-//
-//        System.out.println("Saved bitch!");
-//
-//        return save;
-//    }
+    @Override
+    public boolean saveAs() throws IOException {        
+        if (editor.getBookmarkedLines().isEmpty()) {
+            return super.saveAs();
+        }
 
+        String oldName = getCode(0).getFileName();
+        List<Integer> removedLines = removeBookmarksAndRetrieveLineNumbers(oldName);
+        
+        boolean saved = super.saveAs();
+        
+        String newName = getCode(0).getFileName();
+        generateBookmarksAt(newName, removedLines);
+        
+        if (saved) {
+            for (SketchCode code : getCode()) {
+                editor.addBookmarkComments(code.getFileName());
+            }
+        }
+        return saved;
+    }
+    
+    @Override
+    public boolean save() throws IOException {        
+        if (editor.getBookmarkedLines().isEmpty()) {
+            return super.save();
+        }
+
+        if (super.save()) {
+            for (SketchCode code : getCode()) {
+                editor.addBookmarkComments(code.getFileName());
+            }
+            return true;
+        }
+        return false;
+    }
+
+    
+    /*
+     * @param tab the target SketchCode filename
+     * 
+     * @return a list with the line numbers of all bookmarks removed from this tab
+     */
+    protected List<Integer> removeBookmarksAndRetrieveLineNumbers(String tab) {
+        List<Integer> lineNumbers = new ArrayList<>();
+
+        for (int i = editor.getBookmarkedLines().size() - 1; i >= 0; i--) {
+            LineID lineID = editor.getBookmarkedLines().get(i).getLineID();
+            
+            if (lineID.fileName().equals(tab)) {
+                lineNumbers.add(lineID.lineIdx());
+                editor.removeLineBookmark(lineID);
+            }
+        }
+        return lineNumbers;
+    }
+    
+
+    /*
+     * @param tab the target SketchCode filename
+     * 
+     * @param lineNumbers a list with the line numbers of bookmarks to be added
+     */
+    protected void generateBookmarksAt(String tab, List<Integer> lineNumbers) {
+        for (int line : lineNumbers)
+            editor.addLineBookmark(new LineID(tab, line));
+    }
 }
