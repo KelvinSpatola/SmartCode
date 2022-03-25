@@ -113,6 +113,16 @@
 				"    $",
 				"}"
 			]
+		},
+		{
+			"key": "try:",
+			"code": [
+				"try {",
+				"    #$",
+				"} catch (Exception e) {",
+				"    e.printStackTrace();",
+				"}"
+			]
 		}
 	]
 }

@@ -2,11 +2,17 @@ package kelvinspatola.mode.smartcode;
 
 import static kelvinspatola.mode.smartcode.Constants.*;
 
+import java.awt.Cursor;
+import java.awt.FontMetrics;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+import javax.swing.JPopupMenu;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 
@@ -14,29 +20,102 @@ import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
 import processing.app.SketchCode;
 import processing.app.syntax.TextAreaDefaults;
-import processing.mode.java.JavaEditor;
+import processing.app.ui.Editor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
+    private MouseListener originalTextAreaPopupMenu;
+    protected JPopupMenu gutterRightClickPopup;
 
     // CONSTRUCTOR
-    public SmartCodeTextArea(TextAreaDefaults defaults, JavaEditor editor) {
+    public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
         super(defaults, editor);
 
-        SmartCodeInputHandler inputHandler = new SmartCodeInputHandler((SmartCodeEditor) editor);
+        SmartCodeInputHandler inputHandler = new SmartCodeInputHandler(editor);
 
         if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
             inputHandler.addKeyListener(new BracketCloser(editor));
         }
         if (SmartCodePreferences.TEMPLATES_ENABLED) {
-            SnippetManager sm = new SnippetManager((SmartCodeEditor) editor);
+            SnippetManager sm = new SnippetManager(editor);
             inputHandler.addKeyListener(sm);
             addCaretListener(sm);
             getSmartCodePainter().addLinePainter(sm);
         }
         // default behaviour for the textarea in regards to TAB and ENTER key
-        inputHandler.addKeyListener((SmartCodeEditor) editor);
+        inputHandler.addKeyListener(editor);
+
         setInputHandler(inputHandler);
+
+        // lets capture the original right click popup menu listener
+        originalTextAreaPopupMenu = painter.getMouseListeners()[2];
+        painter.removeMouseListener(originalTextAreaPopupMenu);
+
+        // Remove PdeTextArea's gutterCursorMouseAdapter object so we can add our own
+        // listener
+        painter.removeMouseMotionListener(gutterCursorMouseAdapter);
+
+        // Handle mouse clicks to toggle line bookmarks
+        MouseAdapter gutterBookmarkToggling = new MouseHandler();
+        painter.addMouseListener(gutterBookmarkToggling);
+        painter.addMouseMotionListener(gutterBookmarkToggling);
+    }
+
+    class MouseHandler extends MouseAdapter {
+        private int lastX; // previous horizontal position of the mouse cursor
+
+        @Override
+        public void mouseMoved(MouseEvent e) {
+            if (e.getX() < Editor.LEFT_GUTTER) {
+                if (lastX >= Editor.LEFT_GUTTER) {
+                    painter.removeMouseListener(originalTextAreaPopupMenu);
+                    painter.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                }
+            } else {
+                if (lastX < Editor.LEFT_GUTTER) {
+                    painter.addMouseListener(originalTextAreaPopupMenu);
+                    painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
+                }
+            }
+            lastX = e.getX();
+        }
+
+        long lastTime; // OS X seems to be firing multiple mouse events
+
+        @Override
+        public void mousePressed(MouseEvent e) {
+            long thisTime = e.getWhen();
+            int button = e.getButton();
+
+            if (thisTime - lastTime > 100) {
+                if (button == MouseEvent.BUTTON3) {
+
+                    int line = _yToLine(e.getY());
+                    int lastLine = getLineCount();
+
+                    if (e.getX() < Editor.LEFT_GUTTER && line < lastLine) {
+                        gutterRightClickPopup.show(painter, e.getX(), e.getY());
+                    }
+                    lastTime = thisTime;
+                }
+            }
+        }
+    };
+
+    public void setGutterRightClickPopup(JPopupMenu popupMenu) {
+        gutterRightClickPopup = popupMenu;
+    }
+
+    /**
+     * Converts a y co-ordinate to a line index. Rewriting this because i need it to
+     * not clamp the returned value between 0 and getLineCount() as the original
+     * JEditTextArea.yToLine() method does.
+     * 
+     * @param y The y co-ordinate
+     */
+    public int _yToLine(int y) {
+        FontMetrics fm = painter.getFontMetrics();
+        return Math.max(0, (y / fm.getHeight() + firstLine));
     }
 
     @Override

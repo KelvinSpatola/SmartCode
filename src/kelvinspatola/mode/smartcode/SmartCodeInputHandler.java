@@ -2,15 +2,11 @@ package kelvinspatola.mode.smartcode;
 
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import kelvinspatola.mode.smartcode.ui.LineBookmark;
 import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.syntax.PdeInputHandler;
-import processing.mode.java.debug.LineID;
 
 public class SmartCodeInputHandler extends PdeInputHandler {
     protected List<KeyListener> listeners;
@@ -34,29 +30,16 @@ public class SmartCodeInputHandler extends PdeInputHandler {
 
         // for testing purposes
         addKeyBinding("C+B", e -> {
+//            System.out.println(Platform.getContentFile("modes/java/keywords.txt"));
+//            System.out.println(editor.getMode().getReferenceFolder());
             testing();
-        });
-        addKeyBinding("C+M", e -> {
-            System.out.println(Platform.getContentFile("modes/java/keywords.txt"));
-            System.out.println(editor.getMode().getReferenceFolder());
         });
 
         listeners = new ArrayList<>();
     }
 
     void testing() {
-//        int size = ((SmartCodeEditor) editor).getBookmarkedLines().size();
-//        
-//        for (LineBookmark lm : ((SmartCodeEditor) editor).getBookmarkedLines()) {
-//            LineID lineID = lm.getLineID();
-//            System.out.println(lineID + " - tab: " + lm.getTabIndex());
-//        }
-//        System.out.println("size: " + size);
-
-        for (int i = 0; i < ((SmartCodeEditor) editor).getSmartCodePainter().painters.size(); i++) {
-            LinePainter p = ((SmartCodeEditor) editor).getSmartCodePainter().painters.get(i);
-            System.out.println("index: " + i + p.getClass().getSimpleName());
-        }
+        System.out.println("test");
     }
 
     public void addKeyListener(KeyListener listener) {

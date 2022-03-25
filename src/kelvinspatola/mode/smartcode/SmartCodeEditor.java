@@ -3,14 +3,12 @@ package kelvinspatola.mode.smartcode;
 import static kelvinspatola.mode.smartcode.Constants.*;
 
 import java.awt.BorderLayout;
-import java.awt.Font;
+import java.awt.Component;
 import java.awt.event.KeyEvent;
-import java.awt.EventQueue;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import javax.swing.*;
@@ -41,7 +39,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
 
-    static private boolean helloMessageViewed;
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -54,6 +51,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         buildMenu();
         buildPopupMenu();
+        buildGutterPopupMenu();
         buildMarkerColumn(new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height));
 
         occurrences = new CodeOccurrences(this, preprocService);
@@ -71,10 +69,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     private void printHelloMessage() {
         statusNotice("SmartCode is active");
-        if (!helloMessageViewed) {
-            console.message("SmartCode 0.0.1\n" + "created by Kelvin Spatola\n", false);
-            helloMessageViewed = true;
-        }
+        console.message("SmartCode 0.0.1\n" + "created by Kelvin Spatola\n", false);
     }
 
     @Override
@@ -129,7 +124,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     private void buildMenu() {
         JMenu menu = new JMenu("SmartCode");
-        List<JMenuItem> updatableItems = new ArrayList<>();
 
         JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
         menu.addSeparator(); // ---------------------------------------------
@@ -146,10 +140,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         createItem(menu, "Insert line break", "A+ENTER", () -> insertLineBreak(getCaretOffset()));
 
         menu.addSeparator(); // ---------------------------------------------
-        updatableItems.add(createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment));
-        updatableItems.add(createItem(menu, "Format selected text", "C+T", this::handleAutoFormat));
-        updatableItems.add(createItem(menu, "To upper case", "CS+U", () -> changeCase(true)));
-        updatableItems.add(createItem(menu, "To lower case", "CS+L", () -> changeCase(false)));
+        JMenuItem[] updatableItems = { createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
+                createItem(menu, "Format selected text", "C+T", this::handleAutoFormat),
+                createItem(menu, "To upper case", "CS+U", () -> changeCase(true)),
+                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) };
         createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
 
         menu.addSeparator(); // ---------------------------------------------
@@ -176,52 +170,38 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     private void buildPopupMenu() {
         JPopupMenu popup = textarea.getRightClickPopup();
-        JMenu submenu = new JMenu("SmartCode");
-
-        List<JMenuItem> selectableItems = new ArrayList<>();
-        Predicate<Integer> isBookmarked = line -> isLineBookmark(line);
 
         popup.addSeparator(); // ---------------------------------------------
-        JMenuItem lineBookmarkItem = createItem(popup, "", null, () -> toggleLineBookmark(textarea.getCaretLine()));
-        JMenuItem showBookmarksItem = createItem(popup, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-
-        popup.addSeparator(); // ---------------------------------------------
-        selectableItems.add(createItem(submenu, "Format selected text", null, this::handleAutoFormat));
-        selectableItems.add(createItem(submenu, "Toggle block comment", null, this::toggleBlockComment));
-        selectableItems.add(createItem(submenu, "To upper case", null, () -> changeCase(true)));
-        selectableItems.add(createItem(submenu, "To lower case", null, () -> changeCase(false)));
-
-        popup.addPopupMenuListener(new PopupMenuListener() {
-            @Override
-            public void popupMenuCanceled(PopupMenuEvent arg0) {
-            }
-
-            @Override
-            public void popupMenuWillBecomeInvisible(PopupMenuEvent arg0) {
-            }
-
-            @Override
-            public void popupMenuWillBecomeVisible(PopupMenuEvent arg0) {
-                lineBookmarkItem.setText(
-                        isBookmarked.test(textarea.getCaretLine()) ? "Remove line bookmark" : "Add line bookmark");
-
-                showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
-            }
-
-        });
+        JMenuItem[] selectableItems = { createItem(popup, "Format selected text", null, this::handleAutoFormat),
+                createItem(popup, "Toggle block comment", null, this::toggleBlockComment),
+                createItem(popup, "To upper case", null, () -> changeCase(true)),
+                createItem(popup, "To lower case", null, () -> changeCase(false)) };
 
         // Update state on selection/de-selection
-        submenu.addMenuListener(new MenuAdapter() {
+        popup.addPopupMenuListener(new MenuAdapter() {
             @Override
-            public void menuSelected(MenuEvent e) {
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
                 for (JMenuItem item : selectableItems) {
                     item.setEnabled(isSelectionActive());
                 }
             }
         });
+    }
 
-        submenu.setFont(popup.getFont().deriveFont(Font.BOLD));
-        popup.add(submenu);
+    private void buildGutterPopupMenu() {
+        getSmartCodeTextArea().setGutterRightClickPopup(new JPopupMenu() {
+            int line;
+            JMenuItem lineBookmarkItem = createItem(this, "", null, () -> toggleLineBookmark(line));
+            JMenuItem showBookmarksItem = createItem(this, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
+
+            @Override
+            public void show(Component component, int x, int y) {
+                line = textarea.yToLine(y);
+                lineBookmarkItem.setText(isLineBookmark(line) ? "Remove bookmark" : "Add bookmark");
+                showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
+                super.show(component, x, y);
+            }
+        });
     }
 
     protected static JMenuItem createItem(JComponent menu, String title, String keyBinding, Runnable action) {
@@ -245,7 +225,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
-    abstract static class MenuAdapter implements MenuListener {
+    abstract static class MenuAdapter implements MenuListener, PopupMenuListener {
         @Override
         public void menuCanceled(MenuEvent e) {
         }
@@ -256,6 +236,18 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         @Override
         public void menuSelected(MenuEvent e) {
+        }
+
+        @Override
+        public void popupMenuCanceled(PopupMenuEvent e) {
+        }
+
+        @Override
+        public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+        }
+
+        @Override
+        public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
         }
     }
 
@@ -1187,7 +1179,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             return false;
         };
     }
-    
+
     protected void addBookmarkComments(String tabFilename) {
         final List<Integer> bms = new ArrayList<>();
         for (LineBookmark bm : getBookmarkedLines()) {
@@ -1196,7 +1188,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 bms.add(lineID.lineIdx());
             }
         }
-        
+
         SketchCode tab = getTab(tabFilename);
         try {
             tab.load();
@@ -1239,7 +1231,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
         return bms;
     }
-
 
     /****************
      * 

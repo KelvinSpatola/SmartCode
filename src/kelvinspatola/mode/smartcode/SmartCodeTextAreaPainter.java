@@ -3,13 +3,11 @@ package kelvinspatola.mode.smartcode;
 import static kelvinspatola.mode.smartcode.Constants.*;
 
 import java.awt.Color;
-import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseAdapter;
 import java.awt.geom.GeneralPath;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,14 +20,13 @@ import processing.app.syntax.PdeTextArea;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
 import processing.app.ui.Theme;
-import processing.mode.java.JavaTextArea;
 import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<LinePainter> painters = new ArrayList<>();
     protected Color bookmarkIconColor;
 
-    public SmartCodeTextAreaPainter(JavaTextArea textarea, TextAreaDefaults defaults) {
+    public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
         highlights = new Highlight() {
@@ -45,8 +42,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             @Override
             public void paintHighlight(Graphics gfx, int line, int y) {
                 for (LinePainter painter : painters) {
-                    if (painter.canPaint(gfx, line, y + getLineDisplacement(), fontMetrics.getHeight(),
-                            (SmartCodeTextArea) textArea)) {
+                    if (painter.canPaint(gfx, line, y + getLineDisplacement(), fontMetrics.getHeight(), textarea)) {
                         //
                     } else {
                         repaint();
@@ -54,25 +50,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 }
             }
         };
-
-        // Handle mouse clicks to toggle line bookmarks
-        addMouseListener(new MouseAdapter() {
-            long lastTime; // OS X seems to be firing multiple mouse events
-
-            public void mousePressed(MouseEvent e) {
-                long thisTime = e.getWhen();
-
-                if (thisTime - lastTime > 100) {
-                    int lineIndex = yToLine(e.getY());
-                    int lastLine = textArea.getLineCount();
-
-                    if (e.getX() < Editor.LEFT_GUTTER && lineIndex < lastLine) {
-                        getSmartCodeEditor().toggleLineBookmark(lineIndex);
-                    }
-                    lastTime = thisTime;
-                }
-            }
-        });
     }
 
     @Override
@@ -87,18 +64,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
     public void addLinePainter(LinePainter painter) {
         painters.add(painter);
-    }
-
-    /**
-     * Converts a y co-ordinate to a line index. Rewriting this because i need it to
-     * not clamp the returned value as the original JEditTextArea.yToLine() method
-     * does.
-     * 
-     * @param y The y co-ordinate
-     */
-    public int yToLine(int y) {
-        FontMetrics fm = getFontMetrics();
-        return Math.max(0, (y / fm.getHeight() + textArea.getFirstLine()));
     }
 
     @Override
