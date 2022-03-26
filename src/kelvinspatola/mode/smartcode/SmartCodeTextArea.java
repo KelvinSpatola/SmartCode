@@ -103,6 +103,7 @@ public class SmartCodeTextArea extends JavaTextArea {
             long thisTime = e.getWhen();
 
             if (thisTime - lastTime > 100) {
+                
                 if (e.getButton() == MouseEvent.BUTTON3) {
                     int line = _yToLine(e.getY());
                     // constrain to the last line of text and not the last visible line
@@ -111,11 +112,22 @@ public class SmartCodeTextArea extends JavaTextArea {
                     if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine)) {
                         isGutterPressed = true;
                     }
-                    lastTime = thisTime;
+                    
+                } else if (e.getButton() == MouseEvent.BUTTON1) {
+                    if (e.getClickCount() == 2) {
+                        int line = _yToLine(e.getY());
+                        // constrain to the last line of text and not the last visible line
+                        int lastTextLine = getLineCount();
+
+                        if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine)) {
+                            ((SmartCodeEditor) editor).toggleLineBookmark(line);
+                        }
+                    }
                 }
+                
+                lastTime = thisTime;
             }
         }
-        // switch (event.getClickCount()) {
 
         @Override
         public void mouseReleased(MouseEvent e) {
