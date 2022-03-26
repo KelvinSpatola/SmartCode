@@ -39,7 +39,8 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     }
 
     void testing() {
-        System.out.println("test");
+        ((SmartCodeEditor) editor).getSmartCodeTextArea().test();
+//        System.out.println("test");
     }
 
     public void addKeyListener(KeyListener listener) {

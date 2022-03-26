@@ -191,13 +191,13 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     private void buildGutterPopupMenu() {
         getSmartCodeTextArea().setGutterRightClickPopup(new JPopupMenu() {
             int line;
-            JMenuItem lineBookmarkItem = createItem(this, "", null, () -> toggleLineBookmark(line));
+            JMenuItem toggleBookmarkItem = createItem(this, "", null, () -> toggleLineBookmark(line));
             JMenuItem showBookmarksItem = createItem(this, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
 
             @Override
             public void show(Component component, int x, int y) {
                 line = textarea.yToLine(y);
-                lineBookmarkItem.setText(isLineBookmark(line) ? "Remove bookmark" : "Add bookmark");
+                toggleBookmarkItem.setText(isLineBookmark(line) ? "Remove bookmark" : "Add bookmark");
                 showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
                 super.show(component, x, y);
             }

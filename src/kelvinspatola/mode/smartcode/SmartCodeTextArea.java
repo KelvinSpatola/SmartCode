@@ -6,9 +6,12 @@ import java.awt.Cursor;
 import java.awt.FontMetrics;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -18,13 +21,16 @@ import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
+import processing.app.Messages;
 import processing.app.SketchCode;
+import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
-    private MouseListener originalTextAreaPopupMenu;
+    private MouseListener pdeMouseHandlerListener;
+    private MouseMotionListener pdeDragHandlerListener;
     protected JPopupMenu gutterRightClickPopup;
 
     // CONSTRUCTOR
@@ -46,14 +52,19 @@ public class SmartCodeTextArea extends JavaTextArea {
         inputHandler.addKeyListener(editor);
 
         setInputHandler(inputHandler);
+        
 
-        // lets capture the original right click popup menu listener
-        originalTextAreaPopupMenu = painter.getMouseListeners()[2];
-        painter.removeMouseListener(originalTextAreaPopupMenu);
-
-        // Remove PdeTextArea's gutterCursorMouseAdapter object so we can add our own
-        // listener
+        // Remove PdeTextArea's gutterCursorMouseAdapter listener so we
+        // can add our own listener
         painter.removeMouseMotionListener(gutterCursorMouseAdapter);
+        
+        // let's capture the default MouseHandler listener
+        pdeMouseHandlerListener = painter.getMouseListeners()[2];
+        painter.removeMouseListener(pdeMouseHandlerListener);
+
+        // let's capture the default DragHandler listener
+        pdeDragHandlerListener = painter.getMouseMotionListeners()[1];
+        painter.removeMouseMotionListener(pdeDragHandlerListener);
 
         // Handle mouse clicks to toggle line bookmarks
         MouseAdapter gutterBookmarkToggling = new MouseHandler();
@@ -62,45 +73,79 @@ public class SmartCodeTextArea extends JavaTextArea {
     }
 
     class MouseHandler extends MouseAdapter {
-        private int lastX; // previous horizontal position of the mouse cursor
+        int lastX; // previous horizontal position of the mouse cursor
+        long lastTime; // OS X seems to be firing multiple mouse events
+        boolean isGutterPressed;
 
         @Override
         public void mouseMoved(MouseEvent e) {
+            // check if the cursor is INSIDE the left gutter area
             if (e.getX() < Editor.LEFT_GUTTER) {
                 if (lastX >= Editor.LEFT_GUTTER) {
-                    painter.removeMouseListener(originalTextAreaPopupMenu);
+                    painter.removeMouseListener(pdeMouseHandlerListener);
+                    painter.removeMouseMotionListener(pdeDragHandlerListener);
                     painter.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                 }
-            } else {
+
+            } else { // check if the cursor is OUTSIDE the left gutter area (inside the text area)
                 if (lastX < Editor.LEFT_GUTTER) {
-                    painter.addMouseListener(originalTextAreaPopupMenu);
+                    painter.addMouseListener(pdeMouseHandlerListener);
+                    painter.addMouseMotionListener(pdeDragHandlerListener);
                     painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
+                    isGutterPressed = false;
                 }
             }
             lastX = e.getX();
         }
 
-        long lastTime; // OS X seems to be firing multiple mouse events
-
         @Override
         public void mousePressed(MouseEvent e) {
             long thisTime = e.getWhen();
-            int button = e.getButton();
 
             if (thisTime - lastTime > 100) {
-                if (button == MouseEvent.BUTTON3) {
-
+                if (e.getButton() == MouseEvent.BUTTON3) {
                     int line = _yToLine(e.getY());
-                    int lastLine = getLineCount();
+                    // constrain to the last line of text and not the last visible line
+                    int lastTextLine = getLineCount();
 
-                    if (e.getX() < Editor.LEFT_GUTTER && line < lastLine) {
-                        gutterRightClickPopup.show(painter, e.getX(), e.getY());
+                    if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine)) {
+                        isGutterPressed = true;
                     }
                     lastTime = thisTime;
                 }
             }
         }
+        // switch (event.getClickCount()) {
+
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            if (e.getButton() == MouseEvent.BUTTON3 && isGutterPressed) {
+                int line = _yToLine(e.getY());
+                // constrain to the last line of text and not the last visible line
+                int lastTextLine = getLineCount();
+
+                if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine) && gutterRightClickPopup != null) {
+                    gutterRightClickPopup.show(painter, e.getX(), e.getY());
+                }
+                isGutterPressed = false;
+            }
+        }
     };
+
+    protected void test() {
+        int i = 0;
+        Messages.log("\n*** MouseListener ***");
+        for (MouseListener ml : painter.getMouseListeners()) {
+            Messages.log(i++ + ": " + ml.getClass().getName().substring(ml.getClass().getName().lastIndexOf('.'))
+                    + " - " + (ml.getClass().getEnclosingClass() == JEditTextArea.class));
+        }
+        i = 0;
+        Messages.log("\n*** MouseMotionListener ***");
+        for (MouseMotionListener mml : painter.getMouseMotionListeners()) {
+            Messages.log(i++ + ": " + mml.getClass().getName().substring(mml.getClass().getName().lastIndexOf('.'))
+                    + " - " + (mml.getClass().getEnclosingClass() == JEditTextArea.class));
+        }
+    }
 
     public void setGutterRightClickPopup(JPopupMenu popupMenu) {
         gutterRightClickPopup = popupMenu;
