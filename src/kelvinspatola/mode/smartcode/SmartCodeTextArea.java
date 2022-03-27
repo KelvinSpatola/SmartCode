@@ -33,6 +33,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     private MouseMotionListener pdeDragHandlerListener;
     protected JPopupMenu gutterRightClickPopup;
 
+
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
         super(defaults, editor);
@@ -52,12 +53,11 @@ public class SmartCodeTextArea extends JavaTextArea {
         inputHandler.addKeyListener(editor);
 
         setInputHandler(inputHandler);
-        
 
         // Remove PdeTextArea's gutterCursorMouseAdapter listener so we
         // can add our own listener
         painter.removeMouseMotionListener(gutterCursorMouseAdapter);
-        
+
         // let's capture the default MouseHandler listener
         pdeMouseHandlerListener = painter.getMouseListeners()[2];
         painter.removeMouseListener(pdeMouseHandlerListener);
@@ -103,28 +103,20 @@ public class SmartCodeTextArea extends JavaTextArea {
             long thisTime = e.getWhen();
 
             if (thisTime - lastTime > 100) {
-                
-                if (e.getButton() == MouseEvent.BUTTON3) {
-                    int line = _yToLine(e.getY());
-                    // constrain to the last line of text and not the last visible line
-                    int lastTextLine = getLineCount();
+                int line = _yToLine(e.getY());
+                int lastTextLine = getLineCount(); // constrain to the last line of text
 
-                    if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine)) {
-                        isGutterPressed = true;
-                    }
-                    
-                } else if (e.getButton() == MouseEvent.BUTTON1) {
-                    if (e.getClickCount() == 2) {
-                        int line = _yToLine(e.getY());
-                        // constrain to the last line of text and not the last visible line
-                        int lastTextLine = getLineCount();
-
-                        if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine)) {
+                if ((e.getX() < Editor.LEFT_GUTTER) && (line < lastTextLine)) {
+                    switch (e.getButton()) {
+                    case MouseEvent.BUTTON1: // left mouse button
+                        if (e.getClickCount() == 2)
                             ((SmartCodeEditor) editor).toggleLineBookmark(line);
-                        }
+                        break;
+                    case MouseEvent.BUTTON3: // right mouse button
+                        isGutterPressed = true;
+                        break;
                     }
                 }
-                
                 lastTime = thisTime;
             }
         }

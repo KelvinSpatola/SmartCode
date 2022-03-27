@@ -3,6 +3,7 @@ package kelvinspatola.mode.smartcode;
 import static kelvinspatola.mode.smartcode.Constants.*;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
@@ -38,6 +39,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
+    private Color currentBookmarkColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR;
 
 
     // CONSTRUCTOR
@@ -189,19 +191,49 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     private void buildGutterPopupMenu() {
-        getSmartCodeTextArea().setGutterRightClickPopup(new JPopupMenu() {
+        
+        class GutterPopupMenu extends JPopupMenu {
+            JMenu submenu = new JMenu();
+            JMenuItem removeBookmarkItem, showBookmarksListItem;
             int line;
-            JMenuItem toggleBookmarkItem = createItem(this, "", null, () -> toggleLineBookmark(line));
-            JMenuItem showBookmarksItem = createItem(this, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-
+            
+            GutterPopupMenu() {
+                createItem(submenu, "Violet", null, () -> setBookmarkColor(line, Color.decode("#9b5de5")));
+                createItem(submenu, "Magenta", null, () -> setBookmarkColor(line, Color.decode("#f15bb5")));
+                createItem(submenu, "Yellow", null, () -> setBookmarkColor(line, Color.decode("#fee440")));
+                createItem(submenu, "Blue", null, () -> setBookmarkColor(line, Color.decode("#00bbf9")));
+                createItem(submenu, "Green", null, () -> setBookmarkColor(line, Color.decode("#00f5d4")));
+                
+                add(submenu);    
+                removeBookmarkItem = createItem(this, "Remove bookmark", null, () -> removeLineBookmark(getLineIDInCurrentTab(line)));
+                addSeparator();       
+                showBookmarksListItem = createItem(this, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
+            }
+               
+            void setBookmarkColor(int line, Color color) {
+                currentBookmarkColor = color;
+                final LineID lineID = getLineIDInCurrentTab(line);
+                
+                if (isLineBookmark(lineID)) {
+                    getLineBookmark(lineID).setColor(color);
+                } else {
+                    addLineBookmark(lineID);
+                }
+            }
+            
             @Override
             public void show(Component component, int x, int y) {
                 line = textarea.yToLine(y);
-                toggleBookmarkItem.setText(isLineBookmark(line) ? "Remove bookmark" : "Add bookmark");
-                showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
+                boolean isLineBookmark = isLineBookmark(line);
+                
+                submenu.setText(isLineBookmark ? "Change color" : "Add bookmark");
+                removeBookmarkItem.setVisible(isLineBookmark);
+                showBookmarksListItem.setEnabled(!bookmarkedLines.isEmpty());
                 super.show(component, x, y);
             }
-        });
+        };
+        
+        getSmartCodeTextArea().setGutterRightClickPopup(new GutterPopupMenu());
     }
 
     protected static JMenuItem createItem(JComponent menu, String title, String keyBinding, Runnable action) {
@@ -1092,7 +1124,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     protected void addLineBookmark(LineID lineID) {
-        bookmarkedLines.add(new LineBookmark(this, lineID));
+        bookmarkedLines.add(new LineBookmark(this, lineID, currentBookmarkColor));
         bookmarkedLines.sort(null);
         updateColumnPoints(bookmarkedLines, LineBookmark.class);
         showBookmarks.updateTree();
@@ -1172,7 +1204,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected LinePainter getBookmarkLinePainter() {
         return (gfx, line, y, h, textarea) -> {
             if (!isDebuggerEnabled() && isLineBookmark(line)) {
-                gfx.setColor(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR);
+                gfx.setColor(getLineBookmark(getLineIDInCurrentTab(line)).getColor());
                 gfx.fillRect(0, y, getWidth(), h);
                 return true;
             }
