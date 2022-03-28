@@ -5,7 +5,13 @@ import static kelvinspatola.mode.smartcode.Constants.*;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.ComponentOrientation;
+import java.awt.Dimension;
+import java.awt.Insets;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseAdapter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,7 +46,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
     private Color currentBookmarkColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR;
-
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -191,34 +196,24 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     private void buildGutterPopupMenu() {
-        
         class GutterPopupMenu extends JPopupMenu {
-            JMenu submenu = new JMenu();
+            JMenu submenu;
             JMenuItem removeBookmarkItem, showBookmarksListItem;
             int line;
-            
+
             GutterPopupMenu() {
-                createItem(submenu, "Violet", null, () -> setBookmarkColor(line, Color.decode("#9b5de5")));
-                createItem(submenu, "Magenta", null, () -> setBookmarkColor(line, Color.decode("#f15bb5")));
-                createItem(submenu, "Yellow", null, () -> setBookmarkColor(line, Color.decode("#fee440")));
-                createItem(submenu, "Blue", null, () -> setBookmarkColor(line, Color.decode("#00bbf9")));
-                createItem(submenu, "Green", null, () -> setBookmarkColor(line, Color.decode("#00f5d4")));
-                
-                add(submenu);    
-                removeBookmarkItem = createItem(this, "Remove bookmark", null, () -> removeLineBookmark(getLineIDInCurrentTab(line)));
-                addSeparator();       
+                submenu = new JMenu();
+                addColorItem(Color.decode("#9b5de5"));
+                addColorItem(Color.decode("#f15bb5"));
+                addColorItem(Color.decode("#fee440"));
+                addColorItem(Color.decode("#00bbf9"));
+                addColorItem(Color.decode("#00f5d4"));
+                add(submenu);
+
+                removeBookmarkItem = createItem(this, "Remove bookmark", null,
+                        () -> removeLineBookmark(getLineIDInCurrentTab(line)));
+                addSeparator();
                 showBookmarksListItem = createItem(this, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-            }
-               
-            void setBookmarkColor(int line, Color color) {
-                currentBookmarkColor = color;
-                final LineID lineID = getLineIDInCurrentTab(line);
-                
-                if (isLineBookmark(lineID)) {
-                    getLineBookmark(lineID).setColor(color);
-                } else {
-                    addLineBookmark(lineID);
-                }
             }
             
             @Override
@@ -231,8 +226,35 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 showBookmarksListItem.setEnabled(!bookmarkedLines.isEmpty());
                 super.show(component, x, y);
             }
-        };
-        
+            
+            void addColorItem(Color color) {                
+                JMenuItem item = new JMenuItem();
+                item.setOpaque(true);
+                item.setBackground(color);
+                item.setMargin(new Insets(2, -20, 2, 2));
+                item.setEnabled(false);
+                item.addMouseListener(new MouseAdapter() {
+                    public void mouseClicked(MouseEvent e) {
+                        setBookmarkColor(line, color);
+                        GutterPopupMenu.this.setVisible(false);
+                    }
+                });
+                submenu.add(item);
+            }
+
+            void setBookmarkColor(int line, Color color) {
+                currentBookmarkColor = color;
+                final LineID lineID = getLineIDInCurrentTab(line);
+
+                if (isLineBookmark(lineID)) {
+                    getLineBookmark(lineID).setColor(color);
+                    getSketch().setModified(true);
+                } else {
+                    addLineBookmark(lineID);
+                }
+            }
+        }
+
         getSmartCodeTextArea().setGutterRightClickPopup(new GutterPopupMenu());
     }
 
