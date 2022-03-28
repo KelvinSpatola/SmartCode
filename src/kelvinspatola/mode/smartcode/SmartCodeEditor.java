@@ -15,7 +15,11 @@ import java.awt.event.MouseAdapter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import javax.swing.*;
@@ -66,7 +70,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         getSmartCodePainter().addLinePainter(occurrences);
 
         // get bookmarkers from marker comments
-        for (LineID lineID : stripBookmarkComments()) {
+        Map<LineID, String> loadedBookmarks = stripBookmarkComments();
+        for (LineID lineID : loadedBookmarks.keySet()) {
+            currentBookmarkColor = Color.decode(loadedBookmarks.get(lineID));
             addLineBookmark(lineID);
         }
         getSketch().setModified(false);
@@ -1235,11 +1241,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     protected void addBookmarkComments(String tabFilename) {
-        final List<Integer> bms = new ArrayList<>();
+        final Map<Integer, String> bms = new HashMap<>();
         for (LineBookmark bm : getBookmarkedLines()) {
             LineID lineID = bm.getLineID();
             if (lineID.fileName().equals(tabFilename)) {
-                bms.add(lineID.lineIdx());
+                String hex = Integer.toHexString(bm.getColor().getRGB()).substring(2);
+                bms.put(lineID.lineIdx(), hex);
             }
         }
 
@@ -1248,10 +1255,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             tab.load();
             String code = tab.getProgram();
             String[] codeLines = code.split("\\r?\\n");
-            for (int line : bms) {
+            
+            for (int line : bms.keySet()) {
+                String commentTag = "//<#" + bms.get(line) + ">//";
                 // to avoid duplication, do it only if this line is not already marked
-                if (!codeLines[line].endsWith(PIN_MARKER)) {
-                    codeLines[line] += PIN_MARKER;
+                if (!codeLines[line].endsWith(commentTag)) {
+                    codeLines[line] += commentTag;
                 }
             }
             code = PApplet.join(codeLines, "\n");
@@ -1261,9 +1270,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             Messages.err(null, ex);
         }
     }
-
-    protected List<LineID> stripBookmarkComments() {
-        List<LineID> bms = new ArrayList<>();
+    
+    protected Map<LineID, String> stripBookmarkComments() {
+        final String bookmarkCommentRegex = "\\/{2}<(#[a-fA-F0-9]{6}|[a-fA-F0-9]{3})>\\/{2}";
+        final Pattern commentedLinePattern = Pattern.compile("^.*" + bookmarkCommentRegex + "$");
+        final Map<LineID, String> bms = new HashMap<>();
+        
         // iterate over all tabs
         Sketch sketch = getSketch();
         for (SketchCode tab : sketch.getCode()) {
@@ -1273,9 +1285,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             // scan code for bookmark comments
             int line = 0;
             for (String textLine : codeLines) {
-                if (textLine.endsWith(PIN_MARKER)) {
-                    bms.add(new LineID(tab.getFileName(), line));
-                    codeLines[line] = textLine.replaceAll(PIN_MARKER, "");
+                Matcher m = commentedLinePattern.matcher(textLine);
+                
+                if (m.matches()) {
+                    bms.put(new LineID(tab.getFileName(), line), m.group(1));
+                    codeLines[line] = textLine.replaceAll(bookmarkCommentRegex, "");
                 }
                 line++;
             }
