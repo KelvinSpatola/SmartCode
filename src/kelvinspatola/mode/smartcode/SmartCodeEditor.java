@@ -47,7 +47,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
-    private Color currentBookmarkColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR;
+    private Color currentBookmarkColor = Color.decode("#9b5de5");
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -66,8 +66,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         // get bookmarkers from marker comments
         Map<LineID, String> loadedBookmarks = stripBookmarkComments();
         for (LineID lineID : loadedBookmarks.keySet()) {
-            currentBookmarkColor = Color.decode(loadedBookmarks.get(lineID));
-            addLineBookmark(lineID);
+            addLineBookmark(lineID, Color.decode(loadedBookmarks.get(lineID)));
         }
         // setting bookmarks will flag sketch as modified, so override this here
         getSketch().setModified(false);
@@ -152,17 +151,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         createItem(menu, "Insert line break", "A+ENTER", () -> insertLineBreak(getCaretOffset()));
 
         menu.addSeparator(); // ---------------------------------------------
-        JMenuItem[] updatableItems = { 
-                createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
+        JMenuItem[] updatableItems = { createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
                 createItem(menu, "Format selected text", "C+T", this::handleAutoFormat),
                 createItem(menu, "To upper case", "CS+U", () -> changeCase(true)),
-                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) 
-        };
-        createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);     
+                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) };
+        createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
 
         menu.addSeparator(); // ---------------------------------------------
         JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-        JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null, 
+        JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null,
                 () -> clearBookmarksFromTab(getSketch().getCurrentCodeIndex()));
 
         menu.addSeparator(); // ---------------------------------------------
@@ -174,15 +171,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             public void menuSelected(MenuEvent e) {
                 // show list of boomarks only if there's at least one on the list
                 showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
-                
-                // check if there are any bookmarks in the current tab to remove only these
-                boolean canClear = false;
-                for (LineMarker lm : bookmarkedLines) {
-                    if (canClear = (lm.getTabIndex() == getSketch().getCurrentCodeIndex())) {
-                        break;
-                    }
-                }
-                clearBookmarksItem.setEnabled(canClear);
+
+                // Enable this item only if there are any bookmarks in the current tab
+                clearBookmarksItem.setEnabled(hasBookmarksInCurrentTab());
 
                 // Update state on selection/de-selection
                 for (JMenuItem item : updatableItems) {
@@ -263,19 +254,17 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 item.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 item.addActionListener(a -> setBookmarkColor(line, color));
                 submenu.add(item);
-                submenu.add(Box.createHorizontalGlue());
             }
 
             void setBookmarkColor(int line, Color color) {
-                currentBookmarkColor = color;
                 final LineID lineID = getLineIDInCurrentTab(line);
-
                 if (isLineBookmark(lineID)) {
                     getLineBookmark(lineID).setColor(color);
                 } else {
-                    addLineBookmark(lineID);
+                    addLineBookmark(lineID, color);
                 }
                 getSketch().setModified(true);
+                currentBookmarkColor = color;
             }
         }
 
@@ -609,30 +598,36 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             Selection s = new Selection();
             String selectedText = s.getText();
 
-            final List<Integer> removedLines = new ArrayList<>();
-            boolean isBookmarksRemoved = false;
+            List<Integer> taggedLines = null;
+            List<Color> colors = null;
+            boolean isTagged = false;
 
             //
-            if (!bookmarkedLines.isEmpty()) {
-                final int currTabIndex = getSketch().getCurrentCodeIndex();
+            if (hasBookmarksInCurrentTab()) {
+                taggedLines = new ArrayList<>();
+                colors = new ArrayList<>();
+                final int currentTab = getSketch().getCurrentCodeIndex();
 
                 for (int i = bookmarkedLines.size() - 1; i >= 0; i--) {
                     LineBookmark bm = (LineBookmark) bookmarkedLines.get(i);
                     int bmLine = bm.getLineID().lineIdx();
 
-                    if (bm.getTabIndex() == currTabIndex && bmLine >= s.getStartLine() && bmLine <= s.getEndLine()) {
-                        removedLines.add(bmLine);
+                    if (bm.getTabIndex() == currentTab && bmLine >= s.getStartLine() && bmLine <= s.getEndLine()) {
+                        taggedLines.add(bmLine);
+                        colors.add(bm.getColor());
                     }
                 }
 
-                if (!removedLines.isEmpty()) {
+                // Now that we have the line references we need, let's add bookmark tags to the
+                // text
+                if (!taggedLines.isEmpty()) {
                     String[] textLines = selectedText.split("\\r?\\n");
 
-                    for (int line : removedLines) {
+                    for (int line : taggedLines) {
                         textLines[line - s.getStartLine()] += PIN_MARKER;
                     }
                     selectedText = PApplet.join(textLines, "\n");
-                    isBookmarksRemoved = true;
+                    isTagged = true;
                 }
             }
 
@@ -666,9 +661,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 int end = s.getEnd() + 1;
 
                 startCompoundEdit();
-
-                for (int line : removedLines) {
-                    removeLineBookmark(getLineIDInCurrentTab(line));
+                // we need to remove bookmarks here before actually inserting the formatted text
+                // back to the code, otherwise we'll some weird bugs and errors
+                if (isTagged) {
+                    for (int line : taggedLines) {
+                        removeLineBookmark(getLineIDInCurrentTab(line));
+                    }
                 }
 
                 setSelection(start, end);
@@ -677,15 +675,16 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 end = start + formattedText.length() - 1;
                 setSelection(start, end);
 
-                if (isBookmarksRemoved) {
+                if (isTagged) {
                     String[] textLines = formattedText.split("\\r?\\n");
 
                     int line = s.getStartLine();
+                    int colorIndex = colors.size() - 1;
                     for (String textLine : textLines) {
                         if (textLine.endsWith(PIN_MARKER)) {
                             textarea.select(getLineStartOffset(line), getLineStopOffset(line) - 1);
                             textarea.setSelectedText(textLine.replaceAll(PIN_MARKER, ""));
-                            addLineBookmark(getLineIDInCurrentTab(line));
+                            addLineBookmark(getLineIDInCurrentTab(line), colors.get(colorIndex--));
                         }
                         line++;
                     }
@@ -870,10 +869,14 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         stopBookmarkTracking();
 
-        LineID lineID = getLineIDInCurrentTab(targetLine);
         boolean isTargetLineBookmarked;
-        if (isTargetLineBookmarked = isLineBookmark(lineID))
-            removeLineBookmark(lineID);
+        Color targetColor = null;
+        LineID targetID = getLineIDInCurrentTab(targetLine);
+
+        if (isTargetLineBookmarked = isLineBookmark(targetID)) {
+            targetColor = getLineBookmark(targetID).getColor();
+            removeLineBookmark(targetID);
+        }
 
         if (moveUp) {
             setSelection(target_start, s.getEnd());
@@ -896,8 +899,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 moveBookmarkTo(line, line + 1);
         }
 
-        if (isTargetLineBookmarked)
-            addLineBookmark(getLineIDInCurrentTab(moveUp ? selectionEndLine : selectionStartLine));
+        if (isTargetLineBookmarked) {
+            LineID lineID = getLineIDInCurrentTab(moveUp ? selectionEndLine : selectionStartLine);
+            addLineBookmark(lineID, targetColor);
+        }
 
         startBookmarkTracking();
 
@@ -1163,14 +1168,14 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             if (isLineBookmark(lineID)) {
                 removeLineBookmark(lineID);
             } else {
-                addLineBookmark(lineID);
+                addLineBookmark(lineID, currentBookmarkColor);
             }
             getSketch().setModified(true);
         }
     }
 
-    protected void addLineBookmark(LineID lineID) {
-        bookmarkedLines.add(new LineBookmark(this, lineID, currentBookmarkColor));
+    protected void addLineBookmark(LineID lineID, Color color) {
+        bookmarkedLines.add(new LineBookmark(this, lineID, color));
         bookmarkedLines.sort(null);
         updateColumnPoints(bookmarkedLines, LineBookmark.class);
         showBookmarks.updateTree();
@@ -1219,8 +1224,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected boolean moveBookmarkTo(int oldLinePos, int newLinePos) {
         LineID lineID = getLineIDInCurrentTab(oldLinePos);
         if (isLineBookmark(lineID)) {
+            Color color = getLineBookmark(lineID).getColor();
             removeLineBookmark(lineID);
-            addLineBookmark(getLineIDInCurrentTab(newLinePos));
+            addLineBookmark(getLineIDInCurrentTab(newLinePos), color);
             return true;
         }
         return false;
@@ -1236,6 +1242,16 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     public void startBookmarkTracking() {
         bookmarkedLines.forEach(bm -> ((LineBookmark) bm).startTracking());
+    }
+
+    protected boolean hasBookmarksInCurrentTab() {
+        int currentTab = getSketch().getCurrentCodeIndex();
+        for (LineMarker lm : bookmarkedLines) {
+            if (lm.getTabIndex() == currentTab) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected void clearBookmarksFromTab(int tabIndex) {
