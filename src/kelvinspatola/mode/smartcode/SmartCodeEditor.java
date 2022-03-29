@@ -67,17 +67,20 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         buildGutterPopupMenu();
         buildMarkerColumn(new SmartCodeMarkerColumn(this, textarea.getMinimumSize().height));
 
-        occurrences = new CodeOccurrences(this, preprocService);
-        textarea.addCaretListener(occurrences);
-        getSmartCodePainter().addLinePainter(occurrences);
-
         // get bookmarkers from marker comments
         Map<LineID, String> loadedBookmarks = stripBookmarkComments();
         for (LineID lineID : loadedBookmarks.keySet()) {
             currentBookmarkColor = Color.decode(loadedBookmarks.get(lineID));
             addLineBookmark(lineID);
         }
+        // setting bookmarks will flag sketch as modified, so override this here
         getSketch().setModified(false);
+        // report to the preprocService that we made changes to the sketch's documents
+        preprocService.notifySketchChanged();
+
+        occurrences = new CodeOccurrences(this, preprocService);
+        textarea.addCaretListener(occurrences);
+        getSmartCodePainter().addLinePainter(occurrences);
 
         printHelloMessage();
     }
