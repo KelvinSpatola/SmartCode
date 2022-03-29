@@ -5,12 +5,14 @@ import static kelvinspatola.mode.smartcode.Constants.*;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.ComponentOrientation;
-import java.awt.Dimension;
+import java.awt.Cursor;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Insets;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.MouseAdapter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -221,30 +223,31 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 addSeparator();
                 showBookmarksListItem = createItem(this, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
             }
-            
+
             @Override
             public void show(Component component, int x, int y) {
                 line = textarea.yToLine(y);
                 boolean isLineBookmark = isLineBookmark(line);
-                
+
                 submenu.setText(isLineBookmark ? "Change color" : "Add bookmark");
                 removeBookmarkItem.setVisible(isLineBookmark);
                 showBookmarksListItem.setEnabled(!bookmarkedLines.isEmpty());
                 super.show(component, x, y);
             }
-            
-            void addColorItem(Color color) {                
-                JMenuItem item = new JMenuItem();
-                item.setOpaque(true);
-                item.setBackground(color);
-                item.setMargin(new Insets(2, -20, 2, 2));
-                item.setEnabled(false);
-                item.addMouseListener(new MouseAdapter() {
-                    public void mouseClicked(MouseEvent e) {
-                        setBookmarkColor(line, color);
-                        GutterPopupMenu.this.setVisible(false);
+
+            void addColorItem(Color color) {
+                JMenuItem item = new JMenuItem() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        Graphics2D g2d = (Graphics2D) g;
+                        g2d.setColor(color);
+                        g2d.fillRect(2, 2, getWidth() - 4, getHeight() - 4);
                     }
-                });
+                };
+                item.setMargin(new Insets(2, -20, 2, 2));
+                item.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                item.addActionListener(a -> setBookmarkColor(line, color));
                 submenu.add(item);
             }
 
@@ -254,10 +257,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
                 if (isLineBookmark(lineID)) {
                     getLineBookmark(lineID).setColor(color);
-                    getSketch().setModified(true);
                 } else {
                     addLineBookmark(lineID);
                 }
+                getSketch().setModified(true);
             }
         }
 
@@ -1255,7 +1258,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             tab.load();
             String code = tab.getProgram();
             String[] codeLines = code.split("\\r?\\n");
-            
+
             for (int line : bms.keySet()) {
                 String commentTag = "//<#" + bms.get(line) + ">//";
                 // to avoid duplication, do it only if this line is not already marked
@@ -1270,12 +1273,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             Messages.err(null, ex);
         }
     }
-    
+
     protected Map<LineID, String> stripBookmarkComments() {
         final String bookmarkCommentRegex = "\\/{2}<(#[a-fA-F0-9]{6}|[a-fA-F0-9]{3})>\\/{2}";
         final Pattern commentedLinePattern = Pattern.compile("^.*" + bookmarkCommentRegex + "$");
         final Map<LineID, String> bms = new HashMap<>();
-        
+
         // iterate over all tabs
         Sketch sketch = getSketch();
         for (SketchCode tab : sketch.getCode()) {
@@ -1286,7 +1289,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             int line = 0;
             for (String textLine : codeLines) {
                 Matcher m = commentedLinePattern.matcher(textLine);
-                
+
                 if (m.matches()) {
                     bms.put(new LineID(tab.getFileName(), line), m.group(1));
                     codeLines[line] = textLine.replaceAll(bookmarkCommentRegex, "");
