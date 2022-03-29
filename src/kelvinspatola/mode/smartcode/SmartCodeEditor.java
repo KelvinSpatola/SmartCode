@@ -9,11 +9,7 @@ import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseAdapter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -143,8 +139,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     private void buildMenu() {
         JMenu menu = new JMenu("SmartCode");
 
-        JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-        menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Duplicate lines up", "CA+UP", () -> duplicateLines(true));
         createItem(menu, "Duplicate lines down", "CA+DOWN", () -> duplicateLines(false));
         createItem(menu, "Move lines up", "A+UP", () -> moveLines(true));
@@ -158,22 +152,39 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         createItem(menu, "Insert line break", "A+ENTER", () -> insertLineBreak(getCaretOffset()));
 
         menu.addSeparator(); // ---------------------------------------------
-        JMenuItem[] updatableItems = { createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
+        JMenuItem[] updatableItems = { 
+                createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
                 createItem(menu, "Format selected text", "C+T", this::handleAutoFormat),
                 createItem(menu, "To upper case", "CS+U", () -> changeCase(true)),
-                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) };
-        createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
+                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) 
+        };
+        createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);     
+
+        menu.addSeparator(); // ---------------------------------------------
+        JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
+        JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null, 
+                () -> clearBookmarksFromTab(getSketch().getCurrentCodeIndex()));
 
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Visit GitHub page", null,
                 () -> Platform.openURL("https://github.com/KelvinSpatola/SmartCode"));
 
-        // Update state on selection/de-selection
         menu.addMenuListener(new MenuAdapter() {
             @Override
             public void menuSelected(MenuEvent e) {
+                // show list of boomarks only if there's at least one on the list
                 showBookmarksItem.setEnabled(!bookmarkedLines.isEmpty());
+                
+                // check if there are any bookmarks in the current tab to remove only these
+                boolean canClear = false;
+                for (LineMarker lm : bookmarkedLines) {
+                    if (canClear = (lm.getTabIndex() == getSketch().getCurrentCodeIndex())) {
+                        break;
+                    }
+                }
+                clearBookmarksItem.setEnabled(canClear);
 
+                // Update state on selection/de-selection
                 for (JMenuItem item : updatableItems) {
                     item.setEnabled(isSelectionActive());
                 }
@@ -252,6 +263,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 item.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 item.addActionListener(a -> setBookmarkColor(line, color));
                 submenu.add(item);
+                submenu.add(Box.createHorizontalGlue());
             }
 
             void setBookmarkColor(int line, Color color) {
