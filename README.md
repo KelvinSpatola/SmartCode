@@ -1,4 +1,4 @@
-# Processing Mode Template
+# SmartCode mode for Processing
 This is an example setup to create a new mode in [Processing 3](https://processing.org/). It extends Processing's default Java mode, though you can easily remove the Java mode dependencies to create a mode for a different language.
 
 This template has been tested with Processing 4.0a6, 3.5.4, 3.0, and 3.0a11. 3.0a10 and previous versions will not load the template.
