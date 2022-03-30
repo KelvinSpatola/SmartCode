@@ -92,8 +92,12 @@ public class ShowBookmarks {
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode(editor.getSketch().getName());
 
         bookmarks.stream().map(b -> {
-            String text = "<html><font color=#bbbbbb>" + (b.getLine() + 1) + "</font> <font color=#000000>"
-                    + b.getText().trim() + "</font></html>";
+            String colorHex = Integer.toHexString(((LineBookmark) b).getColor().getRGB()).substring(2);
+            String colorIndicator = "<font color=" + colorHex + "> &#x25A0; </font>"; // &#x25A0; -> HTML code for the square
+            String lineNumberIndicator = "<font color=#bbbbbb>" + (b.getLine() + 1) + ": </font>";
+            String lineTextIndicator = "<font color=#000000>" + b.getText().trim() + "</font>";
+            
+            String text = "<html>" + colorIndicator + lineNumberIndicator + lineTextIndicator + "</html>";
             return new BookmarkTreeNode(b.getTabIndex(), b.getStartOffset(), b.getStopOffset(), text);
         })
                 // Group by tab index
