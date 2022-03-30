@@ -1,7 +1,14 @@
 package kelvinspatola.mode.smartcode;
 
+import java.awt.Color;
+
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
+
+import kelvinspatola.mode.smartcode.ui.LineBookmark;
+
+import java.util.HashMap;
 import java.util.List;
 
 import processing.app.Mode;
@@ -42,7 +49,7 @@ public class SmartCodeSketch extends Sketch {
     protected void nameCode(String newName) {
         if (renaming) {
             String oldName = getCurrentCode().getFileName();
-            List<Integer> removedLines = removeBookmarksAndRetrieveLineNumbers(oldName);
+            var removedLines = getBookmarksInfoAndRemoveThem(oldName);
             super.nameCode(newName);
             generateBookmarksAt(getCurrentCode().getFileName(), removedLines);
 
@@ -52,19 +59,19 @@ public class SmartCodeSketch extends Sketch {
     }
 
     @Override
-    public boolean saveAs() throws IOException {        
+    public boolean saveAs() throws IOException {
         if (editor.getBookmarkedLines().isEmpty()) {
             return super.saveAs();
         }
 
         String oldName = getCode(0).getFileName();
-        List<Integer> removedLines = removeBookmarksAndRetrieveLineNumbers(oldName);
-        
+        var removedLines = getBookmarksInfoAndRemoveThem(oldName);
+
         boolean saved = super.saveAs();
-        
+
         String newName = getCode(0).getFileName();
         generateBookmarksAt(newName, removedLines);
-        
+
         if (saved) {
             for (SketchCode code : getCode()) {
                 editor.addBookmarkComments(code.getFileName());
@@ -72,9 +79,9 @@ public class SmartCodeSketch extends Sketch {
         }
         return saved;
     }
-    
+
     @Override
-    public boolean save() throws IOException {        
+    public boolean save() throws IOException {
         if (editor.getBookmarkedLines().isEmpty()) {
             return super.save();
         }
@@ -88,34 +95,44 @@ public class SmartCodeSketch extends Sketch {
         return false;
     }
 
-    
-    /*
-     * @param tab the target SketchCode filename
+    /**
+     * Saves information relative to the line number and highlight color from all
+     * bookmarks in the current tab before removing them.
      * 
-     * @return a list with the line numbers of all bookmarks removed from this tab
+     * Its purpose is to save bookmark references at a time before the tab name is
+     * changed and then serve the {@link generateBookmarksAt} method, which restores all
+     * bookmarks back once a new name has been assigned to the tab.
+     * 
+     * @param tab the target SketchCode filename.
+     * 
+     * @return a map with the line number and color of all bookmarks removed from
+     *         the current tab.
+     *         
+     * @see generateBookmarksAt
      */
-    protected List<Integer> removeBookmarksAndRetrieveLineNumbers(String tab) {
-        List<Integer> lineNumbers = new ArrayList<>();
+    protected Map<Integer, Color> getBookmarksInfoAndRemoveThem(String tabFileName) {
+        Map<Integer, Color> result = new HashMap<>();
+        List<LineBookmark> bookmarks = editor.getBookmarkedLines();
 
-        for (int i = editor.getBookmarkedLines().size() - 1; i >= 0; i--) {
-            LineID lineID = editor.getBookmarkedLines().get(i).getLineID();
-            
-            if (lineID.fileName().equals(tab)) {
-                lineNumbers.add(lineID.lineIdx());
+        for (int i = bookmarks.size() - 1; i >= 0; i--) {
+            LineID lineID = bookmarks.get(i).getLineID();
+
+            if (lineID.fileName().equals(tabFileName)) {
+                Color color = bookmarks.get(i).getColor();
+                result.put(lineID.lineIdx(), color);
                 editor.removeLineBookmark(lineID);
             }
         }
-        return lineNumbers;
+        return result;
     }
-    
 
     /*
      * @param tab the target SketchCode filename
      * 
      * @param lineNumbers a list with the line numbers of bookmarks to be added
      */
-    protected void generateBookmarksAt(String tab, List<Integer> lineNumbers) {
-        for (int line : lineNumbers)
-            editor.addLineBookmark(new LineID(tab, line));
+    protected void generateBookmarksAt(String tabFileName, Map<Integer, Color> references) {
+        for (int line : references.keySet())
+            editor.addLineBookmark(new LineID(tabFileName, line), references.get(line));
     }
 }

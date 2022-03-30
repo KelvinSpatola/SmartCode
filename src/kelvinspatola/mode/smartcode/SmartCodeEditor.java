@@ -1261,6 +1261,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 removeLineBookmark(bm.getLineID());
             }
         }
+        getSketch().setModified(true);
     }
 
     protected LinePainter getBookmarkLinePainter() {
