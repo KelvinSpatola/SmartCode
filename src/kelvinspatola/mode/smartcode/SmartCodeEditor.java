@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.swing.*;
 import javax.swing.event.*;
@@ -47,7 +49,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
-    private Color currentBookmarkColor = Color.decode("#9b5de5");
+    protected Color currentBookmarkColor = Color.decode("#9b5de5");
+    protected Timer statusNoticeTimer;
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -77,12 +80,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
 
-        printHelloMessage();
+        timedAction(this::printHelloMessage, 500);
     }
 
     private void printHelloMessage() {
         statusNotice("SmartCode is active");
-        console.message("SmartCode 0.0.1\n" + "created by Kelvin Spatola\n", false);
+        System.out.println("SmartCode 0.0.1\n" + "created by Kelvin Spatola\n");
     }
 
     @Override
@@ -192,12 +195,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JPopupMenu popup = textarea.getRightClickPopup();
 
         popup.addSeparator(); // ---------------------------------------------
-        JMenuItem[] selectableItems = { 
-                createItem(popup, "Format selected text", null, this::handleAutoFormat),
+        JMenuItem[] selectableItems = { createItem(popup, "Format selected text", null, this::handleAutoFormat),
                 createItem(popup, "Toggle block comment", null, this::toggleBlockComment),
                 createItem(popup, "To upper case", null, () -> changeCase(true)),
-                createItem(popup, "To lower case", null, () -> changeCase(false)) 
-        };
+                createItem(popup, "To lower case", null, () -> changeCase(false)) };
 
         // Update state on selection/de-selection
         popup.addPopupMenuListener(new MenuAdapter() {
@@ -1424,5 +1425,36 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     public void updateColumnPoints(List<LineMarker> points, Class<?> parent) {
         ((SmartCodeMarkerColumn) errorColumn).updatePoints(points, parent);
+    }
+
+    @Override
+    public void applyPreferences() {
+        super.applyPreferences();
+        SmartCodeTextAreaPainter.updateDefaultFontSize();
+    }
+
+    public void timedStatusNotice(String msg, int millis) {
+        if (statusNoticeTimer != null) {
+            statusNoticeTimer.cancel();
+        }
+        statusNotice(msg);
+
+        statusNoticeTimer = new Timer();
+        statusNoticeTimer.schedule(new TimerTask() {
+            public void run() {
+                statusEmpty(); // Clear the status area.
+                statusNoticeTimer.cancel(); // Terminate the timer thread
+            }
+        }, millis);
+    }
+
+    static public void timedAction(Runnable task, int millis) {
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            public void run() {
+                task.run();
+                timer.cancel(); // Terminate the timer thread
+            }
+        }, millis);
     }
 }

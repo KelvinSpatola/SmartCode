@@ -99,10 +99,10 @@ public class SmartCodeSketch extends Sketch {
      * bookmarks in the current tab before removing them.
      * 
      * Its purpose is to save bookmark references at a time before the tab name is
-     * changed and then serve the {@link generateBookmarksAt} method, which restores all
+     * changed and then serve the <code>generateBookmarksAt</code> method, which restores all
      * bookmarks back once a new name has been assigned to the tab.
      * 
-     * @param tab the target SketchCode filename.
+     * @param tab the target <code>SketchCode</code> filename.
      * 
      * @return a map with the line number and color of all bookmarks removed from
      *         the current tab.

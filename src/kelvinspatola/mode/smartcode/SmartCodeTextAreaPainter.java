@@ -26,8 +26,8 @@ import processing.mode.java.JavaTextAreaPainter;
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<LinePainter> painters = new ArrayList<>();
     protected Color bookmarkIconColor;
+    static private int presetFontSize = Preferences.getInteger("editor.font.size");
 
-    
     public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
@@ -162,13 +162,48 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         path.closePath();
         g2.fill(path);
     }
-    
+
+    /**
+     * Gets the current value of the font size being rendered by the editor. Note
+     * that this may not match the value defined in the preferences file.
+     * 
+     * @return the editor's current font size.
+     */
     public int getFontSize() {
         return getFontMetrics().getFont().getSize();
     }
-    
+
+    /**
+     * Changes the editor font size without saving the changes to the preferences
+     * file.
+     * <p>
+     * Internally, this method actually writes the value in the preferences file,
+     * calls <code>updateTheme()</code> in order to update the editor's rendering,
+     * and finally rewrites the original value back to the preferences file without
+     * updating the editor.
+     * 
+     * @param size the font size. The minimum value that can be assigned is 8.
+     */
     public void setFontSize(int size) {
-        Preferences.set("editor.font.size", String.valueOf(Math.max(8, size)));
+        size = Math.max(8, size);
+        Preferences.set("editor.font.size", String.valueOf(size));
         updateTheme();
+        // Since the font size has already been changed, let's write the default value
+        // back to the preferences file. This way we prevent font size changes
+        // from passing to other editors when opening them. We also prevent these
+        // changes from being "saved" in the preferences file. The actual
+        // changes are supposed to be made in the preferences' window.
+        Preferences.set("editor.font.size", String.valueOf(presetFontSize));
+        
+        getSmartCodeEditor().timedStatusNotice("Font size: " + size, 1500);
+    }
+
+    /**
+     * Used whenever the user defines a new font size in the preferences window. It
+     * should be called inside <code>Editor.applyPreferences()</code> so it can be
+     * updated on every new change.
+     */
+    static public void updateDefaultFontSize() {
+        presetFontSize = Preferences.getInteger("editor.font.size");
     }
 }

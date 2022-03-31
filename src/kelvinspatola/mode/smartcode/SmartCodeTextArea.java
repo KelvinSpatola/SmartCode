@@ -10,6 +10,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseWheelEvent;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -19,9 +20,7 @@ import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
-import processing.app.Messages;
 import processing.app.SketchCode;
-import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
 import processing.mode.java.JavaTextArea;
@@ -30,7 +29,6 @@ public class SmartCodeTextArea extends JavaTextArea {
     private MouseListener pdeMouseHandlerListener;
     private MouseMotionListener pdeDragHandlerListener;
     protected JPopupMenu gutterRightClickPopup;
-
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -65,12 +63,19 @@ public class SmartCodeTextArea extends JavaTextArea {
         painter.removeMouseMotionListener(pdeDragHandlerListener);
 
         // Handle mouse clicks to toggle line bookmarks
-        MouseAdapter gutterBookmarkToggling = new MouseHandler();
+        MouseAdapter gutterBookmarkToggling = new GutterMouseHandler();
         painter.addMouseListener(gutterBookmarkToggling);
         painter.addMouseMotionListener(gutterBookmarkToggling);
+
+        addMouseWheelListener(e -> {
+            if (e.isControlDown()) {
+                int clicks = e.getWheelRotation();
+                getSmartCodePainter().setFontSize(getSmartCodePainter().getFontSize() - clicks);
+            }
+        });
     }
 
-    class MouseHandler extends MouseAdapter {
+    class GutterMouseHandler extends MouseAdapter {
         int lastX; // previous horizontal position of the mouse cursor
         long lastTime; // OS X seems to be firing multiple mouse events
         boolean isGutterPressed;
@@ -133,21 +138,6 @@ public class SmartCodeTextArea extends JavaTextArea {
             }
         }
     };
-
-    protected void test() {
-        int i = 0;
-        Messages.log("\n*** MouseListener ***");
-        for (MouseListener ml : painter.getMouseListeners()) {
-            Messages.log(i++ + ": " + ml.getClass().getName().substring(ml.getClass().getName().lastIndexOf('.'))
-                    + " - " + (ml.getClass().getEnclosingClass() == JEditTextArea.class));
-        }
-        i = 0;
-        Messages.log("\n*** MouseMotionListener ***");
-        for (MouseMotionListener mml : painter.getMouseMotionListeners()) {
-            Messages.log(i++ + ": " + mml.getClass().getName().substring(mml.getClass().getName().lastIndexOf('.'))
-                    + " - " + (mml.getClass().getEnclosingClass() == JEditTextArea.class));
-        }
-    }
 
     public void setGutterRightClickPopup(JPopupMenu popupMenu) {
         gutterRightClickPopup = popupMenu;
