@@ -3,7 +3,6 @@ package kelvinspatola.mode.smartcode;
 import java.awt.Color;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Map;
 
 import kelvinspatola.mode.smartcode.ui.LineBookmark;

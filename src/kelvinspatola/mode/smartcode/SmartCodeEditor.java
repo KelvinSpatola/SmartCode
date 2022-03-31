@@ -192,10 +192,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JPopupMenu popup = textarea.getRightClickPopup();
 
         popup.addSeparator(); // ---------------------------------------------
-        JMenuItem[] selectableItems = { createItem(popup, "Format selected text", null, this::handleAutoFormat),
+        JMenuItem[] selectableItems = { 
+                createItem(popup, "Format selected text", null, this::handleAutoFormat),
                 createItem(popup, "Toggle block comment", null, this::toggleBlockComment),
                 createItem(popup, "To upper case", null, () -> changeCase(true)),
-                createItem(popup, "To lower case", null, () -> changeCase(false)) };
+                createItem(popup, "To lower case", null, () -> changeCase(false)) 
+        };
 
         // Update state on selection/de-selection
         popup.addPopupMenuListener(new MenuAdapter() {

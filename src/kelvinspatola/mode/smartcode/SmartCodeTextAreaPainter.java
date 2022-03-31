@@ -15,6 +15,7 @@ import java.util.List;
 import javax.swing.text.Segment;
 import javax.swing.text.Utilities;
 
+import processing.app.Preferences;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextArea;
 import processing.app.syntax.TextAreaDefaults;
@@ -26,6 +27,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<LinePainter> painters = new ArrayList<>();
     protected Color bookmarkIconColor;
 
+    
     public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
@@ -160,5 +162,13 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         path.closePath();
         g2.fill(path);
     }
-
+    
+    public int getFontSize() {
+        return getFontMetrics().getFont().getSize();
+    }
+    
+    public void setFontSize(int size) {
+        Preferences.set("editor.font.size", String.valueOf(Math.max(8, size)));
+        updateTheme();
+    }
 }

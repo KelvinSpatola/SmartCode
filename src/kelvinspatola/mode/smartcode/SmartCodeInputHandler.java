@@ -27,6 +27,8 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         addKeyBinding("A+ENTER", e -> editor.insertLineBreak(getTextArea(e).getCaretPosition()));
         addKeyBinding("CS+ENTER", e -> editor.insertNewLineAbove(getTextArea(e).getCaretLine()));
         addKeyBinding("S+ENTER", e -> editor.insertNewLineBellow(getTextArea(e).getCaretLine()));
+        addKeyBinding("C+PLUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() + 1));
+        addKeyBinding("C+MINUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() - 1));
 
         // for testing purposes
         addKeyBinding("C+B", e -> {
@@ -39,8 +41,8 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     }
 
     void testing() {
-        ((SmartCodeEditor) editor).getSmartCodeTextArea().test();
-//        System.out.println("test");
+        //((SmartCodeEditor) editor).getSmartCodeTextArea().test();
+        System.out.println("test");
     }
 
     public void addKeyListener(KeyListener listener) {
