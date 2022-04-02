@@ -1,5 +1,10 @@
 package kelvinspatola.mode.smartcode.ui;
 
+import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_BOOKMARK_COLOR;
+import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_ERROR_COLOR;
+import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_OCCURRENCE_COLOR;
+import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_WARNING_COLOR;
+
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
@@ -13,26 +18,20 @@ import java.util.stream.Collectors;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences.Occurrence;
+import processing.app.Preferences;
 import processing.app.Problem;
 import processing.app.syntax.PdeTextArea;
-import processing.app.ui.Editor;
 import processing.app.ui.MarkerColumn;
 import processing.core.PApplet;
 
 public class SmartCodeMarkerColumn extends MarkerColumn {
     private List<LineMarker> allMarkers = new ArrayList<>();
-    private Color errorColor;
-    private Color warningColor;
-    private Color bookmarkColor;
-    private Color occurrenceColor;
+    private int lineHeight;
 
-    private final int lineHeight;
-
-    public SmartCodeMarkerColumn(Editor editor, int height) {
-        super(editor, height);
+    public SmartCodeMarkerColumn(SmartCodeEditor editor) {
+        super(editor, editor.getTextArea().getMinimumSize().height);
 
         updateTheme();
-        lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
 
         addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) {
@@ -47,14 +46,13 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     }
 
     @Override
-    protected void updateTheme() {
-//        errorColor = Theme.getColor("editor.column.error.color");
-//        warningColor = Theme.getColor("editor.column.warning.color");
-//        bookmarkColor = new Color(255, 255, 0);
-        bookmarkColor = SmartCodePreferences.COLUMN_BOOKMARK_COLOR;
-        errorColor = SmartCodePreferences.COLUMN_ERROR_COLOR;
-        occurrenceColor = SmartCodePreferences.COLUMN_OCCURRENCE_COLOR;
-        warningColor = SmartCodePreferences.COLUMN_WARNING_COLOR;
+    public void updateTheme() {
+        lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
+        
+        COLUMN_BOOKMARK_COLOR = Preferences.getColor(SmartCodePreferences.attributes[12]);
+        COLUMN_ERROR_COLOR = Preferences.getColor(SmartCodePreferences.attributes[13]);
+        COLUMN_OCCURRENCE_COLOR = Preferences.getColor(SmartCodePreferences.attributes[14]);
+        COLUMN_WARNING_COLOR = Preferences.getColor(SmartCodePreferences.attributes[15]);
     }
 
     @Override
@@ -95,15 +93,15 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
 
                 if (lm.getParent() == ErrorsAndWarnings.class) {
                     boolean isError = ((ErrorsAndWarnings) lm).problem.isError();
-                    g.setColor(isError ? errorColor : warningColor);
+                    g.setColor(isError ? COLUMN_ERROR_COLOR : COLUMN_WARNING_COLOR);
                     g.fillRect(1, y, getWidth() - 2, 2);
 
                 } else if (lm.getParent() == Occurrence.class) {
-                    g.setColor(occurrenceColor);
+                    g.setColor(COLUMN_OCCURRENCE_COLOR);
                     g.fillRect(1, y, getWidth() - 2, 2);
 
                 } else if (lm.getParent() == LineBookmark.class) {
-                    g.setColor(bookmarkColor);
+                    g.setColor(COLUMN_BOOKMARK_COLOR);
                     g.drawRect(1, y, getWidth() - 2, 2);
 
                 }

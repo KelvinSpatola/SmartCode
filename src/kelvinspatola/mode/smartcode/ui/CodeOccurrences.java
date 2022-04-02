@@ -19,13 +19,13 @@ import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
+import processing.app.ui.Theme;
 import processing.mode.java.ASTUtils;
 import processing.mode.java.PreprocService;
 import processing.mode.java.PreprocSketch;
 import processing.mode.java.SketchInterval;
 
 public class CodeOccurrences implements CaretListener, LinePainter {
-//    private Color occurrencesColor = SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR;
     private List<LineMarker> occurrences = new ArrayList<>();
     private SmartCodeEditor editor;
     private PreprocService pps;
@@ -86,7 +86,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
         CompilationUnit root = ps.compilationUnit;
         SimpleName name = ASTUtils.getSimpleNameAt(root, startJavaOffset, stopJavaOffset);
-        if (name == null) 
+        if (name == null)
             return;
 
         // Find binding
@@ -181,6 +181,11 @@ public class CodeOccurrences implements CaretListener, LinePainter {
             }
         }
         return true;
+    }
+
+    @Override
+    public void updateTheme() {
+        SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR = Theme.getColor("header.tab.selected.color");
     }
 
     class Occurrence implements LineMarker {

@@ -24,9 +24,9 @@ import processing.data.JSONArray;
 import processing.data.JSONObject;
 
 public class SnippetManager implements KeyListener, CaretListener, LinePainter {
-    private Color boundingBoxColor = Theme.getColor("editor.eolmarkers.color");
     protected final Map<String, Snippet> snippets = new HashMap<>();
     protected boolean isReadingKeyboardInput;
+    protected Color boundingBoxColor;
     protected Snippet currentSnippet;
     protected SmartCodeEditor editor;
 
@@ -173,6 +173,11 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
             return true;
         }
         return false;
+    }
+    
+    @Override
+    public void updateTheme() {
+        boundingBoxColor = Theme.getColor("editor.eolmarkers.color");
     }
 
     private String checkTrigger() {

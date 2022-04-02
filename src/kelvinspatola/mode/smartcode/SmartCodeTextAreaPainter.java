@@ -25,8 +25,8 @@ import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected List<LinePainter> painters = new ArrayList<>();
-    protected Color bookmarkIconColor;
     static private int presetFontSize = Preferences.getInteger("editor.font.size");
+    protected Color bookmarkIconColor;
 
     public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
@@ -58,6 +58,12 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     protected void updateTheme() {
         super.updateTheme();
         bookmarkIconColor = Theme.getColor("footer.icon.selected.color");
+
+        if (painters != null) {
+            for (LinePainter painter : painters) {
+                painter.updateTheme();
+            }
+        }
     }
 
     public SmartCodeEditor getSmartCodeEditor() {
@@ -188,13 +194,14 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         size = Math.max(8, size);
         Preferences.set("editor.font.size", String.valueOf(size));
         updateTheme();
+        getSmartCodeEditor().getMarkerColumn().updateTheme();
         // Since the font size has already been changed, let's write the default value
         // back to the preferences file. This way we prevent font size changes
         // from passing to other editors when opening them. We also prevent these
         // changes from being "saved" in the preferences file. The actual
         // changes are supposed to be made in the preferences' window.
         Preferences.set("editor.font.size", String.valueOf(presetFontSize));
-        
+
         getSmartCodeEditor().timedStatusNotice("Font size: " + size, 1500);
     }
 
