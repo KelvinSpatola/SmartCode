@@ -15,12 +15,12 @@ import java.util.List;
 import javax.swing.text.Segment;
 import javax.swing.text.Utilities;
 
+import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Preferences;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextArea;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
-import processing.app.ui.Theme;
 import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
@@ -57,7 +57,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     @Override
     protected void updateTheme() {
         super.updateTheme();
-        bookmarkIconColor = Theme.getColor("footer.icon.selected.color");
+        bookmarkIconColor = SmartCodeTheme.updateColor("bookmarks.icon.color");
 
         if (painters != null) {
             for (LinePainter painter : painters) {

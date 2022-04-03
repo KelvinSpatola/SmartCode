@@ -1,5 +1,6 @@
 package kelvinspatola.mode.smartcode.ui;
 
+import java.awt.Color;
 import java.awt.Graphics;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -19,7 +20,6 @@ import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
-import processing.app.ui.Theme;
 import processing.mode.java.ASTUtils;
 import processing.mode.java.PreprocService;
 import processing.mode.java.PreprocSketch;
@@ -33,6 +33,8 @@ public class CodeOccurrences implements CaretListener, LinePainter {
     private String code;
     private String prevCandidate;
     private int prevLine = -1;
+    
+    private Color occurenceColor;
 
 //    private float delta;
 
@@ -40,6 +42,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
     public CodeOccurrences(SmartCodeEditor editor, PreprocService pps) {
         this.editor = editor;
         this.pps = pps;
+        updateTheme();
     }
 
     @Override
@@ -176,7 +179,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
                 int x = ta._offsetToX(line, wordStart);
                 int w = ta._offsetToX(line, wordEnd) - x;
 
-                gfx.setColor(SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR);
+                gfx.setColor(occurenceColor);
                 gfx.fillRect(x, y, w, h);
             }
         }
@@ -185,7 +188,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
     @Override
     public void updateTheme() {
-        SmartCodePreferences.OCCURRENCES_HIGHLIGHT_COLOR = Theme.getColor("header.tab.selected.color");
+        occurenceColor = SmartCodeTheme.updateColor("occurrences.highlight.color");
     }
 
     class Occurrence implements LineMarker {

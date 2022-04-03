@@ -46,7 +46,9 @@ import processing.mode.java.JavaEditor;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
-    protected Color currentBookmarkColor = SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_1;
+    protected Color currentBookmarkColor = SmartCodeTheme.getColor("bookmarks.linehighlight.color.1");
+    protected final Color[] bookmarkColors = new Color[5]; 
+
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
@@ -58,7 +60,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         showBookmarks = new ShowBookmarks(this, bookmarkedLines);
         if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT) {
-            getSmartCodePainter().addLinePainter(new BookmarkPainter());
+            var bookmarkPainter = new BookmarkPainter();
+            bookmarkPainter.updateTheme();
+            getSmartCodePainter().addLinePainter(bookmarkPainter);
         }
 
         buildMenu();
@@ -80,7 +84,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
 
-        timedAction(this::printHelloMessage, 500);
+        timedAction(this::printHelloMessage, 500);        
     }
 
     private void printHelloMessage() {
@@ -126,6 +130,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super.applyPreferences();
         SmartCodeTextAreaPainter.updateDefaultFontSize();
     }
+    
 
     // TODO: lembrete de que é preciso trabalhar aqui
     @Override
@@ -229,11 +234,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
             GutterPopupMenu() {
                 submenu = new JMenu();
-                addColorItem(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_1);
-                addColorItem(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_2);
-                addColorItem(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_3);
-                addColorItem(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_4);
-                addColorItem(SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_5);
+                addColorItem(bookmarkColors[0]);
+                addColorItem(bookmarkColors[1]);
+                addColorItem(bookmarkColors[2]);
+                addColorItem(bookmarkColors[3]);
+                addColorItem(bookmarkColors[4]);
                 add(submenu);
 
                 removeBookmarkItem = createItem(this, "Remove bookmark", null,
@@ -1350,14 +1355,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         @Override
         public void updateTheme() {
-            SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_1 = Preferences.getColor(SmartCodePreferences.attributes[5]);
-            SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_2 = Preferences.getColor(SmartCodePreferences.attributes[6]);
-            SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_3 = Preferences.getColor(SmartCodePreferences.attributes[7]);
-            SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_4 = Preferences.getColor(SmartCodePreferences.attributes[8]);
-            SmartCodePreferences.BOOKMARKS_HIGHLIGHT_COLOR_5 = Preferences.getColor(SmartCodePreferences.attributes[9]);
+            for (int i = 0; i < bookmarkColors.length; i++) {
+                bookmarkColors[i] = SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i + 1));
+            }
         }
     }
-
+    
     /****************
      * 
      * MISC

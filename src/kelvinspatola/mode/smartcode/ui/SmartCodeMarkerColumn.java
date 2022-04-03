@@ -1,10 +1,5 @@
 package kelvinspatola.mode.smartcode.ui;
 
-import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_BOOKMARK_COLOR;
-import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_ERROR_COLOR;
-import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_OCCURRENCE_COLOR;
-import static kelvinspatola.mode.smartcode.SmartCodePreferences.COLUMN_WARNING_COLOR;
-
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Graphics;
@@ -16,9 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
-import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.ui.CodeOccurrences.Occurrence;
-import processing.app.Preferences;
 import processing.app.Problem;
 import processing.app.syntax.PdeTextArea;
 import processing.app.ui.MarkerColumn;
@@ -27,6 +20,7 @@ import processing.core.PApplet;
 public class SmartCodeMarkerColumn extends MarkerColumn {
     private List<LineMarker> allMarkers = new ArrayList<>();
     private int lineHeight;
+    private Color bookmarkColor, errorColor, occurenceColor, warningColor;
 
     public SmartCodeMarkerColumn(SmartCodeEditor editor) {
         super(editor, editor.getTextArea().getMinimumSize().height);
@@ -48,11 +42,11 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     @Override
     public void updateTheme() {
         lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
-        
-        COLUMN_BOOKMARK_COLOR = Preferences.getColor(SmartCodePreferences.attributes[12]);
-        COLUMN_ERROR_COLOR = Preferences.getColor(SmartCodePreferences.attributes[13]);
-        COLUMN_OCCURRENCE_COLOR = Preferences.getColor(SmartCodePreferences.attributes[14]);
-        COLUMN_WARNING_COLOR = Preferences.getColor(SmartCodePreferences.attributes[15]);
+
+        bookmarkColor = SmartCodeTheme.getColor("column.bookmark.color");
+        errorColor = SmartCodeTheme.getColor("column.error.color");
+        occurenceColor = SmartCodeTheme.updateColor("column.occurrence.color");
+        warningColor = SmartCodeTheme.getColor("column.warning.color");
     }
 
     @Override
@@ -64,7 +58,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     public void updatePoints(List<LineMarker> points, Class<?> parent) {
         if (points == null)
             return;
-        
+
         for (int i = allMarkers.size() - 1; i >= 0; i--) {
             if (allMarkers.get(i).getParent() == parent) {
                 allMarkers.remove(i);
@@ -93,15 +87,15 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
 
                 if (lm.getParent() == ErrorsAndWarnings.class) {
                     boolean isError = ((ErrorsAndWarnings) lm).problem.isError();
-                    g.setColor(isError ? COLUMN_ERROR_COLOR : COLUMN_WARNING_COLOR);
+                    g.setColor(isError ? errorColor : warningColor);
                     g.fillRect(1, y, getWidth() - 2, 2);
 
                 } else if (lm.getParent() == Occurrence.class) {
-                    g.setColor(COLUMN_OCCURRENCE_COLOR);
+                    g.setColor(occurenceColor);
                     g.fillRect(1, y, getWidth() - 2, 2);
 
                 } else if (lm.getParent() == LineBookmark.class) {
-                    g.setColor(COLUMN_BOOKMARK_COLOR);
+                    g.setColor(bookmarkColor);
                     g.drawRect(1, y, getWidth() - 2, 2);
 
                 }
@@ -120,10 +114,10 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         } else {
             bottom = (lineCount * lineHeight) - top;
         }
-        
+
         return (lineCount == 1) ? top : (int) PApplet.map(line, 1, lineCount, top, bottom);
     }
-    
+
     private LineMarker findClosestMarker(final int mouseY) {
         LineMarker closest = null;
         int closestDist = Integer.MAX_VALUE;
@@ -194,7 +188,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         public String getText() {
             return problem.getMessage();
         }
-        
+
         public Class<?> getParent() {
             return this.getClass();
         }

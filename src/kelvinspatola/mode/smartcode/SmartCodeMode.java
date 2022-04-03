@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Base;
 import processing.app.Platform;
 import processing.app.ui.Editor;
@@ -17,11 +18,13 @@ import processing.mode.java.JavaMode;
 public class SmartCodeMode extends JavaMode {
     static public boolean bracketClosingEnabled;
     protected File dataFolder;
+    protected File themeFile;
     protected File snippetsFile;
 
     public SmartCodeMode(Base base, File folder) {
         super(base, folder);
         SmartCodePreferences.init();
+        SmartCodeTheme.init();
 
         examplesFolder = Platform.getContentFile("modes/java/examples");
         dataFolder = getContentFile("data");
