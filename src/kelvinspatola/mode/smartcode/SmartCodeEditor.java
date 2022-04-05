@@ -47,7 +47,7 @@ import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected Color currentBookmarkColor = SmartCodeTheme.getColor("bookmarks.linehighlight.color.1");
-    protected final Color[] bookmarkColors = new Color[5]; 
+    protected final Color[] bookmarkColors = new Color[5];
 
     protected final List<LineMarker> bookmarkedLines = new ArrayList<>();
     protected CodeOccurrences occurrences;
@@ -84,7 +84,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
 
-        timedAction(this::printHelloMessage, 500);        
+        timedAction(this::printHelloMessage, 500);
     }
 
     private void printHelloMessage() {
@@ -120,23 +120,22 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         // let's put textarea back in the game
         editorPanel.add(textarea);
     }
-    
+
     protected SmartCodeMarkerColumn getMarkerColumn() {
         return (SmartCodeMarkerColumn) errorColumn;
     }
-    
+
     @Override
     public void applyPreferences() {
         super.applyPreferences();
         SmartCodeTextAreaPainter.updateDefaultFontSize();
     }
-    
+
     @Override
     public void updateTheme() {
         SmartCodeTheme.load();
         super.updateTheme();
     }
-    
 
     // TODO: lembrete de que é preciso trabalhar aqui
     @Override
@@ -183,8 +182,22 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         menu.addSeparator(); // ---------------------------------------------
         JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-        JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null,
-                () -> clearBookmarksFromTab(getSketch().getCurrentCodeIndex()));
+        JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null, () -> {
+            Object[] options = { Language.text("prompt.ok"), Language.text("prompt.cancel") };
+            
+            int choice = JOptionPane.showOptionDialog(this,
+                    "Are you sure you want to clear all bookmarks from this tab?",
+                    "Bookmarks",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE, 
+                    null,
+                    options,
+                    options[0]);
+            
+            if (choice == JOptionPane.YES_OPTION) {
+                clearBookmarksFromTab(getSketch().getCurrentCodeIndex());
+            }
+        });
 
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Visit GitHub page", null,
@@ -236,6 +249,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         class GutterPopupMenu extends JPopupMenu {
             JMenu submenu;
             JMenuItem removeBookmarkItem, showBookmarksListItem;
+            List<JMenuItem> coloredItems = new ArrayList<>();
             int line;
 
             GutterPopupMenu() {
@@ -278,6 +292,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 item.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 item.addActionListener(a -> setBookmarkColor(line, color));
                 submenu.add(item);
+                coloredItems.add(item);
             }
 
             void setBookmarkColor(int line, Color color) {
@@ -290,11 +305,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 getSketch().setModified(true);
                 currentBookmarkColor = color;
             }
-            
+
             @Override
             public void repaint() {
                 super.repaint();
+                for (int i = 0; i < bookmarkColors.length; i++) {
+                    bookmarkColors[i] = SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i + 1));
+                }
                 if (submenu != null) {
+                    coloredItems.forEach(i -> i.repaint());
                     submenu.repaint();
                 }
                 System.out.println("gutterPopupMenu");
@@ -1361,8 +1380,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
             if (!SmartCodeTheme.BOOKMARKS_HIGHLIGHT || bookmarkedLines.isEmpty() || isDebuggerEnabled())
-                return false; 
-            
+                return false;
+
             if (isLineBookmark(line)) {
                 gfx.setColor(getLineBookmark(getLineIDInCurrentTab(line)).getColor());
                 gfx.fillRect(0, y, getWidth(), h);
@@ -1379,7 +1398,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             System.out.println("BookmarkPainter");
         }
     }
-    
+
     /****************
      * 
      * MISC

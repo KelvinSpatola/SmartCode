@@ -12,14 +12,17 @@ import java.util.Set;
 
 import processing.app.Base;
 import processing.app.Messages;
-import processing.app.Platform;
-import processing.app.Preferences;
 import processing.app.Settings;
 import processing.app.ui.Theme;
 import processing.core.PApplet;
 
 public class SmartCodeTheme {
-    static public final String[] attributes = {
+    static public boolean BOOKMARKS_HIGHLIGHT;
+    static public boolean OCCURRENCES_HIGHLIGHT;
+    static private Set<String> pdeThemeAttributes = new HashSet<>();
+    static private Settings settings;
+    
+    static private final String[] attributes = {
             "bookmarks.icon.color", // 0
             "bookmarks.linehighlight", // 1
             "bookmarks.linehighlight.color.1", // 2
@@ -35,7 +38,7 @@ public class SmartCodeTheme {
             "occurrences.highlight.color", // 12
     };
 
-    static protected Map<String, String> defaultPrefs = new HashMap<>();
+    static protected final Map<String, String> defaultPrefs = new HashMap<>();
     static {
         defaultPrefs.put(attributes[0], "footer.icon.selected.color"); // bookmarks.icon.color
         defaultPrefs.put(attributes[1], "true"); // bookmarks.linehighlight
@@ -52,15 +55,10 @@ public class SmartCodeTheme {
         defaultPrefs.put(attributes[12], "header.tab.selected.color"); // occurrences.highlight.color
     }
 
-    static private Settings theme;
-    static private Set<String> pdeThemeAttributes = new HashSet<>();
-    static public boolean BOOKMARKS_HIGHLIGHT;
-    static public boolean OCCURRENCES_HIGHLIGHT;
-
     static public void init() {
         try {
             File inputFile = ensureExistence(getThemeFile());
-            theme = new Settings(inputFile);
+            settings = new Settings(inputFile);
             ensureAttributes();
 
         } catch (IOException e) {
@@ -68,8 +66,8 @@ public class SmartCodeTheme {
         }
         loadPdeThemeAttributes();
         
-        BOOKMARKS_HIGHLIGHT = getBoolean(attributes[1]);
-        OCCURRENCES_HIGHLIGHT = getBoolean(attributes[11]);
+        BOOKMARKS_HIGHLIGHT = getBoolean("bookmarks.linehighlight");
+        OCCURRENCES_HIGHLIGHT = getBoolean("occurrences.highlight");
     }
 
     static public File getThemeFile() {
@@ -95,12 +93,12 @@ public class SmartCodeTheme {
 
     private static void ensureAttributes() {
         for (String att : defaultPrefs.keySet()) {
-            if (!theme.getMap().containsKey(att) || theme.get(att).isEmpty()) {
-                theme.set(att, defaultPrefs.get(att));
+            if (!settings.getMap().containsKey(att) || settings.get(att).isEmpty()) {
+                settings.set(att, defaultPrefs.get(att));
                 Messages.log("Setting up a default value for: " + att);
             }
         }
-        theme.save();
+        settings.save();
     }
 
     static private void loadPdeThemeAttributes() {
@@ -115,7 +113,6 @@ public class SmartCodeTheme {
                 int equals = line.indexOf('=');
                 if (equals != -1) {
                     String key = line.substring(0, equals).trim();
-//                    String value = line.substring(equals + 1).trim();
                     pdeThemeAttributes.add(key);
                 }
             }
@@ -124,37 +121,23 @@ public class SmartCodeTheme {
         }
     }
 
-//    static public Color updateColor(String attribute) {
-//        String key = "";
-//
-//        if (theme.getMap().containsKey(attribute)) {
-//            if (attribute.equals("column.occurrence.color") || attribute.equals("occurrences.highlight.color")) {
-//                key = "header.tab.selected.color";
-//
-//            } else if (attribute.equals("bookmarks.icon.color")) {
-//                key = "footer.icon.selected.color";
-//            }
-//        }
-//        return updateColor(attribute, Theme.get(key));
-//    }
-
     static public void load() {
-        theme.load();
-        BOOKMARKS_HIGHLIGHT = getBoolean(attributes[1]);
-        OCCURRENCES_HIGHLIGHT = getBoolean(attributes[11]);
+        settings.load();
+        BOOKMARKS_HIGHLIGHT = getBoolean("bookmarks.linehighlight");
+        OCCURRENCES_HIGHLIGHT = getBoolean("occurrences.highlight");
     }
 
     static public String get(String attribute) {
-        if (theme.getMap().containsKey(attribute)) {
-            String value = theme.get(attribute);
+        if (settings.getMap().containsKey(attribute)) {
+            String value = settings.get(attribute);
 
             if (pdeThemeAttributes.contains(value)) {
                 return Theme.get(value);
             }
-            theme.set(attribute, value);
-            theme.save();
+            settings.set(attribute, value);
+            settings.save();
         }
-        return theme.get(attribute);
+        return settings.get(attribute);
     }
 
     static public boolean getBoolean(String attribute) {
