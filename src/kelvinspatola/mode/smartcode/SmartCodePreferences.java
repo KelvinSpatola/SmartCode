@@ -38,11 +38,11 @@ public class SmartCodePreferences {
         defaultPrefs.put(attributes[2], "true"); // autoformat.strings
         defaultPrefs.put(attributes[3], "80"); // autoformat.strings.length
         defaultPrefs.put(attributes[4], "true"); // bookmarks.linehighlight
-        defaultPrefs.put(attributes[5], "#9B5DE5"); // bookmarks.linehighlight.color.1
-        defaultPrefs.put(attributes[6], "#F15BB5"); // bookmarks.linehighlight.color.2
-        defaultPrefs.put(attributes[7], "#FEE440"); // bookmarks.linehighlight.color.3
-        defaultPrefs.put(attributes[8], "#00BBF9"); // bookmarks.linehighlight.color.4
-        defaultPrefs.put(attributes[9], "#00F5D4"); // bookmarks.linehighlight.color.5
+        defaultPrefs.put(attributes[5], "#9B5DE57D"); // bookmarks.linehighlight.color.1
+        defaultPrefs.put(attributes[6], "#F15BB57D"); // bookmarks.linehighlight.color.2
+        defaultPrefs.put(attributes[7], "#FEE4407D"); // bookmarks.linehighlight.color.3
+        defaultPrefs.put(attributes[8], "#00BBF97D"); // bookmarks.linehighlight.color.4
+        defaultPrefs.put(attributes[9], "#00F5D47D"); // bookmarks.linehighlight.color.5
         defaultPrefs.put(attributes[10], "true"); // brackets.auto_close
         defaultPrefs.put(attributes[11], "true"); // brackets.replace_token
         defaultPrefs.put(attributes[12], "#00FFFF"); // column.bookmark.color

@@ -143,6 +143,14 @@ public class SmartCodeTextArea extends JavaTextArea {
         gutterRightClickPopup = popupMenu;
     }
 
+    @Override
+    public void updateTheme() {
+        super.updateTheme();
+        if (gutterRightClickPopup != null) {
+            gutterRightClickPopup.repaint();
+        }
+    }
+
     /**
      * Converts a y co-ordinate to a line index. Rewriting this because i need it to
      * not clamp the returned value between 0 and getLineCount() as the original

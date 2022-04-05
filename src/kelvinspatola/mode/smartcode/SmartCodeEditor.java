@@ -59,7 +59,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super(base, path, state, mode);
 
         showBookmarks = new ShowBookmarks(this, bookmarkedLines);
-        if (SmartCodePreferences.BOOKMARKS_HIGHLIGHT) {
+        if (SmartCodeTheme.BOOKMARKS_HIGHLIGHT) {
             var bookmarkPainter = new BookmarkPainter();
             bookmarkPainter.updateTheme();
             getSmartCodePainter().addLinePainter(bookmarkPainter);
@@ -129,6 +129,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void applyPreferences() {
         super.applyPreferences();
         SmartCodeTextAreaPainter.updateDefaultFontSize();
+    }
+    
+    @Override
+    public void updateTheme() {
+        SmartCodeTheme.load();
+        super.updateTheme();
     }
     
 
@@ -283,6 +289,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
                 getSketch().setModified(true);
                 currentBookmarkColor = color;
+            }
+            
+            @Override
+            public void repaint() {
+                super.repaint();
+                if (submenu != null) {
+                    submenu.repaint();
+                }
+                System.out.println("gutterPopupMenu");
             }
         }
 
@@ -1345,7 +1360,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     class BookmarkPainter implements LinePainter {
         @Override
         public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
-            if (!isDebuggerEnabled() && isLineBookmark(line)) {
+            if (!SmartCodeTheme.BOOKMARKS_HIGHLIGHT || bookmarkedLines.isEmpty() || isDebuggerEnabled())
+                return false; 
+            
+            if (isLineBookmark(line)) {
                 gfx.setColor(getLineBookmark(getLineIDInCurrentTab(line)).getColor());
                 gfx.fillRect(0, y, getWidth(), h);
                 return true;
@@ -1358,6 +1376,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             for (int i = 0; i < bookmarkColors.length; i++) {
                 bookmarkColors[i] = SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i + 1));
             }
+            System.out.println("BookmarkPainter");
         }
     }
     

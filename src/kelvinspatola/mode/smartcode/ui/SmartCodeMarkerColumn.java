@@ -45,7 +45,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
 
         bookmarkColor = SmartCodeTheme.getColor("column.bookmark.color");
         errorColor = SmartCodeTheme.getColor("column.error.color");
-        occurenceColor = SmartCodeTheme.updateColor("column.occurrence.color");
+        occurenceColor = SmartCodeTheme.getColor("column.occurrence.color");
         warningColor = SmartCodeTheme.getColor("column.warning.color");
     }
 

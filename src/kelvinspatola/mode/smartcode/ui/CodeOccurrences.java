@@ -167,7 +167,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
     @Override
     public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
-        if (occurrences.isEmpty() || !SmartCodePreferences.OCCURRENCES_HIGHLIGHT)
+        if (occurrences.isEmpty() || !SmartCodeTheme.OCCURRENCES_HIGHLIGHT)
             return false;
 
         int currentTab = editor.getSketch().getCurrentCodeIndex();
@@ -188,7 +188,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
     @Override
     public void updateTheme() {
-        occurenceColor = SmartCodeTheme.updateColor("occurrences.highlight.color");
+        occurenceColor = SmartCodeTheme.getColor("occurrences.highlight.color");
     }
 
     class Occurrence implements LineMarker {

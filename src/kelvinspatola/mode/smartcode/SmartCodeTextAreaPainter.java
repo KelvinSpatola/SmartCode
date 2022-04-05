@@ -57,7 +57,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     @Override
     protected void updateTheme() {
         super.updateTheme();
-        bookmarkIconColor = SmartCodeTheme.updateColor("bookmarks.icon.color");
+        bookmarkIconColor = SmartCodeTheme.getColor("bookmarks.icon.color");
 
         if (painters != null) {
             for (LinePainter painter : painters) {
