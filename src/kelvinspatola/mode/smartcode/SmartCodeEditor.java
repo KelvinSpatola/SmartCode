@@ -53,6 +53,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
     protected Timer statusNoticeTimer;
+    
+    static SmartCodePreferencesFrame preferencesFrame;
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -182,9 +184,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         menu.addSeparator(); // ---------------------------------------------
         JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
+        
         JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null, () -> {
             Object[] options = { Language.text("prompt.ok"), Language.text("prompt.cancel") };
-            
             int choice = JOptionPane.showOptionDialog(this,
                     "Are you sure you want to clear all bookmarks from this tab?",
                     "Bookmarks",
@@ -202,6 +204,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Visit GitHub page", null,
                 () -> Platform.openURL("https://github.com/KelvinSpatola/SmartCode"));
+        createItem(menu, Language.text("menu.file.preferences"), null, () -> handlePrefs());
 
         menu.addMenuListener(new MenuAdapter() {
             @Override
@@ -223,6 +226,16 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         int toolMenuIndex = menubar.getComponentIndex(getToolMenu());
         menubar.add(menu, toolMenuIndex);
         Toolkit.setMenuMnemonics(menubar);
+    }
+    
+    /**
+     * Show the Preferences window.
+     */
+    public void handlePrefs() {
+        if (preferencesFrame == null) {
+            preferencesFrame = new SmartCodePreferencesFrame(getBase());
+        }
+        preferencesFrame.showFrame();
     }
 
     private void buildPopupMenu() {

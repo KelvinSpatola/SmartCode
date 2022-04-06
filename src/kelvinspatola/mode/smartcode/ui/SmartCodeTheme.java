@@ -126,6 +126,10 @@ public class SmartCodeTheme {
         BOOKMARKS_HIGHLIGHT = getBoolean("bookmarks.linehighlight");
         OCCURRENCES_HIGHLIGHT = getBoolean("occurrences.highlight");
     }
+    
+    static public void save() {
+        settings.save();
+    }
 
     static public String get(String attribute) {
         if (settings.getMap().containsKey(attribute)) {
@@ -135,9 +139,13 @@ public class SmartCodeTheme {
                 return Theme.get(value);
             }
             settings.set(attribute, value);
-            settings.save();
+            save();
         }
         return settings.get(attribute);
+    }
+    
+    static public void set(String attribute, String value) {
+        settings.set(attribute, value);
     }
 
     static public boolean getBoolean(String attribute) {
@@ -147,6 +155,10 @@ public class SmartCodeTheme {
             return false;
         }
         return Boolean.parseBoolean(value);
+    }
+    
+    static public void setBoolean(String attribute, boolean value) {
+        set(attribute, value ? "true" : "false");
     }
 
     static public Color getColor(String attribute) {
