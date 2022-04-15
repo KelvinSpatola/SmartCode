@@ -36,6 +36,7 @@ public class SmartCodeTheme {
             "column.warning.color", // 10
             "occurrences.highlight", // 11
             "occurrences.highlight.color", // 12
+            "templates.highlight.color", // 13
     };
 
     static protected final Map<String, String> defaultPrefs = new HashMap<>();
@@ -53,6 +54,7 @@ public class SmartCodeTheme {
         defaultPrefs.put(attributes[10], "#FFFF00"); // column.warning.color
         defaultPrefs.put(attributes[11], "true"); // occurrences.highlight
         defaultPrefs.put(attributes[12], "header.tab.selected.color"); // occurrences.highlight.color
+        defaultPrefs.put(attributes[13], "editor.eolmarkers.color"); // templates.highlight.color
     }
 
     static public void init() {
@@ -138,7 +140,7 @@ public class SmartCodeTheme {
             if (pdeThemeAttributes.contains(value)) {
                 return Theme.get(value);
             }
-            settings.set(attribute, value);
+            set(attribute, value);
             save();
         }
         return settings.get(attribute);

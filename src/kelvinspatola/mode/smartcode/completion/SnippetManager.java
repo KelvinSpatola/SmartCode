@@ -18,6 +18,7 @@ import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodeMode;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
+import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.ui.Theme;
 import processing.core.PApplet;
 import processing.data.JSONArray;
@@ -177,7 +178,7 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
     
     @Override
     public void updateTheme() {
-        boundingBoxColor = Theme.getColor("editor.eolmarkers.color");
+        boundingBoxColor = SmartCodeTheme.getColor("templates.highlight.color");
     }
 
     private String checkTrigger() {
