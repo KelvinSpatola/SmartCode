@@ -40,7 +40,10 @@ public class SmartCodePreferences {
 
     static public void init() {
         checkDefaultPreferences();
-
+        load();
+    }
+    
+    static public void load() {
         AUTOFORMAT_COMMENTS = Preferences.getBoolean(attributes[0]);
         AUTOFORMAT_COMMENTS_LENGTH = Preferences.getInteger(attributes[1]);
         AUTOFORMAT_STRINGS = Preferences.getBoolean(attributes[2]);

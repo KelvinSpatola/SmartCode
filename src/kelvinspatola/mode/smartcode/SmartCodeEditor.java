@@ -54,7 +54,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected ShowBookmarks showBookmarks;
     protected Timer statusNoticeTimer;
     
-    static SmartCodePreferencesFrame preferencesFrame;
+    static protected SmartCodePreferencesFrame preferencesFrame;
+    
+    protected int tabSize;
+    protected String tabSpaces;
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -130,7 +133,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     @Override
     public void applyPreferences() {
         super.applyPreferences();
+        SmartCodePreferences.load();
         SmartCodeTextAreaPainter.updateDefaultFontSize();
+        tabSize = Preferences.getInteger("editor.tabs.size");
+        tabSpaces = addSpaces(tabSize);
     }
 
     @Override
@@ -438,7 +444,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                     int lineIndent = 0;
                     int brace = getSmartCodeTextArea().getMatchingBraceLine(line, true);
                     if (brace != -1) {
-                        lineIndent = getSmartCodeTextArea().getLineIndentation(brace) + TAB_SIZE;
+                        lineIndent = getSmartCodeTextArea().getLineIndentation(brace) + tabSize;
                     }
 
                     String lineText = getLineText(line);
@@ -539,7 +545,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             indent = getSmartCodeTextArea().getLineIndentation(caretLine);
 
             if (!getLineText(caretLine).matches(SPLIT_STRING_TEXT))
-                indent += TAB_SIZE;
+                indent += tabSize;
         }
 
         stopCompoundEdit();
@@ -554,7 +560,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
 
         startCompoundEdit();
-        insertText(LF + addSpaces(indent - (indent % TAB_SIZE)) + " * ");
+        insertText(LF + addSpaces(indent - (indent % tabSize)) + " * ");
 
         int caretPos = getCaretOffset();
         String nextText = getText().substring(caretPos);
@@ -566,7 +572,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         if (commentIsOpen) {
             textarea.setCaretPosition(getLineStopOffset(++caretLine) - 1);
-            insertText(LF + addSpaces(indent - (indent % TAB_SIZE)) + " */");
+            insertText(LF + addSpaces(indent - (indent % tabSize)) + " */");
             textarea.setCaretPosition(caretPos);
         }
         stopCompoundEdit();
@@ -577,7 +583,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         int indent = 0;
         if (INDENT) {
-            indent = getSmartCodeTextArea().getLineIndentation(line) + TAB_SIZE;
+            indent = getSmartCodeTextArea().getLineIndentation(line) + tabSize;
         }
 
         startCompoundEdit();
@@ -592,7 +598,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         setSelectedText(LF + addSpaces(indent) + cutText);
 
         int newOffset = getCaretOffset();
-        insertText(LF + addSpaces(indent - TAB_SIZE) + CLOSE_BRACE);
+        insertText(LF + addSpaces(indent - tabSize) + CLOSE_BRACE);
         setSelection(newOffset, newOffset);
         stopCompoundEdit();
     }
@@ -635,12 +641,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 indent = getSmartCodeTextArea().getLineIndentation(startBrace);
 
                 if (!lineText.matches(BLOCK_CLOSING))
-                    indent += TAB_SIZE;
+                    indent += tabSize;
 
                 int positionInLine = getSmartCodeTextArea().getPositionInsideLineWithOffset(offset);
 
                 if (lineText.matches(BLOCK_OPENING) && positionInLine <= lineText.indexOf(OPEN_BRACE))
-                    indent -= TAB_SIZE;
+                    indent -= tabSize;
             }
             setSelection(offset, getLineStopOffset(line) - 1);
         }
@@ -713,7 +719,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             int indent = 0;
 
             if (brace != -1) {
-                indent = getSmartCodeTextArea().getLineIndentation(brace) + TAB_SIZE;
+                indent = getSmartCodeTextArea().getLineIndentation(brace) + tabSize;
             }
 
             formattedText = SmartCodeTextArea.indentText(formattedText, indent);
@@ -774,7 +780,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
-    protected static String refactorStringLiterals(String text) {
+    protected String refactorStringLiterals(String text) {
         int maxLength = SmartCodePreferences.AUTOFORMAT_STRINGS_LENGTH;
 
         // Concatenate every multiline split-string into a single one-line string before
@@ -793,7 +799,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                     indent = SmartCodeTextArea.getLineIndentation(lineText);
                 }
 
-                String preffix = addSpaces(indent) + TAB + "+ \"";
+                String preffix = addSpaces(indent) + tabSpaces + "+ \"";
                 String currLine = lineText.substring(0, maxLength - 1) + "\"";
                 String nextLine = preffix + lineText.substring(maxLength - 1);
 
@@ -993,14 +999,14 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         if (brace != -1) { // we are inside a block here
             if (lineText.matches(BLOCK_OPENING)) {
                 brace = ta.getMatchingBraceLineAlt(line);
-                blockIndent = ta.getLineIndentation(brace) + TAB_SIZE;
+                blockIndent = ta.getLineIndentation(brace) + tabSize;
 
             } else if (lineText.matches(BLOCK_CLOSING)) {
                 brace = ta.getMatchingBraceLine(line, true);
                 blockIndent = ta.getLineIndentation(brace);
 
             } else {
-                blockIndent = ta.getLineIndentation(brace) + TAB_SIZE;
+                blockIndent = ta.getLineIndentation(brace) + tabSize;
             }
         }
 
@@ -1025,7 +1031,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             } else {
                 int startBrace = getSmartCodeTextArea().getMatchingBraceLine(line, true);
                 if (startBrace != -1) {
-                    indent = getSmartCodeTextArea().getLineIndentation(startBrace) + TAB_SIZE;
+                    indent = getSmartCodeTextArea().getLineIndentation(startBrace) + tabSize;
                 }
             }
         }
@@ -1062,7 +1068,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 indent = ta.getLineIndentation(line);
 
                 if (caretPos > lineText.indexOf('{'))
-                    indent += TAB_SIZE;
+                    indent += tabSize;
 
             } else if (lineText.matches(BLOCK_CLOSING)) {
                 indent = ta.getLineIndentation(line);
@@ -1071,15 +1077,15 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 if (caretPos <= closeBrace) {
                     offset += (closeBrace - caretPos);
                     setSelection(offset, offset);
-                    insertText(TAB);
-                    offset += TAB_SIZE;
+                    insertText(tabSpaces);
+                    offset += tabSize;
                 }
 
             } else {
                 int startBrace = ta.getMatchingBraceLine(line, true);
 
                 if (startBrace != -1) // an opening brace was found, we are in a block scope
-                    indent = ta.getLineIndentation(startBrace) + TAB_SIZE;
+                    indent = ta.getLineIndentation(startBrace) + tabSize;
             }
         }
 
@@ -1099,7 +1105,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         } else if (Preferences.getBoolean("editor.tabs.expand")) {
             // "editor.tabs.expand" means that each tab is made up of a
             // stipulated number of spaces, and not just a single solid \t
-            setSelectedText(TAB);
+            setSelectedText(tabSpaces);
 
         } else {
             setSelectedText("\t");

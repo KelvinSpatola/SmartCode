@@ -10,7 +10,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.MouseWheelEvent;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -20,6 +19,7 @@ import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
+import processing.app.Preferences;
 import processing.app.SketchCode;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
@@ -236,7 +236,8 @@ public class SmartCodeTextArea extends JavaTextArea {
 
                 // Remove tabs and replace with spaces
                 if (selection.contains("\t")) {
-                    selection = selection.replaceAll("\t", TAB);
+                    int tabSize = Preferences.getInteger("editor.tabs.size");
+                    selection = selection.replaceAll("\t", addSpaces(tabSize));
                 }
 
                 // Replace unicode x00A0 (non-breaking space) with just a plain space.
@@ -257,7 +258,8 @@ public class SmartCodeTextArea extends JavaTextArea {
                     if (selection.contains(LF)) {
                         int indent = 0;
                         if (INDENT) {
-                            indent = getLineIndentation(getCaretLine()) + TAB_SIZE;
+                            int tabSize = Preferences.getInteger("editor.tabs.size");
+                            indent = getLineIndentation(getCaretLine()) + tabSize;
                         }
 
                         String[] lines = selection.split(LF);
@@ -324,9 +326,10 @@ public class SmartCodeTextArea extends JavaTextArea {
     public static String outdentText(String text) {
         String[] lines = text.split(LF);
         StringBuilder sb = new StringBuilder();
-
+        int tabSize = Preferences.getInteger("editor.tabs.size");
+        
         for (int i = 0; i < lines.length; i++) {
-            String str = lines[i].substring(TAB_SIZE);
+            String str = lines[i].substring(tabSize);
             if (i < lines.length - 1)
                 sb.append(str).append(LF);
             else
