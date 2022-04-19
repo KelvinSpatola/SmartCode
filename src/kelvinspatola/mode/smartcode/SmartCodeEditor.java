@@ -53,9 +53,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected CodeOccurrences occurrences;
     protected ShowBookmarks showBookmarks;
     protected Timer statusNoticeTimer;
-    
+
     static protected SmartCodePreferencesFrame preferencesFrame;
-    
+
     protected int tabSize;
     protected String tabSpaces;
 
@@ -190,18 +190,13 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         menu.addSeparator(); // ---------------------------------------------
         JMenuItem showBookmarksItem = createItem(menu, "Show bookmarks", null, showBookmarks::handleShowBookmarks);
-        
+
         JMenuItem clearBookmarksItem = createItem(menu, "Clear bookmarks in current tab", null, () -> {
             Object[] options = { Language.text("prompt.ok"), Language.text("prompt.cancel") };
             int choice = JOptionPane.showOptionDialog(this,
-                    "Are you sure you want to clear all bookmarks from this tab?",
-                    "Bookmarks",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE, 
-                    null,
-                    options,
-                    options[0]);
-            
+                    "Are you sure you want to clear all bookmarks from this tab?", "Bookmarks",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+
             if (choice == JOptionPane.YES_OPTION) {
                 clearBookmarksFromTab(getSketch().getCurrentCodeIndex());
             }
@@ -233,7 +228,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         menubar.add(menu, toolMenuIndex);
         Toolkit.setMenuMnemonics(menubar);
     }
-    
+
     /**
      * Show the Preferences window.
      */
@@ -494,31 +489,33 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
 
             if (lineText.matches(COMMENT_TEXT)) {
-                if (!lineText.contains(OPEN_COMMENT)) {
-                    int line = caretLine - 1;
+                if (SmartCodePreferences.AUTOCLOSE_BLOCK_COMMENTS) {
+                    if (!lineText.contains(OPEN_COMMENT)) {
+                        int line = caretLine - 1;
 
-                    while (line >= 0) {
-                        if (!getLineText(line).matches(COMMENT_TEXT))
-                            break;
-                        line--;
+                        while (line >= 0) {
+                            if (!getLineText(line).matches(COMMENT_TEXT))
+                                break;
+                            line--;
+                        }
+                        if (!getLineText(line + 1).contains(OPEN_COMMENT)) {
+                            insertNewLine(caret);
+                            return;
+                        }
                     }
-                    if (!getLineText(line + 1).contains(OPEN_COMMENT)) {
-                        insertNewLine(caret);
+                    int commentStart = lineText.indexOf(OPEN_COMMENT);
+                    int commentStop = (lineText.contains(CLOSE_COMMENT) ? lineText.indexOf(CLOSE_COMMENT)
+                            : lineText.length()) + 2;
+
+                    if (positionInLine > commentStart && positionInLine < commentStop) {
+                        splitComment(caretLine);
                         return;
                     }
-                }
-                int commentStart = lineText.indexOf(OPEN_COMMENT);
-                int commentStop = (lineText.contains(CLOSE_COMMENT) ? lineText.indexOf(CLOSE_COMMENT)
-                        : lineText.length()) + 2;
-
-                if (positionInLine > commentStart && positionInLine < commentStop) {
-                    splitComment(caretLine);
-                    return;
                 }
             }
 
             if (lineText.matches(BLOCK_OPENING)) {
-                if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
+                if (SmartCodePreferences.AUTOCLOSE_BRACKETS) { // TODO: make this condition a pref of its own
 
                     boolean bracketsAreBalanced = SmartCodeTextArea.checkBracketsBalance(getText(), "{", "}");
                     boolean hasClosingBrace = lineText.matches(BLOCK_CLOSING);
@@ -794,24 +791,27 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         for (int i = 0; i < lines.size(); i++) {
             String lineText = lines.get(i);
 
-            if (lineText.matches(STRING_TEXT) && lineText.length() > maxLength) {
-                if (depth == 0) {
-                    indent = SmartCodeTextArea.getLineIndentation(lineText);
+            if (lineText.matches(STRING_TEXT)) {
+                int stringStart = lineText.indexOf("\"");
+                int stringEnd = lineText.lastIndexOf("\"");
+
+                if ((stringEnd - stringStart) > maxLength) {
+                    if (depth == 0) {
+                        indent = SmartCodeTextArea.getLineIndentation(lineText);
+                    }
+                    String preffix = addSpaces(indent) + tabSpaces + "+ \"";
+                    String currLine = lineText.substring(0, stringStart + maxLength - 1) + "\"";
+                    String nextLine = preffix + lineText.substring(stringStart + maxLength - 1);
+
+                    lines.set(i, currLine);
+                    lines.add(i + 1, nextLine);
+                    depth++;
+                    continue;
                 }
-
-                String preffix = addSpaces(indent) + tabSpaces + "+ \"";
-                String currLine = lineText.substring(0, maxLength - 1) + "\"";
-                String nextLine = preffix + lineText.substring(maxLength - 1);
-
-                lines.set(i, currLine);
-                lines.add(i + 1, nextLine);
-                depth++;
-
-            } else {
-                lines.set(i, lineText);
-                depth = 0;
-                indent = 0;
             }
+            lines.set(i, lineText);
+            depth = 0;
+            indent = 0;
         }
 
         StringBuilder result = new StringBuilder();

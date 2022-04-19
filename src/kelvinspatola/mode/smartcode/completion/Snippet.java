@@ -17,13 +17,12 @@ public class Snippet {
     protected int startingPosition;
     public int leftBoundary, rightBoundary;
     protected int indent;
-    
 
     // CONSTRUCTOR
     public Snippet(String source) {
         if (source == null)
             return;
-        
+
         buffer = new StringBuilder();
         tabstops = new ArrayList<>();
         processSourceText(source);
@@ -112,17 +111,17 @@ public class Snippet {
 
         return leftBoundary;
     }
-        
+
     public int getNextStopPosition() {
         if (stopIndex == tabstops.size() - 1)
             return -1;
-        
+
         int caret = 0, delta = 0;
 
         for (int i = 0; i < stopIndex && i < tabstops.size(); i++) {
             delta += tabstops.get(i).delta();
         }
-        
+
         caret = tabstops.get(stopIndex + 1).startOffset;
         return startingPosition + caret + (indent * calcLine(caret)) + delta + (rightBoundary - leftBoundary - 1);
     }
@@ -132,24 +131,32 @@ public class Snippet {
 
         // won't do anything if this is a not printable character (except backspace and
         // delete)
-        if (key == 8 || key >= 32 && key <= 127) { // 8 -> VK_BACK_SPACE
+        if (key == 8 || key >= 32 && key <= 127) { // 8 -> VK_BACK_SPACE, 127 -> VK_DELETE
+            int step = 1;
 
             if (key == KeyEvent.VK_BACK_SPACE || key == KeyEvent.VK_DELETE) {
-                tabstops.get(stopIndex).currentOffset--;
-                rightBoundary--;
-                return;
+                tabstops.get(stopIndex).currentOffset -= step;
+                rightBoundary -= step;
+                return; // return here to avoid all next if statements
             }
 
-            if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
-                if (isOpeningBracket(e.getKeyChar())) { // ( [ { \" \'
-                    tabstops.get(stopIndex).currentOffset += 2;
-                    rightBoundary += 2;
-                    return;
+            if (SmartCodePreferences.AUTOCLOSE_BRACKETS) {
+                if ("([{".contains(String.valueOf(e.getKeyChar()))) {
+                    step = 2;
                 }
             }
 
-            tabstops.get(stopIndex).currentOffset++;
-            rightBoundary++;
+            if (SmartCodePreferences.AUTOCLOSE_QUOTES) {
+                if ("\"\'".contains(String.valueOf(e.getKeyChar()))) {
+                    step = 2;
+                }
+            }
+            
+            // TODO: verificar situacao quando o utilizador insere um bracket dentro de ''
+            // ver BracketCloser.class linha 90
+
+            tabstops.get(stopIndex).currentOffset += step;
+            rightBoundary += step;
         }
     }
 
@@ -163,11 +170,6 @@ public class Snippet {
 
     public String getSource() {
         return sourceText;
-    }
-
-    private static boolean isOpeningBracket(char ch) {
-        String tokens = "([{\"\'";
-        return tokens.contains(String.valueOf(ch));
     }
 
     protected int calcLine(int offset) {

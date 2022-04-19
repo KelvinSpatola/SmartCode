@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import processing.app.Platform;
-import processing.app.Preferences;
 import processing.app.syntax.PdeInputHandler;
 
 public class SmartCodeInputHandler extends PdeInputHandler {
@@ -70,7 +69,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
 
         for (KeyListener kl : listeners) {
             if (kl.handlePressed(e)) {
-                e.consume();
+                e.consume(); // not sure of what this is doing here
                 return true;
             }
         }
@@ -111,7 +110,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
 
         int indent = 0;
 
-        if (Preferences.getBoolean("editor.indent")) {
+        if (Constants.INDENT) {
             SmartCodeTextArea textarea = (SmartCodeTextArea) editor.getTextArea();
 
             int line = textarea.getCaretLine();
@@ -131,8 +130,8 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         // if the user chooses to disable the bracket closing feature in the
         // Preferences.txt file, we should then insert a closing brace here.
         // Otherwise this is handled by the BracketCloser class.
-        if (!SmartCodePreferences.BRACKETS_AUTO_CLOSE)
-            result += '}';
+//        if (!SmartCodePreferences.AUTOCLOSE_BRACKETS)
+//            result += '}';
 
         editor.setSelectedText(result);
         editor.stopCompoundEdit();

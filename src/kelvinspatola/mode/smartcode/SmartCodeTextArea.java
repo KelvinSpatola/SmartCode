@@ -36,9 +36,8 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         SmartCodeInputHandler inputHandler = new SmartCodeInputHandler(editor);
 
-        if (SmartCodePreferences.BRACKETS_AUTO_CLOSE) {
-            inputHandler.addKeyListener(new BracketCloser(editor));
-        }
+        inputHandler.addKeyListener(new BracketCloser(editor));
+        
         if (SmartCodePreferences.TEMPLATES_ENABLED) {
             SnippetManager sm = new SnippetManager(editor);
             inputHandler.addKeyListener(sm);
@@ -327,7 +326,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         String[] lines = text.split(LF);
         StringBuilder sb = new StringBuilder();
         int tabSize = Preferences.getInteger("editor.tabs.size");
-        
+
         for (int i = 0; i < lines.length; i++) {
             String str = lines[i].substring(tabSize);
             if (i < lines.length - 1)

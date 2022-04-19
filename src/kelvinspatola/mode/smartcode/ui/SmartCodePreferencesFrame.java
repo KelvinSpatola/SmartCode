@@ -45,13 +45,12 @@ public class SmartCodePreferencesFrame {
     private JCheckBox formatCommentsBox;
     private JCheckBox formatStringsBox;
     private JCheckBox closeBracketsBox;
-    private JCheckBox closeStringsAndCharsBox;
-    private JCheckBox closeCommentRegionsBox;
+    private JCheckBox closeQuotesBox;
+    private JCheckBox closeBlockCommentsBox;
     private JCheckBox wrapSelectedTextBox;
     private JRadioButton replaceRadio;
     private JRadioButton stackRadio;
     private JCheckBox checkBookmarkHighlighting;
-    private JLabel indentationLabel;
     private JTextField indentField;
     private JCheckBox indentMovingLinesBox;
     private JLabel maxStringWidthLabel;
@@ -118,6 +117,7 @@ public class SmartCodePreferencesFrame {
         restoreBtn = new JButton("Restore defaults");
         restoreBtn.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent arg0) {
+                
             }
         });
         
@@ -133,7 +133,7 @@ public class SmartCodePreferencesFrame {
             stringWidthField.setEnabled(formatStringsBox.isSelected());
         });
         
-        maxStringWidthLabel = new JLabel("Max width:");
+        maxStringWidthLabel = new JLabel("max width:");
         
         stringWidthField = new JTextField();
         stringWidthField.setHorizontalAlignment(SwingConstants.LEFT);
@@ -148,7 +148,7 @@ public class SmartCodePreferencesFrame {
             commentWidthField.setEnabled(formatCommentsBox.isSelected());
         });
         
-        maxCommentWidthLabel = new JLabel("Max width:");
+        maxCommentWidthLabel = new JLabel("max width:");
         
         commentWidthField = new JTextField();
         commentWidthField.setHorizontalAlignment(SwingConstants.LEFT);
@@ -156,13 +156,15 @@ public class SmartCodePreferencesFrame {
         
         /* AUTO-CLOSE */
         
+        JSeparator separator = new JSeparator();
+        
         JLabel autoCloseLabel = new JLabel("auto-close");
         autoCloseLabel.setHorizontalAlignment(SwingConstants.LEFT);
         autoCloseLabel.setFont(new Font("Tahoma", Font.BOLD, 11));
         
         closeBracketsBox = new JCheckBox("{brace}, (parentesis), [square] and <angle> brackets");
-        closeStringsAndCharsBox = new JCheckBox("\"strings\" and 'chars'");
-        closeCommentRegionsBox = new JCheckBox("Javadoc and comment regions");
+        closeQuotesBox = new JCheckBox("\"strings\" and 'chars'");
+        closeBlockCommentsBox = new JCheckBox("Javadoc and comment regions");
         
         wrapSelectedTextBox = new JCheckBox("Wrap selected text");
         wrapSelectedTextBox.addChangeListener(a -> {
@@ -176,7 +178,11 @@ public class SmartCodePreferencesFrame {
         wrapButtonsGroup.add(replaceRadio);
         wrapButtonsGroup.add(stackRadio);
         
-        indentationLabel = new JLabel("indentation");
+        /* INDENTATION */
+        
+        JSeparator separator_1 = new JSeparator();
+        
+        JLabel indentationLabel = new JLabel("indentation");
         indentationLabel.setHorizontalAlignment(SwingConstants.LEFT);
         indentationLabel.setFont(new Font("Tahoma", Font.BOLD, 11));
         
@@ -190,9 +196,7 @@ public class SmartCodePreferencesFrame {
         
         indentMovingLinesBox = new JCheckBox("Automatically indent when moving text lines");
         
-        JSeparator separator = new JSeparator();
         
-        JSeparator separator_1 = new JSeparator();
         
                 
         GroupLayout gl_tabGeneral = new GroupLayout(tabGeneral);
@@ -219,8 +223,8 @@ public class SmartCodePreferencesFrame {
                             .addGap(6))
                         .addComponent(separator, GroupLayout.DEFAULT_SIZE, 307, Short.MAX_VALUE)
                         .addComponent(wrapSelectedTextBox)
-                        .addComponent(closeCommentRegionsBox)
-                        .addComponent(closeStringsAndCharsBox)
+                        .addComponent(closeBlockCommentsBox)
+                        .addComponent(closeQuotesBox)
                         .addGroup(gl_tabGeneral.createSequentialGroup()
                             .addGap(21)
                             .addComponent(replaceRadio)
@@ -264,9 +268,9 @@ public class SmartCodePreferencesFrame {
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(closeBracketsBox)
                     .addPreferredGap(ComponentPlacement.RELATED)
-                    .addComponent(closeStringsAndCharsBox)
+                    .addComponent(closeQuotesBox)
                     .addPreferredGap(ComponentPlacement.RELATED)
-                    .addComponent(closeCommentRegionsBox)
+                    .addComponent(closeBlockCommentsBox)
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(wrapSelectedTextBox)
                     .addPreferredGap(ComponentPlacement.RELATED)
@@ -364,12 +368,17 @@ public class SmartCodePreferencesFrame {
         maxCommentWidthLabel.setEnabled(formatCommentsBox.isSelected());
         commentWidthField.setText(String.valueOf(AUTOFORMAT_COMMENTS_LENGTH));
         
+        /* auto-close brackets, quotes and block comments */
+        closeBracketsBox.setSelected(AUTOCLOSE_BRACKETS);
+        closeQuotesBox.setSelected(AUTOCLOSE_QUOTES);
+        closeBlockCommentsBox.setSelected(AUTOCLOSE_BLOCK_COMMENTS);
+        
         /* wrap selected text buttons */
-        wrapSelectedTextBox.setSelected(BRACKETS_AUTO_CLOSE);
+        wrapSelectedTextBox.setSelected(AUTOCLOSE_WRAP_TEXT);
         replaceRadio.setEnabled(wrapSelectedTextBox.isSelected());
         stackRadio.setEnabled(wrapSelectedTextBox.isSelected());
-        replaceRadio.setSelected(BRACKETS_REPLACE_TOKEN);
-        stackRadio.setSelected(!BRACKETS_REPLACE_TOKEN);
+        replaceRadio.setSelected(AUTOCLOSE_WRAP_REPLACE);
+        stackRadio.setSelected(!AUTOCLOSE_WRAP_REPLACE);
         
         /* indentation */
         currTabSize = Preferences.getInteger("editor.tabs.size");
@@ -393,16 +402,20 @@ public class SmartCodePreferencesFrame {
                 Integer.parseInt(commentWidthField.getText().trim()));
         
         /* auto-close */
-        
+        Preferences.setBoolean("SmartCode.auto_close.brackets", closeBracketsBox.isSelected());
+        Preferences.setBoolean("SmartCode.auto_close.quotes", closeQuotesBox.isSelected());
+        Preferences.setBoolean("SmartCode.auto_close.block_comments", closeBlockCommentsBox.isSelected());
+        Preferences.setBoolean("SmartCode.auto_close.wrap_text", wrapSelectedTextBox.isSelected());
+        Preferences.setBoolean("SmartCode.auto_close.wrap_text.replace", replaceRadio.isSelected());
         
         /* indentation */
         int newTabSize = Integer.parseInt(indentField.getText().trim());
         Preferences.setInteger("editor.tabs.size", newTabSize);
         Preferences.setBoolean("SmartCode.movelines.auto_indent", indentMovingLinesBox.isSelected());
         
-        
-        
 
+        
+        
         SmartCodeTheme.setBoolean("bookmarks.linehighlight", checkBookmarkHighlighting.isSelected());
         SmartCodeTheme.setBoolean("occurrences.highlight", checkOccurrencesHighlighting.isSelected());
 

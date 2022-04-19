@@ -1,15 +1,17 @@
 package kelvinspatola.mode.smartcode.completion;
 
+import static kelvinspatola.mode.smartcode.SmartCodePreferences.*;
+
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.Map;
 
 import kelvinspatola.mode.smartcode.KeyListener;
-import kelvinspatola.mode.smartcode.SmartCodePreferences;
+import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import processing.app.ui.Editor;
 
 public class BracketCloser implements KeyListener {
-    static private final Map<Character, Character> tokens = new HashMap<>();
+    static public final Map<Character, Character> tokens = new HashMap<>();
     static private boolean isSkipped;
     private char nextToken;
     private Editor editor;
@@ -24,7 +26,7 @@ public class BracketCloser implements KeyListener {
     }
 
     // CONSTRUCTOR
-    public BracketCloser(Editor editor) {
+    public BracketCloser(SmartCodeEditor editor) {
         this.editor = editor;
     }
 
@@ -38,26 +40,33 @@ public class BracketCloser implements KeyListener {
             return false;
         }
 
-        // closing
-        if (keyChar == nextToken) {
+        // closing token -> skipping
+        if (keyChar == nextToken && !editor.isSelectionActive()) {
             skipNextToken(keyChar);
             return false;
         }
 
-        // closing
+        // closing token -> inserting
         if (isClosingBracket(keyChar)) {
-            editor.insertText(String.valueOf(keyChar));
+            editor.setSelectedText(String.valueOf(keyChar), true);
             return false;
         }
 
-        // opening
+        // opening token -> wrapping, inserting (if disabled) or auto-close
         if (tokens.containsKey(keyChar)) {
-            // if selection is active we must wrap a pair of tokens around the selection
-            if (editor.isSelectionActive())
+            // if selection is active and text selection wrapping is enabled,
+            // we must wrap a pair of tokens around the selection
+            if (AUTOCLOSE_WRAP_TEXT && editor.isSelectionActive()) {
                 wrapSelection(keyChar);
 
-            else // otherwise, add a closing token
+            } else if (isTokenDisabled(keyChar)) {
+                // if the user has disabled this token in the preferences menu, insert it in the
+                // text then without auto-closing it.
+                editor.setSelectedText(String.valueOf(keyChar), true);
+
+            } else { // otherwise, add a closing token
                 addClosingToken(keyChar);
+            }
         }
 
         return false;
@@ -79,12 +88,12 @@ public class BracketCloser implements KeyListener {
         String lineText = editor.getLineText(line);
 
         if (isTokenInside("'", "'", caret, lineText) || (token == '<' && (isTokenInside("(", ")", caret, lineText)))) {
-            editor.insertText(String.valueOf(token));
+            editor.setSelectedText(String.valueOf(token), true);
             return;
         }
 
         nextToken = tokens.get(token);
-        editor.insertText("" + token + nextToken);
+        editor.setSelectedText("" + token + nextToken, true);
         // step back one char so that it is in the middle of the tokens
         int newCaret = editor.getCaretOffset() - 1;
         editor.setSelection(newCaret, newCaret);
@@ -100,7 +109,7 @@ public class BracketCloser implements KeyListener {
             isSkipped = true;
 
         } else if (isClosingBracket(token)) { // if it's one of these: )]}>
-            editor.insertText(String.valueOf(token));
+            editor.setSelectedText(String.valueOf(token), true);
 
         } else { // if it's either \' or \"
             addClosingToken(token);
@@ -110,7 +119,7 @@ public class BracketCloser implements KeyListener {
     private void wrapSelection(char token) {
         StringBuilder selectedText = new StringBuilder(editor.getSelectedText());
 
-        if (SmartCodePreferences.BRACKETS_REPLACE_TOKEN) {
+        if (AUTOCLOSE_WRAP_REPLACE) {
             char firstChar = selectedText.charAt(0);
             char lastChar = selectedText.charAt(selectedText.length() - 1);
 
@@ -134,7 +143,7 @@ public class BracketCloser implements KeyListener {
                 selectedText.insert(0, token).append(tokens.get(token)).toString();
             }
 
-        } else {
+        } else { // otherwise, stack
             selectedText.insert(0, token).append(tokens.get(token)).toString();
         }
 
@@ -145,6 +154,19 @@ public class BracketCloser implements KeyListener {
         editor.setSelectedText(selectedText.toString());
         editor.setSelection(start, end);
         editor.stopCompoundEdit();
+    }
+
+    private static boolean isTokenDisabled(char token) {
+        if (!AUTOCLOSE_QUOTES) {
+            if ("\"\'".contains(String.valueOf(token)))
+                return true;
+        }
+
+        if (!AUTOCLOSE_BRACKETS) {
+            if ("([{<".contains(String.valueOf(token)))
+                return true;
+        }
+        return false;
     }
 
     private static boolean isTokenInside(String openToken, String closeToken, int caretPos, String lineText) {
