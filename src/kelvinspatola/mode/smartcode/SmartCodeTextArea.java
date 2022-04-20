@@ -142,13 +142,11 @@ public class SmartCodeTextArea extends JavaTextArea {
         gutterRightClickPopup = popupMenu;
     }
 
-    @Override
-    public void updateTheme() {
-        super.updateTheme();
-        if (gutterRightClickPopup != null) {
-            gutterRightClickPopup.repaint();
-        }
-    }
+//    @Override
+//    public void updateTheme() {
+//        super.updateTheme();
+//        System.out.println("*** TextArea ***");
+//    }
 
     /**
      * Converts a y co-ordinate to a line index. Rewriting this because i need it to

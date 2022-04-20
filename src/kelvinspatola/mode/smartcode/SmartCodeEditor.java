@@ -142,6 +142,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void updateTheme() {
         SmartCodeTheme.load();
         super.updateTheme();
+
+        if (bookmarkColors != null) {
+            buildGutterPopupMenu();
+            currentBookmarkColor = bookmarkColors[0];
+        }
     }
 
     // TODO: lembrete de que é preciso trabalhar aqui
@@ -262,7 +267,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         class GutterPopupMenu extends JPopupMenu {
             JMenu submenu;
             JMenuItem removeBookmarkItem, showBookmarksListItem;
-            List<JMenuItem> coloredItems = new ArrayList<>();
             int line;
 
             GutterPopupMenu() {
@@ -305,7 +309,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 item.setCursor(new Cursor(Cursor.HAND_CURSOR));
                 item.addActionListener(a -> setBookmarkColor(line, color));
                 submenu.add(item);
-                coloredItems.add(item);
             }
 
             void setBookmarkColor(int line, Color color) {
@@ -318,19 +321,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 getSketch().setModified(true);
                 currentBookmarkColor = color;
             }
-
-//            @Override
-//            public void repaint() {
-//                super.repaint();
-//                for (int i = 0; i < bookmarkColors.length; i++) {
-//                    bookmarkColors[i] = SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i + 1));
-//                }
-//                if (submenu != null) {
-//                    coloredItems.forEach(i -> i.repaint());
-//                    submenu.repaint();
-//                }
-//                System.out.println("gutterPopupMenu");
-//            }
         }
 
         getSmartCodeTextArea().setGutterRightClickPopup(new GutterPopupMenu());
@@ -1413,7 +1403,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             System.out.println("*** BookmarkPainter ***");
             for (int i = 0; i < bookmarkColors.length; i++) {
                 bookmarkColors[i] = SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i + 1));
-                System.out.println("color " + i + ": #" + PApplet.hex(bookmarkColors[i].getRGB() & 0xffffff, 6));
+                //System.out.println("color " + i + ": #" + PApplet.hex(bookmarkColors[i].getRGB() & 0xffffff, 6));
             }
         }
     }
