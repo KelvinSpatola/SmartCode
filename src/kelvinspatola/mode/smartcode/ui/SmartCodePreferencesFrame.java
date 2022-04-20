@@ -9,20 +9,31 @@ import java.awt.event.WindowEvent;
 import javax.swing.*;
 
 import processing.app.Base;
+import processing.app.Language;
+import processing.app.ui.ColorChooser;
 import processing.app.ui.Editor;
 import processing.app.ui.Toolkit;
+import processing.core.PApplet;
 import processing.app.Preferences;
 
-import kelvinspatola.mode.smartcode.Constants;
 import static kelvinspatola.mode.smartcode.SmartCodePreferences.*;
+import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.*;
 
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 import javax.swing.JCheckBox;
 import javax.swing.JButton;
 import javax.swing.LayoutStyle.ComponentPlacement;
+import javax.swing.border.Border;
+import javax.swing.border.CompoundBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -34,7 +45,6 @@ public class SmartCodePreferencesFrame {
     private Base base;
     private JFrame frame;
     private JPanel mainPane;
-    private JCheckBox checkOccurrencesHighlighting;
     private JTabbedPane tabbedPane;
     private JPanel tabGeneral;
     private JButton applyBtn;
@@ -50,13 +60,35 @@ public class SmartCodePreferencesFrame {
     private JCheckBox wrapSelectedTextBox;
     private JRadioButton replaceRadio;
     private JRadioButton stackRadio;
-    private JCheckBox checkBookmarkHighlighting;
     private JTextField indentField;
     private JCheckBox indentMovingLinesBox;
     private JLabel maxStringWidthLabel;
     private JLabel maxCommentWidthLabel;
     
+    private JCheckBox bookmarkHighlightingBox;
+    private JTextField colorField_1;
+    private JTextField colorField_2;
+    private JTextField colorField_3;
+    private JTextField colorField_4;
+    private JTextField colorField_5;
+    private JTextField iconColorField;
+    private JTextField colorPalette_1;
+    private JTextField colorPalette_2;
+    private JTextField colorPalette_3;
+    private JTextField colorPalette_4;
+    private JTextField colorPalette_5;
+    private JTextField iconColorPalette;
+    private ColorChooser iconSelector;
+    private ColorChooser colorSelector_1;
+    private ColorChooser colorSelector_2;
+    private ColorChooser colorSelector_3;
+    private ColorChooser colorSelector_4;
+    private ColorChooser colorSelector_5;
+    
     private int currTabSize;
+    private JPanel tabOccurrences;
+    private JCheckBox occurrencesHighlightingBox;
+    
 
     /**
      * Launch the application.
@@ -66,7 +98,7 @@ public class SmartCodePreferencesFrame {
             public void run() {
                 try {
                     SmartCodePreferencesFrame SmartPrefs = new SmartCodePreferencesFrame();
-                    SmartPrefs.showFrame();
+                    //SmartPrefs.showFrame();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -111,7 +143,6 @@ public class SmartCodePreferencesFrame {
         /* FORMATTING */
         
         tabGeneral = new JPanel();
-        tabGeneral.setBorder(null);
         tabbedPane.addTab("General", null, tabGeneral, null);
         
         restoreBtn = new JButton("Restore defaults");
@@ -122,7 +153,6 @@ public class SmartCodePreferencesFrame {
         });
         
         JLabel formattingLabel = new JLabel("formatting");
-        formattingLabel.setHorizontalAlignment(SwingConstants.LEFT);
         formattingLabel.setFont(new Font("Tahoma", Font.BOLD, 11));
         
         /* string formatting */
@@ -136,7 +166,6 @@ public class SmartCodePreferencesFrame {
         maxStringWidthLabel = new JLabel("max width:");
         
         stringWidthField = new JTextField();
-        stringWidthField.setHorizontalAlignment(SwingConstants.LEFT);
         stringWidthField.setColumns(3);
         
         
@@ -151,15 +180,13 @@ public class SmartCodePreferencesFrame {
         maxCommentWidthLabel = new JLabel("max width:");
         
         commentWidthField = new JTextField();
-        commentWidthField.setHorizontalAlignment(SwingConstants.LEFT);
         commentWidthField.setColumns(3);
         
         /* AUTO-CLOSE */
         
-        JSeparator separator = new JSeparator();
+        JSeparator sep1 = new JSeparator();
         
         JLabel autoCloseLabel = new JLabel("auto-close");
-        autoCloseLabel.setHorizontalAlignment(SwingConstants.LEFT);
         autoCloseLabel.setFont(new Font("Tahoma", Font.BOLD, 11));
         
         closeBracketsBox = new JCheckBox("{brace}, (parentesis), [square] and <angle> brackets");
@@ -180,24 +207,21 @@ public class SmartCodePreferencesFrame {
         
         /* INDENTATION */
         
-        JSeparator separator_1 = new JSeparator();
+        JSeparator sep2 = new JSeparator();
         
         JLabel indentationLabel = new JLabel("indentation");
-        indentationLabel.setHorizontalAlignment(SwingConstants.LEFT);
         indentationLabel.setFont(new Font("Tahoma", Font.BOLD, 11));
         
         JLabel indentLabel = new JLabel("Indent size:");
         JLabel spacesLabel = new JLabel("spaces");
         
         indentField = new JTextField();
-        indentField.setHorizontalAlignment(SwingConstants.LEFT);
-        indentField.setEnabled(true);
-        indentField.setColumns(1);
+        indentField.setColumns(3);
         
         indentMovingLinesBox = new JCheckBox("Automatically indent when moving text lines");
         
         
-        
+        int gap = 13; //Toolkit.BORDER;
                 
         GroupLayout gl_tabGeneral = new GroupLayout(tabGeneral);
         gl_tabGeneral.setHorizontalGroup(
@@ -205,65 +229,66 @@ public class SmartCodePreferencesFrame {
                 .addGroup(gl_tabGeneral.createSequentialGroup()
                     .addContainerGap()
                     .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING)
+                        .addComponent(sep1, GroupLayout.PREFERRED_SIZE, 300, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(formattingLabel)
                         .addGroup(gl_tabGeneral.createSequentialGroup()
-                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING, false)
-                                .addComponent(formattingLabel)
+                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING)
                                 .addComponent(formatCommentsBox)
                                 .addComponent(formatStringsBox))
-                            .addPreferredGap(ComponentPlacement.RELATED, 22, Short.MAX_VALUE)
-                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.TRAILING)
-                                .addGroup(gl_tabGeneral.createSequentialGroup()
-                                    .addComponent(maxStringWidthLabel)
-                                    .addPreferredGap(ComponentPlacement.RELATED)
-                                    .addComponent(stringWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                                .addGroup(gl_tabGeneral.createSequentialGroup()
-                                    .addComponent(maxCommentWidthLabel, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
-                                    .addPreferredGap(ComponentPlacement.RELATED)
-                                    .addComponent(commentWidthField, GroupLayout.PREFERRED_SIZE, 33, GroupLayout.PREFERRED_SIZE)))
-                            .addGap(6))
-                        .addComponent(separator, GroupLayout.DEFAULT_SIZE, 307, Short.MAX_VALUE)
+                            .addGap(gap)
+                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING)
+                                .addComponent(maxCommentWidthLabel)
+                                .addComponent(maxStringWidthLabel))
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING)
+                                .addComponent(commentWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                                .addComponent(stringWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)))
                         .addComponent(wrapSelectedTextBox)
                         .addComponent(closeBlockCommentsBox)
                         .addComponent(closeQuotesBox)
                         .addGroup(gl_tabGeneral.createSequentialGroup()
-                            .addGap(21)
+                            .addGap(gap)
                             .addComponent(replaceRadio)
                             .addPreferredGap(ComponentPlacement.RELATED)
                             .addComponent(stackRadio))
                         .addComponent(closeBracketsBox)
-                        .addGroup(gl_tabGeneral.createSequentialGroup()
-                            .addComponent(autoCloseLabel)
-                            .addGap(96))
-                        .addComponent(separator_1, GroupLayout.PREFERRED_SIZE, 307, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(autoCloseLabel)
                         .addComponent(indentMovingLinesBox)
                         .addGroup(gl_tabGeneral.createSequentialGroup()
                             .addComponent(indentLabel)
                             .addPreferredGap(ComponentPlacement.RELATED)
-                            .addComponent(indentField, GroupLayout.PREFERRED_SIZE, 33, GroupLayout.PREFERRED_SIZE)
+                            .addComponent(indentField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                             .addPreferredGap(ComponentPlacement.RELATED)
                             .addComponent(spacesLabel))
                         .addComponent(indentationLabel)
-                        .addComponent(restoreBtn, Alignment.TRAILING))
+                        .addGroup(gl_tabGeneral.createParallelGroup(Alignment.TRAILING)
+                            .addComponent(restoreBtn)
+                            .addComponent(sep2, GroupLayout.PREFERRED_SIZE, 300, GroupLayout.PREFERRED_SIZE)))
                     .addContainerGap())
         );
         gl_tabGeneral.setVerticalGroup(
             gl_tabGeneral.createParallelGroup(Alignment.LEADING)
                 .addGroup(gl_tabGeneral.createSequentialGroup()
-                    .addGap(6)
-                    .addComponent(formattingLabel)
+                    .addContainerGap()
+                    .addGroup(gl_tabGeneral.createParallelGroup(Alignment.TRAILING)
+                        .addGroup(gl_tabGeneral.createSequentialGroup()
+                            .addComponent(formattingLabel)
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addComponent(formatStringsBox)
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addComponent(formatCommentsBox))
+                        .addGroup(gl_tabGeneral.createSequentialGroup()
+                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.BASELINE)
+                                .addComponent(maxStringWidthLabel)
+                                .addComponent(stringWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addGroup(gl_tabGeneral.createParallelGroup(Alignment.BASELINE)
+                                .addComponent(commentWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                                .addComponent(maxCommentWidthLabel))))
                     .addPreferredGap(ComponentPlacement.RELATED)
-                    .addGroup(gl_tabGeneral.createParallelGroup(Alignment.BASELINE)
-                        .addComponent(formatStringsBox)
-                        .addComponent(maxStringWidthLabel)
-                        .addComponent(stringWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                    .addGap(6)
-                    .addGroup(gl_tabGeneral.createParallelGroup(Alignment.BASELINE)
-                        .addComponent(formatCommentsBox)
-                        .addComponent(maxCommentWidthLabel)
-                        .addComponent(commentWidthField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                    .addGap(11)
-                    .addComponent(separator, GroupLayout.PREFERRED_SIZE, 2, GroupLayout.PREFERRED_SIZE)
-                    .addGap(4)
+                    .addGap(gap)
+                    .addComponent(sep1, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(autoCloseLabel)
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(closeBracketsBox)
@@ -277,8 +302,8 @@ public class SmartCodePreferencesFrame {
                     .addGroup(gl_tabGeneral.createParallelGroup(Alignment.BASELINE)
                         .addComponent(replaceRadio)
                         .addComponent(stackRadio))
-                    .addGap(7)
-                    .addComponent(separator_1, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addGap(gap)
+                    .addComponent(sep2, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(indentationLabel)
                     .addPreferredGap(ComponentPlacement.RELATED)
@@ -289,34 +314,241 @@ public class SmartCodePreferencesFrame {
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(indentMovingLinesBox)
                     .addPreferredGap(ComponentPlacement.UNRELATED)
-                    .addComponent(restoreBtn)
-                    .addContainerGap(25, Short.MAX_VALUE))
+                    .addComponent(restoreBtn))
         );
         gl_tabGeneral.setAutoCreateGaps(true);
         gl_tabGeneral.setAutoCreateContainerGaps(true);
         tabGeneral.setLayout(gl_tabGeneral);
         
+        
+        /*
+         * BOOKMARKS TAB
+         * 
+         */
+        
         JPanel tabBookmarks = new JPanel();
-        FlowLayout flowLayout = (FlowLayout) tabBookmarks.getLayout();
-        flowLayout.setAlignment(FlowLayout.LEFT);
-        tabBookmarks.setBorder(null);
         tabbedPane.addTab("Bookmarks", null, tabBookmarks, null);
         
-        checkBookmarkHighlighting = new JCheckBox("Highlight bookmarked lines");
-        checkBookmarkHighlighting.setHorizontalAlignment(SwingConstants.LEFT);
-        tabBookmarks.add(checkBookmarkHighlighting);
-        checkOccurrencesHighlighting = new JCheckBox("Highlight occurrences");
-        checkOccurrencesHighlighting.setHorizontalAlignment(SwingConstants.LEFT);
-        tabBookmarks.add(checkOccurrencesHighlighting);
+        bookmarkHighlightingBox = new JCheckBox("Highlight bookmarked lines");
+        bookmarkHighlightingBox.addChangeListener(a -> {
+//            maxStringWidthLabel.setEnabled(checkBookmarkHighlighting.isSelected());
+        });
+        
+        JLabel colorLabel_1 = new JLabel("Color 1:  #");
+        colorPalette_1 = createColorPalette();
+        colorField_1 = createColorField(colorPalette_1);
+
+        colorSelector_1 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"),
+                Language.text("prompt.ok"), e -> {
+                    String colorValue = colorSelector_1.getHexColor();
+                    colorValue = colorValue.substring(1); // remove the #
+                    colorField_1.setText(colorValue);
+                    colorPalette_1.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorSelector_1.hide();
+                });
+
+        setupMouseListener(colorPalette_1, colorSelector_1);
+        
+        
+        JLabel colorLabel_2 = new JLabel("Color 2:  #");
+        colorPalette_2 = createColorPalette();
+        colorField_2 = createColorField(colorPalette_2);
+        
+        colorSelector_2 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"),
+                Language.text("prompt.ok"), e -> {
+                    String colorValue = colorSelector_2.getHexColor();
+                    colorValue = colorValue.substring(1); // remove the #
+                    colorField_2.setText(colorValue);
+                    colorPalette_2.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorSelector_2.hide();
+                });
+        
+        setupMouseListener(colorPalette_2, colorSelector_2);
+        
+        
+        JLabel colorLabel_3 = new JLabel("Color 3:  #");
+        
+        colorField_3 = new JTextField();
+        colorField_3.setColumns(6);
+        
+        colorPalette_3 = new JTextField("      ");
+        colorPalette_3.setOpaque(true);
+        colorPalette_3.setEnabled(true);
+        colorPalette_3.setEditable(false);
+        
+        
+        JLabel colorLabel_4 = new JLabel("Color 4:  #");
+        
+        colorField_4 = new JTextField();
+        colorField_4.setColumns(6);
+        
+        colorPalette_4 = new JTextField("      ");
+        colorPalette_4.setOpaque(true);
+        colorPalette_4.setEnabled(true);
+        colorPalette_4.setEditable(false);
+        
+        
+        JLabel colorLabel_5 = new JLabel("Color 5:  #");
+        
+        colorField_5 = new JTextField();
+        colorField_5.setColumns(6);
+        
+        colorPalette_5 = new JTextField("      ");
+        colorPalette_5.setOpaque(true);
+        colorPalette_5.setEnabled(true);
+        colorPalette_5.setEditable(false);
+        
+        JSeparator separator = new JSeparator();
+        
+        
+        JLabel iconColorLabel = new JLabel("Icon color:  #");
+        iconColorPalette = createColorPalette();
+        iconColorField = createColorField(iconColorPalette);
+        
+        iconSelector = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.icon.color"),
+                Language.text("prompt.ok"), a -> {
+                    String colorValue = iconSelector.getHexColor();
+                    colorValue = colorValue.substring(1); // remove the #
+                    iconColorField.setText(colorValue);
+                    iconColorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
+                    iconSelector.hide();
+                });
+        
+        setupMouseListener(iconColorPalette, iconSelector);
+        
+        
+        GroupLayout gl_tabBookmarks = new GroupLayout(tabBookmarks);
+        gl_tabBookmarks.setHorizontalGroup(
+            gl_tabBookmarks.createParallelGroup(Alignment.LEADING)
+                .addGroup(gl_tabBookmarks.createSequentialGroup()
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.LEADING)
+                        .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.LEADING, false)
+                            .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(separator, GroupLayout.PREFERRED_SIZE, 300, GroupLayout.PREFERRED_SIZE)
+                                .addGap(10))
+                            .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.LEADING, false)
+                                    .addComponent(bookmarkHighlightingBox)
+                                    .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                        .addComponent(colorLabel_1, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorField_1, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorPalette_1, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED))
+                                    .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                        .addComponent(colorLabel_2, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorField_2, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorPalette_2, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED))
+                                    .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                        .addComponent(colorLabel_3, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorField_3, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorPalette_3, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED))
+                                    .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                        .addComponent(colorLabel_4, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorField_4, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorPalette_4, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED))
+                                    .addGroup(gl_tabBookmarks.createSequentialGroup()
+                                        .addComponent(colorLabel_5, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorField_5, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                                        .addPreferredGap(ComponentPlacement.RELATED)
+                                        .addComponent(colorPalette_5, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addGap(13)))))
+                        .addGroup(gl_tabBookmarks.createSequentialGroup()
+                            .addComponent(iconColorLabel, GroupLayout.PREFERRED_SIZE, 66, GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addComponent(iconColorField, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addComponent(iconColorPalette, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(ComponentPlacement.RELATED)))
+                    .addContainerGap(161, Short.MAX_VALUE))
+        );
+        gl_tabBookmarks.setVerticalGroup(
+            gl_tabBookmarks.createParallelGroup(Alignment.LEADING)
+                .addGroup(gl_tabBookmarks.createSequentialGroup()
+                    .addContainerGap()
+                    .addComponent(bookmarkHighlightingBox)
+                    .addPreferredGap(ComponentPlacement.UNRELATED)
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(colorLabel_1)
+                        .addComponent(colorField_1, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(colorPalette_1, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                    .addPreferredGap(ComponentPlacement.RELATED)
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(colorLabel_2)
+                        .addComponent(colorField_2, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(colorPalette_2, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                    .addPreferredGap(ComponentPlacement.RELATED)
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(colorLabel_3)
+                        .addComponent(colorField_3, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(colorPalette_3, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                    .addPreferredGap(ComponentPlacement.RELATED)
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(colorLabel_4)
+                        .addComponent(colorField_4, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(colorPalette_4, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                    .addPreferredGap(ComponentPlacement.RELATED)
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(colorLabel_5)
+                        .addComponent(colorField_5, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(colorPalette_5, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                    .addPreferredGap(ComponentPlacement.UNRELATED)
+                    .addComponent(separator, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addPreferredGap(ComponentPlacement.UNRELATED)
+                    .addPreferredGap(ComponentPlacement.RELATED)
+                    .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(iconColorLabel)
+                        .addComponent(iconColorField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(iconColorPalette, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+       
+                    
+                    .addContainerGap(157, Short.MAX_VALUE))
+        );
+        gl_tabBookmarks.setAutoCreateContainerGaps(true);
+        gl_tabBookmarks.setAutoCreateGaps(true);
+        tabBookmarks.setLayout(gl_tabBookmarks);
         mainPane.add(tabbedPane);
         
         
-        final int buttonWidth = 80;
+        /*
+         * BOOKMARKS TAB
+         * 
+         */
+        
+        tabOccurrences = new JPanel();
+        tabbedPane.addTab("Occurrences", null, tabOccurrences, null);
+        
+        occurrencesHighlightingBox = new JCheckBox("Highlight occurrences");
+        occurrencesHighlightingBox.setHorizontalAlignment(SwingConstants.LEFT);
+        tabOccurrences.add(occurrencesHighlightingBox);
+        
+        
+        /*
+         * FOOTER BUTTONS PANEL
+         * 
+         */
+        
+        
+        final int buttonWidth = 80; // Toolkit.getButtonWidth();
 
         JPanel mainButtonsPane = new JPanel();
         mainPane.add(mainButtonsPane);
         
         applyBtn = new JButton("Apply");
+        applyBtn.setPreferredSize(new Dimension(buttonWidth, 23));
         applyBtn.addActionListener(e -> {
             applyPrefs();
             disposeFrame();
@@ -324,6 +556,7 @@ public class SmartCodePreferencesFrame {
         mainButtonsPane.add(applyBtn);
         
         cancelBtn = new JButton("Cancel");
+        cancelBtn.setPreferredSize(new Dimension(buttonWidth, 23));
         cancelBtn.addActionListener(e -> disposeFrame());
         mainButtonsPane.add(cancelBtn);
         
@@ -356,6 +589,8 @@ public class SmartCodePreferencesFrame {
     }
     
     public void showFrame() {
+        // *** GENERAL *** //
+        
         /* string formatting*/
         formatStringsBox.setSelected(AUTOFORMAT_STRINGS);
         stringWidthField.setEnabled(formatStringsBox.isSelected());
@@ -386,12 +621,39 @@ public class SmartCodePreferencesFrame {
         indentMovingLinesBox.setSelected(MOVE_LINES_AUTO_INDENT);
         
         
+        // *** BOOKMARKS *** //      
+        
+        bookmarkHighlightingBox.setSelected(BOOKMARKS_HIGHLIGHT);
+        
+        colorPalette_1.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"));
+        colorField_1.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.1"));
+        
+        colorPalette_2.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"));
+        colorField_2.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.2"));
+        
+        colorPalette_3.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"));
+        colorField_3.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.3"));
+        
+        colorPalette_4.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"));
+        colorField_4.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.4"));
+        
+        colorPalette_5.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"));
+        colorField_5.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.5"));
+        
+        /* icon */
+        iconColorPalette.setBackground(SmartCodeTheme.getColor("bookmarks.icon.color"));
+        iconColorField.setText(SmartCodeTheme.get("bookmarks.icon.color"));
+        
+        
+        
         frame.getRootPane().setDefaultButton(applyBtn);
         frame.pack();
         frame.setVisible(true);
     }
-    
+        
     protected void applyPrefs() {
+     // *** GENERAL *** //
+        
         /* formatting */
         Preferences.setBoolean("SmartCode.autoformat.strings", formatStringsBox.isSelected());
         Preferences.setInteger("SmartCode.autoformat.strings.length",
@@ -413,12 +675,24 @@ public class SmartCodePreferencesFrame {
         Preferences.setInteger("editor.tabs.size", newTabSize);
         Preferences.setBoolean("SmartCode.movelines.auto_indent", indentMovingLinesBox.isSelected());
         
+        
+        // *** BOOKMARKS *** //        
+        
+        SmartCodeTheme.setBoolean("bookmarks.linehighlight", bookmarkHighlightingBox.isSelected());
+        
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.1", colorPalette_1.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.2", colorPalette_2.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.3", colorPalette_3.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.4", colorPalette_4.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.5", colorPalette_5.getBackground());
+        /* icon */
+        SmartCodeTheme.setColor("bookmarks.icon.color", iconColorPalette.getBackground());
 
         
         
-        SmartCodeTheme.setBoolean("bookmarks.linehighlight", checkBookmarkHighlighting.isSelected());
-        SmartCodeTheme.setBoolean("occurrences.highlight", checkOccurrencesHighlighting.isSelected());
-
+        
+        SmartCodeTheme.setBoolean("occurrences.highlight", occurrencesHighlightingBox.isSelected());
+        
         SmartCodeTheme.save();
         Preferences.save();
         
@@ -430,5 +704,83 @@ public class SmartCodePreferencesFrame {
                 editor.handleAutoFormat();
             }
         }
+    }
+    
+
+
+    private JTextField createColorPalette() {
+        JTextField colorPalette = new JTextField("      ");
+        colorPalette.setOpaque(true);
+        colorPalette.setEnabled(true);
+        colorPalette.setEditable(false);
+        Border cb = new CompoundBorder(BorderFactory.createMatteBorder(1, 1, 0, 0, new Color(195, 195, 195)),
+                BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(54, 54, 54)));
+        colorPalette.setBorder(cb);
+        return colorPalette;
+    }
+    
+    private JTextField createColorField(JTextField colorPalette) {
+        JTextField colorField = new JTextField();
+        colorField.setColumns(6);
+        colorField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                final String colorValue = colorField.getText().toUpperCase();
+
+                if (colorValue.length() == 7 && colorValue.startsWith("#")) {
+                    EventQueue.invokeLater(() -> colorField.setText(colorValue.substring(1)));
+                }
+
+                if (colorValue.length() == 6 && colorValue.matches("[0123456789ABCDEF]*")) {
+                    colorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
+                    
+                    if (!colorValue.equals(colorField.getText())) {
+                        EventQueue.invokeLater(() -> colorField.setText(colorValue));
+                    }
+                }
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                final String colorValue = colorField.getText().toUpperCase();
+
+                if (colorValue.length() == 7 && colorValue.startsWith("#")) {
+                    EventQueue.invokeLater(() -> colorField.setText(colorValue.substring(1)));
+                }
+
+                if (colorValue.length() == 6 && colorValue.matches("[0123456789ABCDEF]*")) {
+                    colorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
+                    
+                    if (!colorValue.equals(colorField.getText())) {
+                        EventQueue.invokeLater(() -> colorField.setText(colorValue));
+                    }
+                }
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+            }
+        });
+        
+        return colorField;
+    }
+    
+    void setupMouseListener(JTextField colorPalette, ColorChooser colorChooser) {
+        colorPalette.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                frame.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+            }
+            
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                frame.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            }
+            
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                colorChooser.show();
+            }
+        });
     }
 }

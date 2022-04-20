@@ -175,6 +175,10 @@ public class SmartCodeTheme {
         }
         return result;
     }
+    
+    static public void setColor(String attr, Color what) {
+        set(attr, "#" + PApplet.hex(what.getRGB() & 0xffffff, 6)); //$NON-NLS-1$
+    }
 
     /**
      * Converts a hex string to a color. If it can't be converted null is returned.
