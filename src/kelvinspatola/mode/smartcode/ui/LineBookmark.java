@@ -2,8 +2,6 @@ package kelvinspatola.mode.smartcode.ui;
 
 import static kelvinspatola.mode.smartcode.Constants.PIN_MARKER;
 
-import java.awt.Color;
-
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import processing.app.SketchCode;
 import processing.mode.java.debug.LineHighlight;
@@ -12,14 +10,14 @@ import processing.mode.java.debug.LineID;
 public class LineBookmark implements LineMarker, Comparable<LineBookmark> {
     private SmartCodeEditor editor;
     private LineHighlight highlight;
-    private Color color;
+    private ColorTag colorTag;
 
     
-    public LineBookmark(SmartCodeEditor editor, LineID lineID, Color color) {
+    public LineBookmark(SmartCodeEditor editor, LineID lineID, ColorTag colorTag) {
         this.editor = editor;
         highlight = new LineHighlight(lineID, editor);
         highlight.setMarker(PIN_MARKER);
-        this.color = color;
+        this.colorTag = colorTag;
     }
         
     public void paint() {
@@ -57,12 +55,12 @@ public class LineBookmark implements LineMarker, Comparable<LineBookmark> {
         return highlight.getLineID();
     }
     
-    public void setColor(Color color) {
-        this.color = color;
+    public void setColorTag(ColorTag colorTag) {
+        this.colorTag = colorTag;
     }
     
-    public Color getColor() {
-        return color;
+    public ColorTag getColorTag() {
+        return colorTag;
     }
 
     @Override

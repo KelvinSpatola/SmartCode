@@ -90,9 +90,9 @@ public class ShowBookmarks {
     public void updateTree() {
         // Create root node
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode(editor.getSketch().getName());
-
+        
         bookmarks.stream().map(b -> {
-            String colorHex = Integer.toHexString(((LineBookmark) b).getColor().getRGB()).substring(2);
+            String colorHex = Integer.toHexString(((LineBookmark) b).getColorTag().getColor().getRGB()).substring(2);
             String colorIndicator = "<font color=" + colorHex + "> &#x25A0; </font>"; // &#x25A0; -> HTML code for the square
             String lineNumberIndicator = "<font color=#bbbbbb>" + (b.getLine() + 1) + ": </font>";
             String lineTextIndicator = "<font color=#000000>" + b.getText().trim() + "</font>";
