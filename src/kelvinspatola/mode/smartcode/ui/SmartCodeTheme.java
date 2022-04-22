@@ -43,11 +43,11 @@ public class SmartCodeTheme {
     static {
         defaultPrefs.put(attributes[0], "footer.icon.selected.color"); // bookmarks.icon.color
         defaultPrefs.put(attributes[1], "true"); // bookmarks.linehighlight
-        defaultPrefs.put(attributes[2], "#9B5DE57D"); // bookmarks.linehighlight.color.1
-        defaultPrefs.put(attributes[3], "#F15BB57D"); // bookmarks.linehighlight.color.2
-        defaultPrefs.put(attributes[4], "#FEE4407D"); // bookmarks.linehighlight.color.3
-        defaultPrefs.put(attributes[5], "#00BBF97D"); // bookmarks.linehighlight.color.4
-        defaultPrefs.put(attributes[6], "#00F5D47D"); // bookmarks.linehighlight.color.5
+        defaultPrefs.put(attributes[2], "#9B5DE5"); // bookmarks.linehighlight.color.1
+        defaultPrefs.put(attributes[3], "#F15BB5"); // bookmarks.linehighlight.color.2
+        defaultPrefs.put(attributes[4], "#FEE440"); // bookmarks.linehighlight.color.3
+        defaultPrefs.put(attributes[5], "#00BBF9"); // bookmarks.linehighlight.color.4
+        defaultPrefs.put(attributes[6], "#00F5D4"); // bookmarks.linehighlight.color.5
         defaultPrefs.put(attributes[7], "#00FFFF"); // column.bookmark.color
         defaultPrefs.put(attributes[8], "#FF0000"); // column.error.color
         defaultPrefs.put(attributes[9], "header.tab.selected.color"); // column.occurrence.color
@@ -168,7 +168,7 @@ public class SmartCodeTheme {
         String hexColor = get(attribute);
 
         if (hexColor != null) {
-            result = hexToColor(hexColor);
+            result = new Color(Integer.parseInt(hexColor.substring(1), 16));
         }
         if (result == null) {
             System.err.println("Could not parse color " + hexColor + " for " + attribute);
@@ -178,32 +178,5 @@ public class SmartCodeTheme {
     
     static public void setColor(String attr, Color what) {
         set(attr, "#" + PApplet.hex(what.getRGB() & 0xffffff, 6)); //$NON-NLS-1$
-    }
-
-    /**
-     * Converts a hex string to a color. If it can't be converted null is returned.
-     * 
-     * @param hex (i.e. #RRGGBBAA or RRGGBB)
-     * @return Color
-     */
-    static private Color hexToColor(String hex) throws IllegalArgumentException {
-        if (!hex.startsWith("#") || !(hex.length() == 7 || hex.length() == 9)) {
-            throw new IllegalArgumentException("Hex color string is incorrect!");
-        }
-
-        hex = hex.replace("#", "");
-        switch (hex.length()) {
-        case 6:
-            return new Color(Integer.valueOf(hex.substring(0, 2), 16), // red
-                    Integer.valueOf(hex.substring(2, 4), 16), // green
-                    Integer.valueOf(hex.substring(4, 6), 16)); // blue
-        case 8:
-            return new Color(Integer.valueOf(hex.substring(0, 2), 16), // red
-                    Integer.valueOf(hex.substring(2, 4), 16), // green
-                    Integer.valueOf(hex.substring(4, 6), 16), // blue
-                    Integer.valueOf(hex.substring(6, 8), 16)); // alpha
-        default:
-            return null;
-        }
     }
 }

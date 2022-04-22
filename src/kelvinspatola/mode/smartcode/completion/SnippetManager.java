@@ -36,6 +36,7 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
         this.editor = editor;
         addDefaultSnippets();
         addSnippetsFromFile(((SmartCodeMode) editor.getMode()).loadSnippetsFile(), snippets);
+        updateTheme();
     }
 
     protected void addDefaultSnippets() {

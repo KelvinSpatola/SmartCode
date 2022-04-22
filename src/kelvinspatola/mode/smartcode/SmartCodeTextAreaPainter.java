@@ -69,7 +69,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     public SmartCodeEditor getSmartCodeEditor() {
         return (SmartCodeEditor) getEditor();
     }
-
+    
     public void addLinePainter(LinePainter painter) {
         painters.add(painter);
     }

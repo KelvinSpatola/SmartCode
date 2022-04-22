@@ -29,6 +29,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     private MouseListener pdeMouseHandlerListener;
     private MouseMotionListener pdeDragHandlerListener;
     protected JPopupMenu gutterRightClickPopup;
+    protected SnippetManager snippetManager;
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -37,12 +38,12 @@ public class SmartCodeTextArea extends JavaTextArea {
         SmartCodeInputHandler inputHandler = new SmartCodeInputHandler(editor);
 
         inputHandler.addKeyListener(new BracketCloser(editor));
-        
+
         if (SmartCodePreferences.TEMPLATES_ENABLED) {
-            SnippetManager sm = new SnippetManager(editor);
-            inputHandler.addKeyListener(sm);
-            addCaretListener(sm);
-            getSmartCodePainter().addLinePainter(sm);
+            snippetManager = new SnippetManager(editor);
+            inputHandler.addKeyListener(snippetManager);
+            addCaretListener(snippetManager);
+//            getSmartCodePainter().addLinePainter(snippetManager);
         }
         // default behaviour for the textarea in regards to TAB and ENTER key
         inputHandler.addKeyListener(editor);
@@ -145,7 +146,6 @@ public class SmartCodeTextArea extends JavaTextArea {
 //    @Override
 //    public void updateTheme() {
 //        super.updateTheme();
-//        System.out.println("*** TextArea ***");
 //    }
 
     /**

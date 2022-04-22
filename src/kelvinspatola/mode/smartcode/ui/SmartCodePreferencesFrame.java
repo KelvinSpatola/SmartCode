@@ -645,6 +645,7 @@ public class SmartCodePreferencesFrame {
         iconColorField.setText(SmartCodeTheme.get("bookmarks.icon.color"));
         
         
+        occurrencesHighlightingBox.setSelected(OCCURRENCES_HIGHLIGHT);
         
         frame.getRootPane().setDefaultButton(applyBtn);
         frame.pack();

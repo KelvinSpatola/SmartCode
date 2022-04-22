@@ -62,7 +62,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super(base, path, state, mode);
 
         showBookmarks = new ShowBookmarks(this, bookmarkedLines);
-        
+
         BookmarkPainter bookmarkPainter = new BookmarkPainter();
         bookmarkPainter.updateTheme();
         getSmartCodePainter().addLinePainter(bookmarkPainter);
@@ -85,6 +85,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         occurrences = new CodeOccurrences(this, preprocService);
         textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
+
+        getSmartCodePainter().addLinePainter(getSmartCodeTextArea().snippetManager);
 
         timedAction(this::printHelloMessage, 500);
     }
@@ -1333,7 +1335,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             String[] codeLines = code.split("\\r?\\n");
 
             for (int line : bms.keySet()) {
-                String commentTag = bms.get(line).toString();
+                String commentTag = bms.get(line).getTag();
                 // to avoid duplication, do it only if this line is not already marked
                 if (!codeLines[line].endsWith(commentTag)) {
                     codeLines[line] += commentTag;
@@ -1383,18 +1385,58 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 return false;
 
             if (isLineBookmark(line)) {
-                gfx.setColor(getLineBookmark(getLineIDInCurrentTab(line)).getColorTag().getColor());
+                Color color = getLineBookmark(getLineIDInCurrentTab(line)).getColorTag().getColor();
+                gfx.setColor(color);
                 gfx.fillRect(0, y, getWidth(), h);
+
+                int selectionStartLine = ta.getSelectionStartLine();
+                int selectionEndLine = ta.getSelectionStopLine();
+
+                if (line >= selectionStartLine && line <= selectionEndLine) {
+                    int selectionStart = ta.getSelectionStart();
+                    int selectionEnd = ta.getSelectionStop();
+                    int lineStart = ta.getLineStartOffset(line);
+                    int x1, x2;
+
+                    if (selectionStart == selectionEnd) { // no selection
+                        x1 = 0;
+                        x2 = getWidth();
+
+                    } else if (selectionStartLine == selectionEndLine) { // selection inside a line
+                        x1 = ta._offsetToX(line, selectionStart - lineStart);
+                        x2 = ta._offsetToX(line, selectionEnd - lineStart);
+
+                    } else if (line == selectionStartLine) { // block selection with caret at selection start
+                        x1 = ta._offsetToX(line, selectionStart - lineStart);
+                        x2 = getWidth();
+
+                    } else if (line == selectionEndLine) { // block selection with caret at selection end
+                        x1 = ta._offsetToX(line, 0);
+                        x2 = ta._offsetToX(line, selectionEnd - lineStart);
+
+                    } else { // lines selected in the middle
+                        x1 = ta._offsetToX(line, 0);
+                        x2 = getWidth();
+                    }
+
+                    int dimming = 25;
+                    int rgb = color.getRGB();
+                    int r = Math.max(0, (rgb >> 16 & 0xFF) - dimming);
+                    int g = Math.max(0, (rgb >> 8 & 0xFF) - dimming);
+                    int b = Math.max(0, (rgb & 0xFF) - dimming);
+                    gfx.setColor(new Color(r, g, b));
+                    gfx.fillRect(Math.min(x1, x2), y, x1 > x2 ? (x1 - x2) : (x2 - x1), h);
+                }
                 return true;
             }
             return false;
         }
 
         @Override
-        public void updateTheme() {  
+        public void updateTheme() {
             short i = 1;
             for (ColorTag tag : ColorTag.values()) {
-               tag.setColor(SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i++)));
+                tag.setColor(SmartCodeTheme.getColor("bookmarks.linehighlight.color." + (i++)));
             }
         }
     }

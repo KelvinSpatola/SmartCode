@@ -30,11 +30,11 @@ public final class ColorTag {
         return color;
     }
 
-    public void setColor(Color colour) {
-        this.color = colour;
+    public void setColor(Color color) {
+        this.color = color;
     }
 
-    public String toString() {
+    public String getTag() {
         return tag;
     }
     
