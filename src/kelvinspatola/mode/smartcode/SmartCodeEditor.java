@@ -1389,6 +1389,17 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 gfx.setColor(color);
                 gfx.fillRect(0, y, getWidth(), h);
 
+                /*
+                 * In case this bookmarked line is part of a text selection or is the caret
+                 * line, it is necessary to paint it differently to give visual feedback to the
+                 * user. All the painting done to the text area by the SmartCode code is done
+                 * using the interface provided by the Processing source code, more precisely
+                 * the 'Highlight' interface inside the TextAreaPainter class. This makes all of
+                 * our painting happen strictly after the line highlight and selection highlight
+                 * paintings, overlapping and omitting them. To avoid that, we paint it
+                 * differently in order to give that feedback.
+                 */
+
                 int selectionStartLine = ta.getSelectionStartLine();
                 int selectionEndLine = ta.getSelectionStopLine();
 
