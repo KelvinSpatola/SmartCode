@@ -31,13 +31,21 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
         super(textarea, defaults);
 
+        /*
+         * All the painting done to the text area by the SmartCode code is done using
+         * the interface provided by the Processing source code, more precisely the
+         * 'Highlight' interface inside the TextAreaPainter class. This makes all of our
+         * painting happen strictly after the line and selection highlight paintings,
+         * overlapping them, and just before the bracket and caret highlighting,
+         * followed by the text painting.
+         */
         highlights = new Highlight() {
             @Override
             public String getToolTipText(MouseEvent evt) {
                 return null;
             }
 
-            @Override
+            @Override // don't know what the heck is this for xD
             public void init(JEditTextArea textarea, Highlight next) {
             }
 
@@ -69,7 +77,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     public SmartCodeEditor getSmartCodeEditor() {
         return (SmartCodeEditor) getEditor();
     }
-    
+
     public void addLinePainter(LinePainter painter) {
         painters.add(painter);
     }

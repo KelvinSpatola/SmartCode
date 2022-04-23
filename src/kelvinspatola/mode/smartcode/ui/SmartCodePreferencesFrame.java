@@ -28,6 +28,9 @@ import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -39,6 +42,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.Component;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 
 
 public class SmartCodePreferencesFrame {
@@ -346,7 +351,6 @@ public class SmartCodePreferencesFrame {
                     colorPalette_1.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_1.hide();
                 });
-
         setupMouseListener(colorPalette_1, colorSelector_1);
         
         
@@ -362,43 +366,54 @@ public class SmartCodePreferencesFrame {
                     colorPalette_2.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_2.hide();
                 });
-        
         setupMouseListener(colorPalette_2, colorSelector_2);
         
         
         JLabel colorLabel_3 = new JLabel("Color 3:  #");
+        colorPalette_3 = createColorPalette();
+        colorField_3 = createColorField(colorPalette_3);    
         
-        colorField_3 = new JTextField();
-        colorField_3.setColumns(6);
-        
-        colorPalette_3 = new JTextField("      ");
-        colorPalette_3.setOpaque(true);
-        colorPalette_3.setEnabled(true);
-        colorPalette_3.setEditable(false);
+        colorSelector_3 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"),
+                Language.text("prompt.ok"), e -> {
+                    String colorValue = colorSelector_3.getHexColor();
+                    colorValue = colorValue.substring(1); // remove the #
+                    colorField_3.setText(colorValue);
+                    colorPalette_3.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorSelector_3.hide();
+                });
+        setupMouseListener(colorPalette_3, colorSelector_3);
         
         
         JLabel colorLabel_4 = new JLabel("Color 4:  #");
+        colorPalette_4 = createColorPalette();
+        colorField_4 = createColorField(colorPalette_4);    
         
-        colorField_4 = new JTextField();
-        colorField_4.setColumns(6);
-        
-        colorPalette_4 = new JTextField("      ");
-        colorPalette_4.setOpaque(true);
-        colorPalette_4.setEnabled(true);
-        colorPalette_4.setEditable(false);
+        colorSelector_4 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"),
+                Language.text("prompt.ok"), e -> {
+                    String colorValue = colorSelector_4.getHexColor();
+                    colorValue = colorValue.substring(1); // remove the #
+                    colorField_4.setText(colorValue);
+                    colorPalette_4.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorSelector_4.hide();
+                });
+        setupMouseListener(colorPalette_4, colorSelector_4);
         
         
         JLabel colorLabel_5 = new JLabel("Color 5:  #");
+        colorPalette_5 = createColorPalette();
+        colorField_5 = createColorField(colorPalette_5);    
         
-        colorField_5 = new JTextField();
-        colorField_5.setColumns(6);
+        colorSelector_5 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"),
+                Language.text("prompt.ok"), e -> {
+                    String colorValue = colorSelector_5.getHexColor();
+                    colorValue = colorValue.substring(1); // remove the #
+                    colorField_5.setText(colorValue);
+                    colorPalette_5.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorSelector_5.hide();
+                });
+        setupMouseListener(colorPalette_5, colorSelector_5);
         
-        colorPalette_5 = new JTextField("      ");
-        colorPalette_5.setOpaque(true);
-        colorPalette_5.setEnabled(true);
-        colorPalette_5.setEditable(false);
-        
-        JSeparator separator = new JSeparator();
+        JSeparator separator = new JSeparator(); // ---------------------------------------------------
         
         
         JLabel iconColorLabel = new JLabel("Icon color:  #");
@@ -413,7 +428,6 @@ public class SmartCodePreferencesFrame {
                     iconColorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
                     iconSelector.hide();
                 });
-        
         setupMouseListener(iconColorPalette, iconSelector);
         
         
@@ -513,8 +527,6 @@ public class SmartCodePreferencesFrame {
                         .addComponent(iconColorLabel)
                         .addComponent(iconColorField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                         .addComponent(iconColorPalette, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
-       
-                    
                     .addContainerGap(157, Short.MAX_VALUE))
         );
         gl_tabBookmarks.setAutoCreateContainerGaps(true);
@@ -533,7 +545,39 @@ public class SmartCodePreferencesFrame {
         
         occurrencesHighlightingBox = new JCheckBox("Highlight occurrences");
         occurrencesHighlightingBox.setHorizontalAlignment(SwingConstants.LEFT);
-        tabOccurrences.add(occurrencesHighlightingBox);
+        
+        JSlider slider = new JSlider();
+        slider.addChangeListener(new ChangeListener() {
+            public void stateChanged(ChangeEvent e) {
+                int val = slider.getValue();
+                System.out.println("val: " + val);
+            }
+        });
+        slider.setPaintTicks(true);
+        slider.setSnapToTicks(true);
+        slider.setPaintLabels(true);
+        slider.setMajorTickSpacing(25);
+        slider.setMinorTickSpacing(5);
+        GroupLayout gl_tabOccurrences = new GroupLayout(tabOccurrences);
+        gl_tabOccurrences.setHorizontalGroup(
+            gl_tabOccurrences.createParallelGroup(Alignment.LEADING)
+                .addGroup(gl_tabOccurrences.createSequentialGroup()
+                    .addContainerGap()
+                    .addGroup(gl_tabOccurrences.createParallelGroup(Alignment.LEADING)
+                        .addComponent(occurrencesHighlightingBox)
+                        .addComponent(slider, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
+                    .addContainerGap(109, Short.MAX_VALUE))
+        );
+        gl_tabOccurrences.setVerticalGroup(
+            gl_tabOccurrences.createParallelGroup(Alignment.LEADING)
+                .addGroup(gl_tabOccurrences.createSequentialGroup()
+                    .addContainerGap()
+                    .addComponent(occurrencesHighlightingBox)
+                    .addGap(34)
+                    .addComponent(slider, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                    .addContainerGap(253, Short.MAX_VALUE))
+        );
+        tabOccurrences.setLayout(gl_tabOccurrences);
         
         
         /*
@@ -723,36 +767,37 @@ public class SmartCodePreferencesFrame {
     private JTextField createColorField(JTextField colorPalette) {
         JTextField colorField = new JTextField();
         colorField.setColumns(6);
+        colorField.setDocument(new HexNumberFormatDocument());
         colorField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void removeUpdate(DocumentEvent e) {
-                final String colorValue = colorField.getText().toUpperCase();
+            public void insertUpdate(DocumentEvent e) {
+                final String colorValue = colorField.getText();
 
-                if (colorValue.length() == 7 && colorValue.startsWith("#")) {
+                if (colorValue.length() == 7) {
                     EventQueue.invokeLater(() -> colorField.setText(colorValue.substring(1)));
                 }
 
-                if (colorValue.length() == 6 && colorValue.matches("[0123456789ABCDEF]*")) {
+                if (colorValue.length() == 6 && colorValue.matches("[A-F0-9]*")) {
                     colorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
                     
-                    if (!colorValue.equals(colorField.getText())) {
+                    if (!colorValue.equals(colorField.getText())) { 
                         EventQueue.invokeLater(() -> colorField.setText(colorValue));
                     }
                 }
             }
 
             @Override
-            public void insertUpdate(DocumentEvent e) {
-                final String colorValue = colorField.getText().toUpperCase();
+            public void removeUpdate(DocumentEvent e) {
+                final String colorValue = colorField.getText();
 
-                if (colorValue.length() == 7 && colorValue.startsWith("#")) {
+                if (colorValue.length() == 7) {
                     EventQueue.invokeLater(() -> colorField.setText(colorValue.substring(1)));
                 }
 
-                if (colorValue.length() == 6 && colorValue.matches("[0123456789ABCDEF]*")) {
+                if (colorValue.length() == 6 && colorValue.matches("[A-F0-9]*")) {
                     colorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
                     
-                    if (!colorValue.equals(colorField.getText())) {
+                    if (!colorValue.equals(colorField.getText())) { 
                         EventQueue.invokeLater(() -> colorField.setText(colorValue));
                     }
                 }
@@ -764,6 +809,33 @@ public class SmartCodePreferencesFrame {
         });
         
         return colorField;
+    }
+    
+    static class HexNumberFormatDocument extends PlainDocument {
+        int maxLength = 6;
+        String hexNumber;
+
+        @Override
+            public void insertString(int offset, String str, AttributeSet att) throws BadLocationException {
+            if (str == null)
+                return;
+            
+            str = str.toUpperCase();
+
+            if (offset == 0)
+                maxLength = 6;
+
+            if (offset == 0 && str.matches("\\#.*")) {
+                hexNumber = "#[A-F0-9]*";
+                maxLength = 7;
+            } else {
+                hexNumber = "[A-F0-9]*";
+            }
+
+            if (str.matches(hexNumber) && (getLength() + str.length()) <= maxLength) {
+                super.insertString(offset, str, att);
+            }
+        }
     }
     
     void setupMouseListener(JTextField colorPalette, ColorChooser colorChooser) {

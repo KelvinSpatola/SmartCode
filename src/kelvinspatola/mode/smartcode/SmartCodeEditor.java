@@ -1430,7 +1430,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                         x2 = getWidth();
                     }
 
-                    int dimming = 25;
+                    final int dimming = 25;
                     int rgb = color.getRGB();
                     int r = Math.max(0, (rgb >> 16 & 0xFF) - dimming);
                     int g = Math.max(0, (rgb >> 8 & 0xFF) - dimming);
