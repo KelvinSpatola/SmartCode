@@ -343,10 +343,9 @@ public class SmartCodePreferencesFrame {
         colorPalette_1 = createColorPalette();
         colorField_1 = createColorField(colorPalette_1);
 
-        colorSelector_1 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"),
+        colorSelector_1 = new ColorChooser(frame, false, colorPalette_1.getBackground(),
                 Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_1.getHexColor();
-                    colorValue = colorValue.substring(1); // remove the #
+                    String colorValue = colorSelector_1.getHexColor().substring(1); // remove the #
                     colorField_1.setText(colorValue);
                     colorPalette_1.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_1.hide();
@@ -358,10 +357,9 @@ public class SmartCodePreferencesFrame {
         colorPalette_2 = createColorPalette();
         colorField_2 = createColorField(colorPalette_2);
         
-        colorSelector_2 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"),
+        colorSelector_2 = new ColorChooser(frame, false, colorPalette_2.getBackground(),
                 Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_2.getHexColor();
-                    colorValue = colorValue.substring(1); // remove the #
+                    String colorValue = colorSelector_2.getHexColor().substring(1); // remove the #
                     colorField_2.setText(colorValue);
                     colorPalette_2.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_2.hide();
@@ -373,10 +371,9 @@ public class SmartCodePreferencesFrame {
         colorPalette_3 = createColorPalette();
         colorField_3 = createColorField(colorPalette_3);    
         
-        colorSelector_3 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"),
+        colorSelector_3 = new ColorChooser(frame, false, colorPalette_3.getBackground(),
                 Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_3.getHexColor();
-                    colorValue = colorValue.substring(1); // remove the #
+                    String colorValue = colorSelector_3.getHexColor().substring(1); // remove the #
                     colorField_3.setText(colorValue);
                     colorPalette_3.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_3.hide();
@@ -388,10 +385,9 @@ public class SmartCodePreferencesFrame {
         colorPalette_4 = createColorPalette();
         colorField_4 = createColorField(colorPalette_4);    
         
-        colorSelector_4 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"),
+        colorSelector_4 = new ColorChooser(frame, false, colorPalette_4.getBackground(),
                 Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_4.getHexColor();
-                    colorValue = colorValue.substring(1); // remove the #
+                    String colorValue = colorSelector_4.getHexColor().substring(1); // remove the #
                     colorField_4.setText(colorValue);
                     colorPalette_4.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_4.hide();
@@ -403,10 +399,9 @@ public class SmartCodePreferencesFrame {
         colorPalette_5 = createColorPalette();
         colorField_5 = createColorField(colorPalette_5);    
         
-        colorSelector_5 = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"),
+        colorSelector_5 = new ColorChooser(frame, false, colorPalette_5.getBackground(),
                 Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_5.getHexColor();
-                    colorValue = colorValue.substring(1); // remove the #
+                    String colorValue = colorSelector_5.getHexColor().substring(1); // remove the #
                     colorField_5.setText(colorValue);
                     colorPalette_5.setBackground(new Color(PApplet.unhex(colorValue)));
                     colorSelector_5.hide();
@@ -415,15 +410,13 @@ public class SmartCodePreferencesFrame {
         
         JSeparator separator = new JSeparator(); // ---------------------------------------------------
         
-        
         JLabel iconColorLabel = new JLabel("Icon color:  #");
         iconColorPalette = createColorPalette();
         iconColorField = createColorField(iconColorPalette);
         
-        iconSelector = new ColorChooser(frame, false, SmartCodeTheme.getColor("bookmarks.icon.color"),
+        iconSelector = new ColorChooser(frame, false, iconColorPalette.getBackground(),
                 Language.text("prompt.ok"), a -> {
-                    String colorValue = iconSelector.getHexColor();
-                    colorValue = colorValue.substring(1); // remove the #
+                    String colorValue = iconSelector.getHexColor().substring(1); // remove the #
                     iconColorField.setText(colorValue);
                     iconColorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
                     iconSelector.hide();
@@ -852,6 +845,7 @@ public class SmartCodePreferencesFrame {
             
             @Override
             public void mouseClicked(MouseEvent e) {
+                colorChooser.setColor(colorPalette.getBackground());
                 colorChooser.show();
             }
         });
