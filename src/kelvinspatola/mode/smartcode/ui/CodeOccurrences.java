@@ -18,7 +18,6 @@ import org.eclipse.jdt.core.dom.SimpleName;
 
 import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
-import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
 import processing.mode.java.ASTUtils;
 import processing.mode.java.PreprocService;

@@ -145,25 +145,25 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     // TODO: lembrete de que é preciso trabalhar aqui
-    @Override
-    public JMenu buildFileMenu() {
-        // JAVA MODE ITEMS
-        String appTitle = Language.text("menu.file.export_application");
-        JMenuItem exportApplication = Toolkit.newJMenuItemShift(appTitle, 'E');
-        exportApplication.addActionListener(e -> {
-            if (sketch.isUntitled() || sketch.isReadOnly()) {
-                Messages.showMessage("Save First", "Please first save the sketch.");
-            } else {
-                handleExportApplication();
-            }
-        });
-
-        // SMARTCODE ITEMS
-        JMenuItem selectTemplate = new JMenuItem("Select template");
-        selectTemplate.addActionListener(a -> setText("\nvoid setup() {\n    size(300, 300);\n}"));
-
-        return buildFileMenu(new JMenuItem[] { selectTemplate, exportApplication });
-    }
+//    @Override
+//    public JMenu buildFileMenu() {
+//        // JAVA MODE ITEMS
+//        String appTitle = Language.text("menu.file.export_application");
+//        JMenuItem exportApplication = Toolkit.newJMenuItemShift(appTitle, 'E');
+//        exportApplication.addActionListener(e -> {
+//            if (sketch.isUntitled() || sketch.isReadOnly()) {
+//                Messages.showMessage("Save First", "Please first save the sketch.");
+//            } else {
+//                handleExportApplication();
+//            }
+//        });
+//
+//        // SMARTCODE ITEMS
+//        JMenuItem selectTemplate = new JMenuItem("Select template");
+//        selectTemplate.addActionListener(a -> setText("\nvoid setup() {\n    size(300, 300);\n}"));
+//
+//        return buildFileMenu(new JMenuItem[] { selectTemplate, exportApplication });
+//    }
 
     private void buildMenu() {
         JMenu menu = new JMenu("SmartCode");
@@ -202,9 +202,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         });
 
         menu.addSeparator(); // ---------------------------------------------
+        createItem(menu, Language.text("menu.file.preferences"), "CS+COMMA", () -> handlePrefs());
+        
+        menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Visit GitHub page", null,
                 () -> Platform.openURL("https://github.com/KelvinSpatola/SmartCode"));
-        createItem(menu, Language.text("menu.file.preferences"), null, () -> handlePrefs());
 
         menu.addMenuListener(new MenuAdapter() {
             @Override

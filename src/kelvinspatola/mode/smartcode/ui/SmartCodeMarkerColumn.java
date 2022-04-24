@@ -40,7 +40,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     }
 
     @Override
-    public void updateTheme() {
+    public void updateTheme() { 
         lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
 
         bookmarkColor = SmartCodeTheme.getColor("column.bookmark.color");

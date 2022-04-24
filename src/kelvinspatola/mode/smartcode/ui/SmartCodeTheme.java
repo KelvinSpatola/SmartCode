@@ -50,7 +50,7 @@ public class SmartCodeTheme {
         defaultPrefs.put(attributes[6], "#00F5D4"); // bookmarks.linehighlight.color.5
         defaultPrefs.put(attributes[7], "#00FFFF"); // column.bookmark.color
         defaultPrefs.put(attributes[8], "#FF0000"); // column.error.color
-        defaultPrefs.put(attributes[9], "header.tab.selected.color"); // column.occurrence.color
+        defaultPrefs.put(attributes[9], "occurrences.highlight.color"); // column.occurrence.color
         defaultPrefs.put(attributes[10], "#FFFF00"); // column.warning.color
         defaultPrefs.put(attributes[11], "true"); // occurrences.highlight
         defaultPrefs.put(attributes[12], "header.tab.selected.color"); // occurrences.highlight.color
@@ -139,6 +139,9 @@ public class SmartCodeTheme {
 
             if (pdeThemeAttributes.contains(value)) {
                 return Theme.get(value);
+                
+            } else if (defaultPrefs.containsKey(value)) {
+                return SmartCodeTheme.get(value);
             }
             set(attribute, value);
             save();

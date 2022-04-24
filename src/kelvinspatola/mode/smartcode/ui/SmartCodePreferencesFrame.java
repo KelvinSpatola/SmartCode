@@ -26,6 +26,7 @@ import javax.swing.JButton;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.border.Border;
 import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.AttributeSet;
@@ -56,7 +57,9 @@ public class SmartCodePreferencesFrame {
     private JButton cancelBtn;
     private JButton restoreBtn;
     private JTextField stringWidthField;
+    private JLabel maxStringWidthLabel;
     private JTextField commentWidthField;
+    private JLabel maxCommentWidthLabel;
     private JCheckBox formatCommentsBox;
     private JCheckBox formatStringsBox;
     private JCheckBox closeBracketsBox;
@@ -67,8 +70,7 @@ public class SmartCodePreferencesFrame {
     private JRadioButton stackRadio;
     private JTextField indentField;
     private JCheckBox indentMovingLinesBox;
-    private JLabel maxStringWidthLabel;
-    private JLabel maxCommentWidthLabel;
+    private int currTabSize;
     
     private JCheckBox bookmarkHighlightingBox;
     private JTextField colorField_1;
@@ -77,22 +79,17 @@ public class SmartCodePreferencesFrame {
     private JTextField colorField_4;
     private JTextField colorField_5;
     private JTextField iconColorField;
-    private JTextField colorPalette_1;
-    private JTextField colorPalette_2;
-    private JTextField colorPalette_3;
-    private JTextField colorPalette_4;
-    private JTextField colorPalette_5;
-    private JTextField iconColorPalette;
-    private ColorChooser iconSelector;
-    private ColorChooser colorSelector_1;
-    private ColorChooser colorSelector_2;
-    private ColorChooser colorSelector_3;
-    private ColorChooser colorSelector_4;
-    private ColorChooser colorSelector_5;
+    private ColorPicker colorPicker_1;
+    private ColorPicker colorPicker_2;
+    private ColorPicker colorPicker_3;
+    private ColorPicker colorPicker_4;
+    private ColorPicker colorPicker_5;
+    private ColorPicker iconColorPicker;
     
-    private int currTabSize;
     private JPanel tabOccurrences;
     private JCheckBox occurrencesHighlightingBox;
+    private JTextField occurrencesField;
+    private ColorPicker occurrencesColorPicker;
     
 
     /**
@@ -336,93 +333,51 @@ public class SmartCodePreferencesFrame {
         
         bookmarkHighlightingBox = new JCheckBox("Highlight bookmarked lines");
         bookmarkHighlightingBox.addChangeListener(a -> {
-//            maxStringWidthLabel.setEnabled(checkBookmarkHighlighting.isSelected());
+            boolean isHighlightEnabled = bookmarkHighlightingBox.isSelected();
+            colorField_1.setEnabled(isHighlightEnabled);
+            colorPicker_1.setEnabled(isHighlightEnabled);
+            colorField_2.setEnabled(isHighlightEnabled);
+            colorPicker_2.setEnabled(isHighlightEnabled);
+            colorField_3.setEnabled(isHighlightEnabled);
+            colorPicker_3.setEnabled(isHighlightEnabled);
+            colorField_4.setEnabled(isHighlightEnabled);
+            colorPicker_4.setEnabled(isHighlightEnabled);
+            colorField_5.setEnabled(isHighlightEnabled);
+            colorPicker_5.setEnabled(isHighlightEnabled);
         });
         
         JLabel colorLabel_1 = new JLabel("Color 1:  #");
-        colorPalette_1 = createColorPalette();
-        colorField_1 = createColorField(colorPalette_1);
-
-        colorSelector_1 = new ColorChooser(frame, false, colorPalette_1.getBackground(),
-                Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_1.getHexColor().substring(1); // remove the #
-                    colorField_1.setText(colorValue);
-                    colorPalette_1.setBackground(new Color(PApplet.unhex(colorValue)));
-                    colorSelector_1.hide();
-                });
-        setupMouseListener(colorPalette_1, colorSelector_1);
-        
+        colorPicker_1 = new ColorPicker();
+        colorField_1 = createColorTextField(colorPicker_1);
+        colorPicker_1.addTextField(colorField_1);
         
         JLabel colorLabel_2 = new JLabel("Color 2:  #");
-        colorPalette_2 = createColorPalette();
-        colorField_2 = createColorField(colorPalette_2);
-        
-        colorSelector_2 = new ColorChooser(frame, false, colorPalette_2.getBackground(),
-                Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_2.getHexColor().substring(1); // remove the #
-                    colorField_2.setText(colorValue);
-                    colorPalette_2.setBackground(new Color(PApplet.unhex(colorValue)));
-                    colorSelector_2.hide();
-                });
-        setupMouseListener(colorPalette_2, colorSelector_2);
-        
+        colorPicker_2 = new ColorPicker();
+        colorField_2 = createColorTextField(colorPicker_2);
+        colorPicker_2.addTextField(colorField_2);
         
         JLabel colorLabel_3 = new JLabel("Color 3:  #");
-        colorPalette_3 = createColorPalette();
-        colorField_3 = createColorField(colorPalette_3);    
-        
-        colorSelector_3 = new ColorChooser(frame, false, colorPalette_3.getBackground(),
-                Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_3.getHexColor().substring(1); // remove the #
-                    colorField_3.setText(colorValue);
-                    colorPalette_3.setBackground(new Color(PApplet.unhex(colorValue)));
-                    colorSelector_3.hide();
-                });
-        setupMouseListener(colorPalette_3, colorSelector_3);
-        
-        
+        colorPicker_3 = new ColorPicker();
+        colorField_3 = createColorTextField(colorPicker_3);    
+        colorPicker_3.addTextField(colorField_3);
+
         JLabel colorLabel_4 = new JLabel("Color 4:  #");
-        colorPalette_4 = createColorPalette();
-        colorField_4 = createColorField(colorPalette_4);    
-        
-        colorSelector_4 = new ColorChooser(frame, false, colorPalette_4.getBackground(),
-                Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_4.getHexColor().substring(1); // remove the #
-                    colorField_4.setText(colorValue);
-                    colorPalette_4.setBackground(new Color(PApplet.unhex(colorValue)));
-                    colorSelector_4.hide();
-                });
-        setupMouseListener(colorPalette_4, colorSelector_4);
-        
-        
+        colorPicker_4 = new ColorPicker();
+        colorField_4 = createColorTextField(colorPicker_4);    
+        colorPicker_4.addTextField(colorField_4);
+
         JLabel colorLabel_5 = new JLabel("Color 5:  #");
-        colorPalette_5 = createColorPalette();
-        colorField_5 = createColorField(colorPalette_5);    
-        
-        colorSelector_5 = new ColorChooser(frame, false, colorPalette_5.getBackground(),
-                Language.text("prompt.ok"), e -> {
-                    String colorValue = colorSelector_5.getHexColor().substring(1); // remove the #
-                    colorField_5.setText(colorValue);
-                    colorPalette_5.setBackground(new Color(PApplet.unhex(colorValue)));
-                    colorSelector_5.hide();
-                });
-        setupMouseListener(colorPalette_5, colorSelector_5);
-        
+        colorPicker_5 = new ColorPicker();
+        colorField_5 = createColorTextField(colorPicker_5);    
+        colorPicker_5.addTextField(colorField_5);
+
         JSeparator separator = new JSeparator(); // ---------------------------------------------------
         
         JLabel iconColorLabel = new JLabel("Icon color:  #");
-        iconColorPalette = createColorPalette();
-        iconColorField = createColorField(iconColorPalette);
-        
-        iconSelector = new ColorChooser(frame, false, iconColorPalette.getBackground(),
-                Language.text("prompt.ok"), a -> {
-                    String colorValue = iconSelector.getHexColor().substring(1); // remove the #
-                    iconColorField.setText(colorValue);
-                    iconColorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
-                    iconSelector.hide();
-                });
-        setupMouseListener(iconColorPalette, iconSelector);
-        
+        iconColorPicker = new ColorPicker();
+        iconColorField = createColorTextField(iconColorPicker);
+        iconColorPicker.addTextField(iconColorField);
+
         
         GroupLayout gl_tabBookmarks = new GroupLayout(tabBookmarks);
         gl_tabBookmarks.setHorizontalGroup(
@@ -443,42 +398,42 @@ public class SmartCodePreferencesFrame {
                                         .addPreferredGap(ComponentPlacement.RELATED)
                                         .addComponent(colorField_1, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
-                                        .addComponent(colorPalette_1, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(colorPicker_1, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED))
                                     .addGroup(gl_tabBookmarks.createSequentialGroup()
                                         .addComponent(colorLabel_2, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
                                         .addComponent(colorField_2, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
-                                        .addComponent(colorPalette_2, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(colorPicker_2, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED))
                                     .addGroup(gl_tabBookmarks.createSequentialGroup()
                                         .addComponent(colorLabel_3, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
                                         .addComponent(colorField_3, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
-                                        .addComponent(colorPalette_3, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(colorPicker_3, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED))
                                     .addGroup(gl_tabBookmarks.createSequentialGroup()
                                         .addComponent(colorLabel_4, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
                                         .addComponent(colorField_4, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
-                                        .addComponent(colorPalette_4, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(colorPicker_4, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED))
                                     .addGroup(gl_tabBookmarks.createSequentialGroup()
                                         .addComponent(colorLabel_5, GroupLayout.PREFERRED_SIZE, 53, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
                                         .addComponent(colorField_5, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
                                         .addPreferredGap(ComponentPlacement.RELATED)
-                                        .addComponent(colorPalette_5, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(colorPicker_5, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
                                         .addGap(13)))))
                         .addGroup(gl_tabBookmarks.createSequentialGroup()
                             .addComponent(iconColorLabel, GroupLayout.PREFERRED_SIZE, 66, GroupLayout.PREFERRED_SIZE)
                             .addPreferredGap(ComponentPlacement.RELATED)
                             .addComponent(iconColorField, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
                             .addPreferredGap(ComponentPlacement.RELATED)
-                            .addComponent(iconColorPalette, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
+                            .addComponent(iconColorPicker, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)
                             .addPreferredGap(ComponentPlacement.RELATED)))
                     .addContainerGap(161, Short.MAX_VALUE))
         );
@@ -491,27 +446,27 @@ public class SmartCodePreferencesFrame {
                     .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
                         .addComponent(colorLabel_1)
                         .addComponent(colorField_1, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(colorPalette_1, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(colorPicker_1, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
                         .addComponent(colorLabel_2)
                         .addComponent(colorField_2, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(colorPalette_2, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(colorPicker_2, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
                         .addComponent(colorLabel_3)
                         .addComponent(colorField_3, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(colorPalette_3, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(colorPicker_3, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
                         .addComponent(colorLabel_4)
                         .addComponent(colorField_4, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(colorPalette_4, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(colorPicker_4, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
                         .addComponent(colorLabel_5)
                         .addComponent(colorField_5, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(colorPalette_5, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(colorPicker_5, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addPreferredGap(ComponentPlacement.UNRELATED)
                     .addComponent(separator, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
                     .addPreferredGap(ComponentPlacement.UNRELATED)
@@ -519,9 +474,9 @@ public class SmartCodePreferencesFrame {
                     .addGroup(gl_tabBookmarks.createParallelGroup(Alignment.BASELINE)
                         .addComponent(iconColorLabel)
                         .addComponent(iconColorField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                        .addComponent(iconColorPalette, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                        .addComponent(iconColorPicker, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addContainerGap(157, Short.MAX_VALUE))
-        );
+        ); 
         gl_tabBookmarks.setAutoCreateContainerGaps(true);
         gl_tabBookmarks.setAutoCreateGaps(true);
         tabBookmarks.setLayout(gl_tabBookmarks);
@@ -529,7 +484,7 @@ public class SmartCodePreferencesFrame {
         
         
         /*
-         * BOOKMARKS TAB
+         * OCCURRENCES TAB
          * 
          */
         
@@ -537,20 +492,18 @@ public class SmartCodePreferencesFrame {
         tabbedPane.addTab("Occurrences", null, tabOccurrences, null);
         
         occurrencesHighlightingBox = new JCheckBox("Highlight occurrences");
+        occurrencesHighlightingBox.addChangeListener(a -> {
+            boolean isHighlightEnabled = occurrencesHighlightingBox.isSelected();
+            occurrencesField.setEnabled(isHighlightEnabled);
+            occurrencesColorPicker.setEnabled(isHighlightEnabled);
+        });
         occurrencesHighlightingBox.setHorizontalAlignment(SwingConstants.LEFT);
         
-        JSlider slider = new JSlider();
-        slider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                int val = slider.getValue();
-                System.out.println("val: " + val);
-            }
-        });
-        slider.setPaintTicks(true);
-        slider.setSnapToTicks(true);
-        slider.setPaintLabels(true);
-        slider.setMajorTickSpacing(25);
-        slider.setMinorTickSpacing(5);
+        JLabel occurrencesColorLabel = new JLabel("Occurrences highlight color  #");
+        occurrencesColorPicker = new ColorPicker();
+        occurrencesField = createColorTextField(occurrencesColorPicker);
+        occurrencesColorPicker.addTextField(occurrencesField);
+        
         GroupLayout gl_tabOccurrences = new GroupLayout(tabOccurrences);
         gl_tabOccurrences.setHorizontalGroup(
             gl_tabOccurrences.createParallelGroup(Alignment.LEADING)
@@ -558,20 +511,54 @@ public class SmartCodePreferencesFrame {
                     .addContainerGap()
                     .addGroup(gl_tabOccurrences.createParallelGroup(Alignment.LEADING)
                         .addComponent(occurrencesHighlightingBox)
-                        .addComponent(slider, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE))
-                    .addContainerGap(109, Short.MAX_VALUE))
+                        .addGroup(gl_tabOccurrences.createSequentialGroup()
+                            .addComponent(occurrencesColorLabel)
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addComponent(occurrencesField, GroupLayout.PREFERRED_SIZE, 60, GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(ComponentPlacement.RELATED)
+                            .addComponent(occurrencesColorPicker, GroupLayout.PREFERRED_SIZE, 21, GroupLayout.PREFERRED_SIZE)))
+                    .addContainerGap(GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         gl_tabOccurrences.setVerticalGroup(
             gl_tabOccurrences.createParallelGroup(Alignment.LEADING)
                 .addGroup(gl_tabOccurrences.createSequentialGroup()
                     .addContainerGap()
                     .addComponent(occurrencesHighlightingBox)
-                    .addGap(34)
-                    .addComponent(slider, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-                    .addContainerGap(253, Short.MAX_VALUE))
+                    .addPreferredGap(ComponentPlacement.RELATED)
+                    .addGroup(gl_tabOccurrences.createParallelGroup(Alignment.BASELINE)
+                        .addComponent(occurrencesColorLabel)
+                        .addComponent(occurrencesField, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(occurrencesColorPicker, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
+                    .addContainerGap(316, Short.MAX_VALUE))
         );
         tabOccurrences.setLayout(gl_tabOccurrences);
         
+        JPanel tabMarkers = new JPanel();
+        tabbedPane.addTab("Markers", null, tabMarkers,
+                "<html>"
+                + "Side column to the right of the editor that indicates the relative location of<br>"
+                + "errors and alerts identified by real-time code inspection in the current file,<br>"
+                + "and helps navigate between them. In addition, the column displays special<br>"
+                + "marks of other features, such as bookmarks and highlighted occurrences."
+                + "</html>");
+        
+        JLabel errorLabel = new JLabel("Error marker:");
+        GroupLayout gl_tabMarkers = new GroupLayout(tabMarkers);
+        gl_tabMarkers.setHorizontalGroup(
+            gl_tabMarkers.createParallelGroup(Alignment.LEADING)
+                .addGroup(gl_tabMarkers.createSequentialGroup()
+                    .addContainerGap()
+                    .addComponent(errorLabel)
+                    .addContainerGap(244, Short.MAX_VALUE))
+        );
+        gl_tabMarkers.setVerticalGroup(
+            gl_tabMarkers.createParallelGroup(Alignment.LEADING)
+                .addGroup(gl_tabMarkers.createSequentialGroup()
+                    .addContainerGap()
+                    .addComponent(errorLabel)
+                    .addContainerGap(337, Short.MAX_VALUE))
+        );
+        tabMarkers.setLayout(gl_tabMarkers);
         
         /*
          * FOOTER BUTTONS PANEL
@@ -662,27 +649,33 @@ public class SmartCodePreferencesFrame {
         
         bookmarkHighlightingBox.setSelected(BOOKMARKS_HIGHLIGHT);
         
-        colorPalette_1.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"));
+        colorPicker_1.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"));
         colorField_1.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.1"));
         
-        colorPalette_2.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"));
+        colorPicker_2.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"));
         colorField_2.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.2"));
         
-        colorPalette_3.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"));
+        colorPicker_3.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"));
         colorField_3.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.3"));
         
-        colorPalette_4.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"));
+        colorPicker_4.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"));
         colorField_4.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.4"));
         
-        colorPalette_5.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"));
+        colorPicker_5.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"));
         colorField_5.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.5"));
         
         /* icon */
-        iconColorPalette.setBackground(SmartCodeTheme.getColor("bookmarks.icon.color"));
+        iconColorPicker.setBackground(SmartCodeTheme.getColor("bookmarks.icon.color"));
         iconColorField.setText(SmartCodeTheme.get("bookmarks.icon.color"));
         
         
+        // *** OCCURRENCES *** //
+        
         occurrencesHighlightingBox.setSelected(OCCURRENCES_HIGHLIGHT);
+        occurrencesColorPicker.setBackground(SmartCodeTheme.getColor("occurrences.highlight.color"));
+        occurrencesField.setText(SmartCodeTheme.get("occurrences.highlight.color"));
+        
+        
         
         frame.getRootPane().setDefaultButton(applyBtn);
         frame.pack();
@@ -718,18 +711,20 @@ public class SmartCodePreferencesFrame {
         
         SmartCodeTheme.setBoolean("bookmarks.linehighlight", bookmarkHighlightingBox.isSelected());
         
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.1", colorPalette_1.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.2", colorPalette_2.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.3", colorPalette_3.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.4", colorPalette_4.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.5", colorPalette_5.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.1", colorPicker_1.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.2", colorPicker_2.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.3", colorPicker_3.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.4", colorPicker_4.getBackground());
+        SmartCodeTheme.setColor("bookmarks.linehighlight.color.5", colorPicker_5.getBackground());
         /* icon */
-        SmartCodeTheme.setColor("bookmarks.icon.color", iconColorPalette.getBackground());
+        SmartCodeTheme.setColor("bookmarks.icon.color", iconColorPicker.getBackground());
 
         
-        
-        
+        // *** OCCURRENCES *** //        
         SmartCodeTheme.setBoolean("occurrences.highlight", occurrencesHighlightingBox.isSelected());
+        SmartCodeTheme.setColor("occurrences.highlight.color", occurrencesColorPicker.getBackground());
+        
+        
         
         SmartCodeTheme.save();
         Preferences.save();
@@ -744,20 +739,7 @@ public class SmartCodePreferencesFrame {
         }
     }
     
-
-
-    private JTextField createColorPalette() {
-        JTextField colorPalette = new JTextField("      ");
-        colorPalette.setOpaque(true);
-        colorPalette.setEnabled(true);
-        colorPalette.setEditable(false);
-        Border cb = new CompoundBorder(BorderFactory.createMatteBorder(1, 1, 0, 0, new Color(195, 195, 195)),
-                BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(54, 54, 54)));
-        colorPalette.setBorder(cb);
-        return colorPalette;
-    }
-    
-    private JTextField createColorField(JTextField colorPalette) {
+    private JTextField createColorTextField(JTextField colorPicker) {
         JTextField colorField = new JTextField();
         colorField.setColumns(6);
         colorField.setDocument(new HexNumberFormatDocument());
@@ -771,7 +753,7 @@ public class SmartCodePreferencesFrame {
                 }
 
                 if (colorValue.length() == 6 && colorValue.matches("[A-F0-9]*")) {
-                    colorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorPicker.setBackground(new Color(PApplet.unhex(colorValue)));
                     
                     if (!colorValue.equals(colorField.getText())) { 
                         EventQueue.invokeLater(() -> colorField.setText(colorValue));
@@ -788,7 +770,7 @@ public class SmartCodePreferencesFrame {
                 }
 
                 if (colorValue.length() == 6 && colorValue.matches("[A-F0-9]*")) {
-                    colorPalette.setBackground(new Color(PApplet.unhex(colorValue)));
+                    colorPicker.setBackground(new Color(PApplet.unhex(colorValue)));
                     
                     if (!colorValue.equals(colorField.getText())) { 
                         EventQueue.invokeLater(() -> colorField.setText(colorValue));
@@ -831,23 +813,62 @@ public class SmartCodePreferencesFrame {
         }
     }
     
-    void setupMouseListener(JTextField colorPalette, ColorChooser colorChooser) {
-        colorPalette.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseExited(MouseEvent e) {
-                frame.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    protected class ColorPicker extends JTextField {
+        ColorChooser colorChooser;
+        JTextField associatedTextField;
+
+        ColorPicker() {
+            setOpaque(true);
+            setEnabled(true);
+            setEditable(false);
+
+            colorChooser = new ColorChooser(frame, false, getBackground(), Language.text("prompt.ok"), e -> {
+                String colorValue = colorChooser.getHexColor().substring(1); // remove the #
+                setBackground(new Color(PApplet.unhex(colorValue)));
+                associatedTextField.setText(colorValue);
+                colorChooser.hide();
+            });
+
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    if (isEnabled())
+                        frame.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    if (isEnabled())
+                        frame.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                }
+
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (isEnabled()) {
+                        colorChooser.setColor(getBackground());
+                        colorChooser.show();
+                    }
+                }
+            });
+        }
+
+        public void addTextField(JTextField associatedTextField) {
+            this.associatedTextField = associatedTextField;
+        }
+
+        @Override
+        public void setEnabled(boolean isEnabled) {
+            super.setEnabled(isEnabled);
+
+            Border border;
+            if (isEnabled) {
+                border = new CompoundBorder(BorderFactory.createMatteBorder(1, 1, 0, 0, new Color(195, 195, 195)),
+                        BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(54, 54, 54)));
+
+            } else {
+                border = new EmptyBorder(0, 0, 0, 0);
             }
-            
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                frame.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-            }
-            
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                colorChooser.setColor(colorPalette.getBackground());
-                colorChooser.show();
-            }
-        });
-    }
+            setBorder(border);
+        }
+    } // ColorPicker
 }
