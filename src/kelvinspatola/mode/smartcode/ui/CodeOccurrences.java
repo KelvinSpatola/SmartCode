@@ -32,10 +32,10 @@ public class CodeOccurrences implements CaretListener, LinePainter {
     private String code;
     private String prevCandidate;
     private int prevLine = -1;
-    
-    private Color occurenceColor;
 
-//    private float delta;
+    private Color occurenceColor;
+    private Color columnColor; 
+
 
     // CONSTRUCTOR
     public CodeOccurrences(SmartCodeEditor editor, PreprocService pps) {
@@ -93,17 +93,6 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
         // Find binding
         IBinding binding = ASTUtils.resolveBinding(name);
-//        System.err.println("name: " + binding.getName() + " - type: " + getBindingTypeLabel(binding));
-//
-//        if (binding.getKind() == IBinding.METHOD) {
-//            IMethodBinding method = (IMethodBinding) binding;
-//            System.out.println("parent: " + method.getDeclaringClass().getName());
-//            System.out.print("params: ");                
-//            for(ITypeBinding type : method.getParameterTypes()) {
-//                System.out.print(type.getName() + ", ");                
-//            }
-//            System.out.println("\nreturn: " + method.getReturnType().getName());
-//        }
 
         List<SketchInterval> intervals = findAllOccurrences(root, binding.getKey()).stream().map(ps::mapJavaToSketch)
                 .collect(Collectors.toList());
@@ -188,6 +177,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
     @Override
     public void updateTheme() {
         occurenceColor = SmartCodeTheme.getColor("occurrences.highlight.color");
+        columnColor = SmartCodeTheme.getColor("column.occurrence.color");
     }
 
     class Occurrence implements LineMarker {
@@ -225,27 +215,16 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         public Class<?> getParent() {
             return this.getClass();
         }
-    }
 
-//    static String getBindingTypeLabel(IBinding binding) {
-//        switch (binding.getKind()) {
-//        case IBinding.METHOD:
-//            if (((IMethodBinding) binding).isConstructor())
-//                return "Constructor";
-//            return "Method";
-//        case IBinding.TYPE:
-//            return "Type";
-//        case IBinding.VARIABLE:
-//            IVariableBinding variable = (IVariableBinding) binding;
-//            if (variable.isField())
-//                return "Field";
-//            else if (variable.isParameter())
-//                return "Parameter";
-//            else if (variable.isEnumConstant())
-//                return "Enum constant";
-//            else
-//                return "Local variable";
+        @Override
+        public void paintMarker(Graphics gfx, int x, int y, int w, int h) {
+            gfx.setColor(columnColor);
+            gfx.fillRect(x, y, w, h);
+        }
+
+//        @Override
+//        public void updateTheme() {
+//            columnColor = SmartCodeTheme.getColor("column.occurrence.color");
 //        }
-//        return "none";
-//    }
+    }
 }

@@ -25,6 +25,7 @@ import java.util.TimerTask;
 import javax.swing.*;
 import javax.swing.event.*;
 
+import kelvinspatola.mode.smartcode.completion.CodeContext;
 import kelvinspatola.mode.smartcode.ui.*;
 import processing.app.Base;
 import processing.app.Language;
@@ -85,8 +86,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         occurrences = new CodeOccurrences(this, preprocService);
         textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
-
+        
         getSmartCodePainter().addLinePainter(getSmartCodeTextArea().snippetManager);
+        
+        CodeContext context = new CodeContext(this, preprocService);
+        textarea.addCaretListener(context);
 
         timedAction(this::printHelloMessage, 500);
     }
@@ -1473,7 +1477,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
         }
-//        errorColumn.repaint();
     }
 
     @Override

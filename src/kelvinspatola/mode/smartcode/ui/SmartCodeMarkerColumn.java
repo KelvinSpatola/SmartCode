@@ -40,13 +40,19 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     }
 
     @Override
-    public void updateTheme() { 
+    public void updateTheme() {
         lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
 
-        bookmarkColor = SmartCodeTheme.getColor("column.bookmark.color");
+//        bookmarkColor = SmartCodeTheme.getColor("column.bookmark.color");
         errorColor = SmartCodeTheme.getColor("column.error.color");
-        occurenceColor = SmartCodeTheme.getColor("column.occurrence.color");
+//        occurenceColor = SmartCodeTheme.getColor("column.occurrence.color");
         warningColor = SmartCodeTheme.getColor("column.warning.color");
+
+//        if (allMarkers != null) {
+//            for (LineMarker lm : allMarkers) {
+//                lm.updateTheme();
+//            }
+//        }
     }
 
     @Override
@@ -84,24 +90,30 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         for (LineMarker lm : allMarkers) {
             if (currentTabIndex == lm.getTabIndex()) {
                 int y = lineToY(lm.getLine() + 1);
-
-                if (lm.getParent() == ErrorsAndWarnings.class) {
-                    boolean isError = ((ErrorsAndWarnings) lm).problem.isError();
-                    g.setColor(isError ? errorColor : warningColor);
-                    g.fillRect(1, y, getWidth() - 2, 2);
-
-                } else if (lm.getParent() == Occurrence.class) {
-                    g.setColor(occurenceColor);
-                    g.fillRect(1, y, getWidth() - 2, 2);
-
-                } else if (lm.getParent() == LineBookmark.class) {
-                    g.setColor(bookmarkColor);
-                    g.drawRect(1, y, getWidth() - 2, 2);
-
-                }
-
+                lm.paintMarker(g, 1, y, getWidth() - 2, 2);
             }
         }
+//        for (LineMarker lm : allMarkers) {
+//            if (currentTabIndex == lm.getTabIndex()) {
+//                int y = lineToY(lm.getLine() + 1);
+//                
+//                if (lm.getParent() == ErrorsAndWarnings.class) {
+//                    boolean isError = ((ErrorsAndWarnings) lm).problem.isError();
+//                    g.setColor(isError ? errorColor : warningColor);
+//                    g.fillRect(1, y, getWidth() - 2, 2);
+//                    
+//                } else if (lm.getParent() == Occurrence.class) {
+//                    g.setColor(occurenceColor);
+//                    g.fillRect(1, y, getWidth() - 2, 2);
+//                    
+//                } else if (lm.getParent() == LineBookmark.class) {
+//                    g.setColor(bookmarkColor);
+//                    g.drawRect(1, y, getWidth() - 2, 2);
+//                    
+//                }
+//                
+//            }
+//        }
     }
 
     private int lineToY(int line) {
@@ -192,5 +204,17 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         public Class<?> getParent() {
             return this.getClass();
         }
+
+        @Override
+        public void paintMarker(Graphics gfx, int x, int y, int w, int h) {
+            gfx.setColor(problem.isError() ? errorColor : warningColor);
+            gfx.fillRect(x, y, w, h);
+        }
+
+//        @Override
+//        public void updateTheme() {
+//            errorColor = SmartCodeTheme.getColor("column.error.color");
+//            warningColor = SmartCodeTheme.getColor("column.warning.color");
+//        }
     }
 }

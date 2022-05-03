@@ -1,5 +1,7 @@
 package kelvinspatola.mode.smartcode.ui;
 
+import java.awt.Graphics;
+
 public interface LineMarker {
     Class<?> getParent();
     
@@ -12,4 +14,8 @@ public interface LineMarker {
     int getStopOffset();
 
     String getText();
+    
+    void paintMarker(Graphics gfx, int x, int y, int w, int h);
+    
+//    void updateTheme();
 }
