@@ -104,7 +104,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 text = null;
             }
 
-        } else if (getSmartCodeEditor().isLineBookmark(line)) {
+        } else if (getSmartCodeEditor().lineBookmarks.isBookmark(line)) {
             text = PIN_MARKER;
         }
 
@@ -192,7 +192,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
      * file.
      * <p>
      * Internally, this method actually writes the value in the preferences file,
-     * calls <code>updateTheme()</code> in order to update the editor's rendering,
+     * calls {@link #updateTheme()} in order to update the editor's rendering,
      * and finally rewrites the original value back to the preferences file without
      * updating the editor.
      * 
@@ -215,7 +215,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
     /**
      * Used whenever the user defines a new font size in the preferences window. It
-     * should be called inside <code>Editor.applyPreferences()</code> so it can be
+     * should be called inside {@link SmartCodeEditor#applyPreferences()} so it can be
      * updated on every new change.
      */
     static public void updateDefaultFontSize() {

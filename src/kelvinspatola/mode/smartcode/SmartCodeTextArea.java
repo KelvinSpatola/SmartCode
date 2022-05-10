@@ -103,6 +103,9 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         @Override
         public void mousePressed(MouseEvent e) {
+            if (editor.isDebuggerEnabled())
+                return;
+            
             long thisTime = e.getWhen();
 
             if (thisTime - lastTime > 100) {
@@ -126,6 +129,9 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         @Override
         public void mouseReleased(MouseEvent e) {
+            if (editor.isDebuggerEnabled())
+                return;
+            
             if (e.getButton() == MouseEvent.BUTTON3 && isGutterPressed) {
                 int line = _yToLine(e.getY());
                 // constrain to the last line of text and not the last visible line

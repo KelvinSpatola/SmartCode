@@ -4,10 +4,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import kelvinspatola.mode.smartcode.ui.ColorTag;
-import kelvinspatola.mode.smartcode.ui.LineBookmark;
+import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
 
 import java.util.HashMap;
-import java.util.List;
 
 import processing.app.Mode;
 import processing.app.Sketch;
@@ -15,13 +14,12 @@ import processing.app.SketchCode;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeSketch extends Sketch {
-    private final SmartCodeEditor editor;
+    private SmartCodeEditor editor;
     private boolean renaming;
 
     // CONSTRUCTOR
     public SmartCodeSketch(String path, Mode mode) {
         super(path, mode);
-        this.editor = null;
     }
 
     // CONSTRUCTOR
@@ -58,7 +56,7 @@ public class SmartCodeSketch extends Sketch {
 
     @Override
     public boolean saveAs() throws IOException {
-        if (editor.getBookmarkedLines().isEmpty()) {
+        if (!editor.lineBookmarks.hasBookmarks()) {
             return super.saveAs();
         }
 
@@ -80,7 +78,7 @@ public class SmartCodeSketch extends Sketch {
 
     @Override
     public boolean save() throws IOException {
-        if (editor.getBookmarkedLines().isEmpty()) {
+        if (!editor.lineBookmarks.hasBookmarks()) {
             return super.save();
         }
 
@@ -98,27 +96,26 @@ public class SmartCodeSketch extends Sketch {
      * bookmarks in the current tab before removing them.
      * 
      * Its purpose is to save bookmark references at a time before the tab name is
-     * changed and then serve the <code>generateBookmarksAt</code> method, which restores all
-     * bookmarks back once a new name has been assigned to the tab.
+     * changed and then serve the {@link #generateBookmarksAt()} method, which
+     * restores all bookmarks back once a new name has been assigned to the tab.
      * 
-     * @param tabFileName the target <code>SketchCode</code> filename.
+     * @param tabFileName the target {@code SketchCode} filename.
      * 
-     * @return a map with the line number and color tag of all bookmarks removed from
-     *         the current tab.
-     *         
+     * @return a map with the line number and color tag of all bookmarks removed
+     *         from the current tab.
+     * 
      * @see generateBookmarksAt
      */
     protected Map<Integer, ColorTag> getBookmarksInfoAndRemoveThem(String tabFileName) {
         Map<Integer, ColorTag> result = new HashMap<>();
-        List<LineBookmark> bookmarks = editor.getBookmarkedLines();
 
-        for (int i = bookmarks.size() - 1; i >= 0; i--) {
-            LineID lineID = bookmarks.get(i).getLineID();
+        for (int i = editor.lineBookmarks.markerCount() - 1; i >= 0; i--) {
+            Bookmark bm = (Bookmark) editor.lineBookmarks.getMarkers().get(i);
 
-            if (lineID.fileName().equals(tabFileName)) {
-                ColorTag tag = bookmarks.get(i).getColorTag();
-                result.put(lineID.lineIdx(), tag);
-                editor.removeLineBookmark(lineID);
+            if (bm.getLineID().fileName().equals(tabFileName)) {
+                ColorTag tag = bm.getColorTag();
+                result.put(bm.getLine(), tag);
+                editor.lineBookmarks.removeBookmark(bm);
             }
         }
         return result;
@@ -131,6 +128,6 @@ public class SmartCodeSketch extends Sketch {
      */
     protected void generateBookmarksAt(String tabFileName, Map<Integer, ColorTag> references) {
         for (int line : references.keySet())
-            editor.addLineBookmark(new LineID(tabFileName, line), references.get(line));
+            editor.lineBookmarks.addBookmark(new LineID(tabFileName, line), references.get(line));
     }
 }

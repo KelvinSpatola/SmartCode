@@ -209,7 +209,9 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         }
 
         public String getText() {
-            return text;
+            String lineNumberIndicator = "<font color=#bbbbbb>" + (line + 1) + ": </font>";
+            String lineTextIndicator = "<font color=#000000>" + text + "</font>";
+            return "<html>" + lineNumberIndicator + lineTextIndicator + "</html>";            
         }
 
         public Class<?> getParent() {
@@ -221,10 +223,5 @@ public class CodeOccurrences implements CaretListener, LinePainter {
             gfx.setColor(columnColor);
             gfx.fillRect(x, y, w, h);
         }
-
-//        @Override
-//        public void updateTheme() {
-//            columnColor = SmartCodeTheme.getColor("column.occurrence.color");
-//        }
     }
 }

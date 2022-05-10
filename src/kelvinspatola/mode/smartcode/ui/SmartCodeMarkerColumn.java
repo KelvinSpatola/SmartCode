@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
-import kelvinspatola.mode.smartcode.ui.CodeOccurrences.Occurrence;
 import processing.app.Problem;
 import processing.app.syntax.PdeTextArea;
 import processing.app.ui.MarkerColumn;
@@ -20,7 +19,7 @@ import processing.core.PApplet;
 public class SmartCodeMarkerColumn extends MarkerColumn {
     private List<LineMarker> allMarkers = new ArrayList<>();
     private int lineHeight;
-    private Color bookmarkColor, errorColor, occurenceColor, warningColor;
+    private Color errorColor, warningColor;
 
     public SmartCodeMarkerColumn(SmartCodeEditor editor) {
         super(editor, editor.getTextArea().getMinimumSize().height);
@@ -42,17 +41,8 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
     @Override
     public void updateTheme() {
         lineHeight = editor.getTextArea().getPainter().getFontMetrics().getHeight();
-
-//        bookmarkColor = SmartCodeTheme.getColor("column.bookmark.color");
         errorColor = SmartCodeTheme.getColor("column.error.color");
-//        occurenceColor = SmartCodeTheme.getColor("column.occurrence.color");
         warningColor = SmartCodeTheme.getColor("column.warning.color");
-
-//        if (allMarkers != null) {
-//            for (LineMarker lm : allMarkers) {
-//                lm.updateTheme();
-//            }
-//        }
     }
 
     @Override
@@ -61,7 +51,7 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         updatePoints(errors, ErrorsAndWarnings.class);
     }
 
-    public void updatePoints(List<LineMarker> points, Class<?> parent) {
+    public void updatePoints(List<? extends LineMarker> points, Class<? extends LineMarker> parent) {
         if (points == null)
             return;
 
@@ -93,27 +83,6 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
                 lm.paintMarker(g, 1, y, getWidth() - 2, 2);
             }
         }
-//        for (LineMarker lm : allMarkers) {
-//            if (currentTabIndex == lm.getTabIndex()) {
-//                int y = lineToY(lm.getLine() + 1);
-//                
-//                if (lm.getParent() == ErrorsAndWarnings.class) {
-//                    boolean isError = ((ErrorsAndWarnings) lm).problem.isError();
-//                    g.setColor(isError ? errorColor : warningColor);
-//                    g.fillRect(1, y, getWidth() - 2, 2);
-//                    
-//                } else if (lm.getParent() == Occurrence.class) {
-//                    g.setColor(occurenceColor);
-//                    g.fillRect(1, y, getWidth() - 2, 2);
-//                    
-//                } else if (lm.getParent() == LineBookmark.class) {
-//                    g.setColor(bookmarkColor);
-//                    g.drawRect(1, y, getWidth() - 2, 2);
-//                    
-//                }
-//                
-//            }
-//        }
     }
 
     private int lineToY(int line) {
@@ -198,7 +167,9 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
         }
 
         public String getText() {
-            return problem.getMessage();
+            String lineNumberIndicator = "<font color=#bbbbbb>" + (getLine() + 1) + ": </font>";
+            String lineTextIndicator = "<font color=#000000>" + problem.getMessage() + "</font>";
+            return "<html>" + lineNumberIndicator + lineTextIndicator + "</html>"; 
         }
 
         public Class<?> getParent() {
@@ -210,11 +181,5 @@ public class SmartCodeMarkerColumn extends MarkerColumn {
             gfx.setColor(problem.isError() ? errorColor : warningColor);
             gfx.fillRect(x, y, w, h);
         }
-
-//        @Override
-//        public void updateTheme() {
-//            errorColor = SmartCodeTheme.getColor("column.error.color");
-//            warningColor = SmartCodeTheme.getColor("column.warning.color");
-//        }
     }
 }

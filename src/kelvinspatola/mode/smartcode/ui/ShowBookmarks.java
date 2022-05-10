@@ -7,7 +7,6 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,9 +31,9 @@ public class ShowBookmarks {
     private JTree tree;
 
     // CONSTRUCTOR
-    public ShowBookmarks(SmartCodeEditor editor, List<LineMarker> bookmarks) {
+    public ShowBookmarks(SmartCodeEditor editor) {
         this.editor = editor;
-        this.bookmarks = bookmarks;
+        bookmarks = editor.lineBookmarks.getMarkers();
 
         // Show Usage window
         window = new JDialog(editor);
@@ -61,7 +60,7 @@ public class ShowBookmarks {
         renderer.setClosedIcon(null);
         renderer.setOpenIcon(null);
         renderer.setBackgroundSelectionColor(new Color(228, 248, 246));
-        renderer.setBorderSelectionColor(new Color(0, 0, 0, 0));
+        renderer.setBorderSelectionColor(Color.BLACK);
         renderer.setTextSelectionColor(Color.BLACK);
         tree = new JTree();
         tree.setCellRenderer(renderer);
@@ -80,6 +79,8 @@ public class ShowBookmarks {
                 }
             }
         });
+        
+        editor.lineBookmarks.notifyChanges(b -> updateTree());
     }
 
     public void handleShowBookmarks() {
@@ -90,24 +91,16 @@ public class ShowBookmarks {
     public void updateTree() {
         // Create root node
         DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode(editor.getSketch().getName());
-        
-        bookmarks.stream().map(b -> {
-            String colorHex = Integer.toHexString(((LineBookmark) b).getColorTag().getColor().getRGB()).substring(2);
-            String colorIndicator = "<font color=" + colorHex + "> &#x25A0; </font>"; // &#x25A0; -> HTML code for the square
-            String lineNumberIndicator = "<font color=#bbbbbb>" + (b.getLine() + 1) + ": </font>";
-            String lineTextIndicator = "<font color=#000000>" + b.getText().trim() + "</font>";
-            
-            String text = "<html>" + colorIndicator + lineNumberIndicator + lineTextIndicator + "</html>";
-            return new BookmarkTreeNode(b.getTabIndex(), b.getStartOffset(), b.getStopOffset(), text);
-        })
-                // Group by tab index
-                .collect(Collectors.groupingBy(node -> node.tabIndex))
+
+        bookmarks.stream().map(BookmarkTreeNode::new)
+                // Group nodes by tab index
+                .collect(Collectors.groupingBy(marker -> marker.tabIndex))
                 // Stream Map Entries of (tab index) <-> (List<BookmarkTreeNode>)
                 .entrySet().stream().map(entry -> {
-                    List<BookmarkTreeNode> bookmarks = entry.getValue();
+                    List<BookmarkTreeNode> nodes = entry.getValue(); // bookmarks per tab
 
-                    int count = bookmarks.size();
-                    String bookmarkLabel = count == 1 ? "bookmark" : "bookmarks";
+                    int count = nodes.size();
+                    String bookmarkLabel = (count == 1) ? "bookmark" : "bookmarks";
                     String tabName = editor.getSketch().getCode(entry.getKey()).getPrettyName();
 
                     // Create new DefaultMutableTreeNode for this tab
@@ -117,13 +110,14 @@ public class ShowBookmarks {
                     DefaultMutableTreeNode tabNode = new DefaultMutableTreeNode(tabLabel);
 
                     // Stream nodes belonging to this tab
-                    bookmarks.stream()
+                    nodes.stream()
+                            //.sorted((n1, n2) -> n1.startOffset - n2.startOffset)
                             // Convert TreeNodes to DefaultMutableTreeNodes
                             .map(DefaultMutableTreeNode::new)
                             // Add all as children of tab node
                             .forEach(tabNode::add);
-
                     return tabNode;
+
                 }).forEach(rootNode::add);
 
         if (showWindow) {
@@ -166,11 +160,11 @@ public class ShowBookmarks {
         final int stopOffset;
         final String text;
 
-        BookmarkTreeNode(int tabIndex, int startOffset, int stopOffset, String text) {
-            this.tabIndex = tabIndex;
-            this.startOffset = startOffset;
-            this.stopOffset = stopOffset;
-            this.text = text;
+        BookmarkTreeNode(LineMarker b) {
+            tabIndex = b.getTabIndex();
+            startOffset = b.getStartOffset();
+            stopOffset = b.getStopOffset();
+            text = b.getText();
         }
 
         @Override
