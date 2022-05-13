@@ -2,7 +2,7 @@ package kelvinspatola.mode.smartcode.ui;
 
 import java.awt.Color;
 import java.awt.Graphics;
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,19 +10,24 @@ import java.util.stream.Collectors;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
+import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.IPackageBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.SimpleName;
 
 import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
+import processing.app.Messages;
 import processing.mode.java.ASTUtils;
 import processing.mode.java.PreprocService;
 import processing.mode.java.PreprocSketch;
-import processing.mode.java.SketchInterval;
 
 public class CodeOccurrences implements CaretListener, LinePainter {
     private List<LineMarker> occurrences = new ArrayList<>();
@@ -34,8 +39,10 @@ public class CodeOccurrences implements CaretListener, LinePainter {
     private int prevLine = -1;
 
     private Color occurenceColor;
-    private Color columnColor; 
+    private Color columnColor;
 
+    private boolean firstReading = true;
+    private Method javaOffsetToPdeOffsetMethod;
 
     // CONSTRUCTOR
     public CodeOccurrences(SmartCodeEditor editor, PreprocService pps) {
@@ -46,7 +53,10 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
     @Override
     public void caretUpdate(CaretEvent e) {
-        int caret = e.getDot();
+        searchCandidatesAt(e.getDot());
+    }
+
+    private void searchCandidatesAt(int caret) {
         final int line = editor.getTextArea().getCaretLine();
 
         // update 'code' only if we move the caret from one line to another
@@ -67,10 +77,10 @@ public class CodeOccurrences implements CaretListener, LinePainter {
                 return;
 
             String candidate = code.substring(startOffset, stopOffset);
-            if (!candidate.equals(prevCandidate)) {
+//            if (!candidate.equals(prevCandidate)) {
                 pps.whenDoneBlocking(ps -> handleCollectOccurrences(ps, startOffset, stopOffset));
                 prevCandidate = candidate;
-            }
+//            }
         } else {
             occurrences.clear();
             prevCandidate = null;
@@ -88,52 +98,106 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
         CompilationUnit root = ps.compilationUnit;
         SimpleName name = ASTUtils.getSimpleNameAt(root, startJavaOffset, stopJavaOffset);
-        if (name == null)
-            return;
+        if (name == null) return;
+
+        occurrences = findAllOccurrences(root, name).stream()
+                .map(node -> mapToOccurrence(ps, node, name))
+                .collect(Collectors.toList());
+    }
+
+    static private List<SimpleName> findAllOccurrences(ASTNode root, SimpleName cantidate) {
+        List<SimpleName> result = new ArrayList<>();  
 
         // Find binding
-        IBinding binding = ASTUtils.resolveBinding(name);
+        final IBinding cadidateBinding = ASTUtils.resolveBinding(cantidate);
+        if (cadidateBinding == null) return result;
+        
+        final String cadidateKey = cadidateBinding.getKey();
+        final String cadidatePkg = cadidateKey.substring(1, cadidateKey.indexOf(';'));
+        final String candidateName = cadidateBinding.getName();
 
-        List<SketchInterval> intervals = findAllOccurrences(root, binding.getKey()).stream().map(ps::mapJavaToSketch)
-                .collect(Collectors.toList());
-
-        for (SketchInterval si : intervals) {
-            try {
-                final Field tabIndexInterval = si.getClass().getDeclaredField("tabIndex");
-                tabIndexInterval.setAccessible(true);
-                final Field startTabOffsetInterval = si.getClass().getDeclaredField("startTabOffset");
-                startTabOffsetInterval.setAccessible(true);
-                final Field stopTabOffsetInterval = si.getClass().getDeclaredField("stopTabOffset");
-                stopTabOffsetInterval.setAccessible(true);
-
-                int tabIndex = (Integer) tabIndexInterval.get(si);
-                int startOffset = (Integer) startTabOffsetInterval.get(si);
-                int stopOffset = (Integer) stopTabOffsetInterval.get(si);
-                int line = editor.getTextArea().getLineOfOffset(startOffset);
-                occurrences.add(new Occurrence(tabIndex, line, startOffset, stopOffset, name.toString()));
-
-            } catch (final ReflectiveOperationException e) {
-                System.err.println(e);
-            }
-        }
-    }
-
-    static private List<SimpleName> findAllOccurrences(ASTNode root, String bindingKey) {
-        List<SimpleName> occurrences = new ArrayList<>();
+        
         root.getRoot().accept(new ASTVisitor() {
             @Override
-            public boolean visit(SimpleName name) {
-                IBinding binding = ASTUtils.resolveBinding(name);
-                if (binding != null && bindingKey.equals(binding.getKey())) {
-                    occurrences.add(name);
+            public boolean visit(SimpleName match) {
+                IBinding matchBinding = ASTUtils.resolveBinding(match);
+                final String matchName = matchBinding.getName();
+
+                if (matchBinding != null && matchName.equals(candidateName)) {
+                    final String key = matchBinding.getKey();
+                    final String matchPkg = key.substring(1, key.indexOf(';'));
+
+                    if (matchPkg.equals(cadidatePkg)) {
+                        result.add(match);
+                    }
                 }
-                return super.visit(name);
+                return super.visit(match);
             }
         });
-        return occurrences;
+        return result;
     }
 
-    public static int findWordStart(String text, int pos) {
+    private Occurrence mapToOccurrence(PreprocSketch ps, ASTNode node, SimpleName name) {
+        int length = node.getLength();
+        int startPdeOffset = 0, stopPdeOffset = 0;
+
+        try {
+            if (firstReading) {
+                javaOffsetToPdeOffsetMethod = ps.getClass().getDeclaredMethod("javaOffsetToPdeOffset", int.class);
+                javaOffsetToPdeOffsetMethod.setAccessible(true);
+                firstReading = false;
+            }
+
+            startPdeOffset = (int) javaOffsetToPdeOffsetMethod.invoke(ps, node.getStartPosition());
+
+            if (length == 0) {
+                stopPdeOffset = startPdeOffset;
+            } else {
+                stopPdeOffset = (int) javaOffsetToPdeOffsetMethod.invoke(ps, node.getStartPosition() + length - 1);
+                if (stopPdeOffset >= 0 && (stopPdeOffset > startPdeOffset || length == 1)) {
+                    stopPdeOffset += 1;
+                }
+            }
+        } catch (final ReflectiveOperationException e) {
+            System.err.println(e);
+        }
+
+        if (startPdeOffset < 0 || stopPdeOffset < 0) {
+            return new Occurrence(-1, -1, -1, name.toString());
+        }
+
+        int tabIndex = ps.pdeOffsetToTabIndex(startPdeOffset);
+
+        if (startPdeOffset >= ps.pdeCode.length()) {
+            startPdeOffset = ps.pdeCode.length() - 1;
+            stopPdeOffset = startPdeOffset + 1;
+        }
+
+        return new Occurrence(tabIndex, ps.pdeOffsetToTabOffset(tabIndex, startPdeOffset),
+                ps.pdeOffsetToTabOffset(tabIndex, stopPdeOffset), name.toString());
+    }
+
+    public void stopTracking() {
+        editor.getTextArea().removeCaretListener(this);
+        occurrences.clear();
+        editor.updateColumnPoints(occurrences, Occurrence.class);
+        prevCandidate = null;
+        prevLine = -1;
+        Messages.log("CodeOccurrences: CaretListener removed");
+    }
+
+    public void startTracking() {
+        editor.getTextArea().addCaretListener(this);
+        searchCandidatesAt(editor.getCaretOffset());
+        editor.updateColumnPoints(occurrences, Occurrence.class);
+        Messages.log("CodeOccurrences: CaretListener added");
+    }
+
+    private boolean isValidChar(int offset) {
+        return Character.isLetterOrDigit(code.charAt(offset));
+    }
+
+    static private int findWordStart(String text, int pos) {
         for (int i = pos; i >= 0; i--) {
             if (!Character.isLetterOrDigit(text.charAt(i)))
                 return i + 1;
@@ -141,16 +205,12 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         return -1;
     }
 
-    public static int findWordEnd(String text, int pos) {
+    static private int findWordEnd(String text, int pos) {
         for (int i = pos; i < text.length(); i++) {
             if (!Character.isLetterOrDigit(text.charAt(i)))
                 return i;
         }
         return -1;
-    }
-
-    private boolean isValidChar(int offset) {
-        return Character.isLetterOrDigit(code.charAt(offset));
     }
 
     @Override
@@ -161,6 +221,10 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         int currentTab = editor.getSketch().getCurrentCodeIndex();
         for (LineMarker occurrence : occurrences) {
             if (occurrence.getTabIndex() == currentTab && occurrence.getLine() == line) {
+
+                if (editor.isSelectionActive() && ta.getCaretLine() == line)
+                    return false;
+
                 int lineStart = ta.getLineStartOffset(line);
                 int wordStart = occurrence.getStartOffset() - lineStart;
                 int wordEnd = occurrence.getStopOffset() - lineStart;
@@ -184,11 +248,11 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         int tab, line, startOffset, stopOffset;
         String text;
 
-        Occurrence(int tab, int line, int startOffset, int stopOffset, String text) {
+        Occurrence(int tab, int startOffset, int stopOffset, String text) {
             this.tab = tab;
-            this.line = line;
             this.startOffset = startOffset;
             this.stopOffset = stopOffset;
+            this.line = editor.getTextArea().getLineOfOffset(startOffset);
             this.text = text;
         }
 
@@ -211,7 +275,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         public String getText() {
             String lineNumberIndicator = "<font color=#bbbbbb>" + (line + 1) + ": </font>";
             String lineTextIndicator = "<font color=#000000>" + text + "</font>";
-            return "<html>" + lineNumberIndicator + lineTextIndicator + "</html>";            
+            return "<html>" + lineNumberIndicator + lineTextIndicator + "</html>";
         }
 
         public Class<?> getParent() {

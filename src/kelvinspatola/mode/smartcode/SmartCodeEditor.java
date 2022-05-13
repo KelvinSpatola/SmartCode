@@ -82,8 +82,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         preprocService.notifySketchChanged();
 
         occurrences = new CodeOccurrences(this, preprocService);
-        textarea.addCaretListener(occurrences);
         getSmartCodePainter().addLinePainter(occurrences);
+        if (SmartCodeTheme.OCCURRENCES_HIGHLIGHT) {
+            textarea.addCaretListener(occurrences);
+        }
 
         getSmartCodePainter().addLinePainter(getSmartCodeTextArea().snippetManager);
 
@@ -138,6 +140,16 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         SmartCodeTextAreaPainter.updateDefaultFontSize();
         tabSize = Preferences.getInteger("editor.tabs.size");
         tabSpaces = addSpaces(tabSize);
+
+        if (occurrences != null) {
+            boolean containsListener = getSmartCodeTextArea().containsListener(occurrences, CaretListener.class);
+
+            if (SmartCodeTheme.OCCURRENCES_HIGHLIGHT && !containsListener) {
+                occurrences.startTracking();
+            } else if (!SmartCodeTheme.OCCURRENCES_HIGHLIGHT && containsListener) {
+                occurrences.stopTracking();
+            }
+        }
     }
 
     @Override
@@ -398,7 +410,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             int currentLine = textarea.getCaretLine();
             if (getCaretOffset() == textarea.getLineStopOffset(currentLine) - 1) {
                 Bookmark bookmarkOnNextLine = lineBookmarks.getBookmark(getLineIDInCurrentTab(currentLine + 1));
-                
+
                 if (bookmarkOnNextLine != null) {
                     if (getLineText(currentLine + 1).isBlank()) {
                         lineBookmarks.removeBookmark(bookmarkOnNextLine);
@@ -871,15 +883,21 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
+    /**
+     * Change the case for selected text to <b>upper</b> or <b>lower</b> case.
+     * 
+     * @param toUpperCase text will be changed to upper case if true, lower case
+     *                    otherwise.
+     */
     public void changeCase(boolean toUpperCase) {
         if (isSelectionActive()) {
             int start = getSelectionStart();
             int end = getSelectionStop();
 
             if (toUpperCase) {
-                setSelectedText(getSelectedText().toUpperCase());
+                setSelectedText(getSelectedText().toUpperCase(), true);
             } else {
-                setSelectedText(getSelectedText().toLowerCase());
+                setSelectedText(getSelectedText().toLowerCase(), true);
             }
             setSelection(start, end);
         }
@@ -948,11 +966,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             newSelectionStart = getLineStartOffset(targetLine);
             newSelectionEnd = getLineStopOffset(s.endLine - 1) - 1;
 
-            long start = System.nanoTime();
             for (int line = selectionStartLine; line <= selectionEndLine; line++)
                 moveBookmarkTo(line, line - 1);
-            long end = System.nanoTime();
-            System.out.println("Elapsed Time in nano - U: " + (end - start));
 
         } else {
             setSelection(s.start, target_end);
@@ -961,11 +976,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             newSelectionStart = getLineStartOffset(s.startLine + 1);
             newSelectionEnd = getLineStopOffset(targetLine) - 1;
 
-            long start = System.nanoTime();
             for (int line = selectionEndLine; line >= selectionStartLine; line--)
                 moveBookmarkTo(line, line + 1);
-            long end = System.nanoTime();
-            System.out.println("Elapsed Time in nano: - D: " + (end - start));
         }
 
         if (isTargetLineBookmarked) {
@@ -1219,7 +1231,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void toggleLineBookmark(int line) {
         final LineID lineID = getLineIDInCurrentTab(line);
         Bookmark bm = lineBookmarks.getBookmark(lineID);
-        
+
         if (bm == null) {
             lineBookmarks.addBookmark(lineID, currentBookmarkColor);
         } else {

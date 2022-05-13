@@ -12,8 +12,10 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.EventListener;
 
 import javax.swing.JPopupMenu;
+import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 
@@ -105,7 +107,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         public void mousePressed(MouseEvent e) {
             if (editor.isDebuggerEnabled())
                 return;
-            
+
             long thisTime = e.getWhen();
 
             if (thisTime - lastTime > 100) {
@@ -131,7 +133,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         public void mouseReleased(MouseEvent e) {
             if (editor.isDebuggerEnabled())
                 return;
-            
+
             if (e.getButton() == MouseEvent.BUTTON3 && isGutterPressed) {
                 int line = _yToLine(e.getY());
                 // constrain to the last line of text and not the last visible line
@@ -148,6 +150,28 @@ public class SmartCodeTextArea extends JavaTextArea {
     public void setGutterRightClickPopup(JPopupMenu popupMenu) {
         gutterRightClickPopup = popupMenu;
     }
+    
+    public boolean containsListener(final CaretListener listener, final Class<? extends EventListener> type) {
+        final Object[] listeners = eventListenerList.getListeners(type);
+        for (Object l : listeners) {
+            if (listener == l) 
+                return true;
+        }
+        return false;
+    }
+
+//    public void addCaretListenerIfAbsent(CaretListener listener) {
+//        boolean containsListener = false;
+//
+//        containsListener = containsListener(listener, CaretListener.class);
+//
+//        if (!containsListener) {
+//            addCaretListener(listener);
+//            System.out.println("Listener added");
+//        } else {
+//            System.out.println("Listener already exists!!!");            
+//        }
+//    }
 
 //    @Override
 //    public void updateTheme() {
