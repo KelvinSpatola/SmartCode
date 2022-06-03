@@ -5,23 +5,29 @@ import javax.swing.event.CaretListener;
 
 import static org.eclipse.jdt.core.dom.ASTNode.*;
 
+import java.awt.Graphics;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.IntStream;
 
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTVisitor;
+import org.eclipse.jdt.core.dom.BlockComment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.LineComment;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
+import kelvinspatola.mode.smartcode.ui.LineMarker;
 import processing.app.syntax.InputHandler;
 import processing.mode.java.ASTUtils;
 import processing.mode.java.PreprocService;
@@ -34,35 +40,47 @@ public class CodeContext implements CaretListener {
     private String code;
     private String prevCandidate;
     private int lastCodeLength = -1;
+    
+    ASTNode rootNode;
+    
 
     // CONSTRUCTOR
     public CodeContext(SmartCodeEditor editor, PreprocService pps) {
         this.editor = editor;
         this.pps = pps;
     }
-
+    
     @Override
     public void caretUpdate(CaretEvent e) {
-        int caret = e.getDot();
-        final int length = editor.getText().length();
+//        int caret = e.getDot();
+        
+//        System.out.println("isCharacterLiteral: " + isCharacterLiteral());
+//        System.out.println("isStringLiteral: " + isStringLiteral());
+//        System.out.println("isComment: " + isComment());
+        
+//        pps.whenDoneBlocking(ps -> {
+//            getContext(ps, editor.getCaretOffset());
+//        });
+                
+//        final int length = editor.getText().length();
 
         // update 'code' only if we move the caret from one line to another
-        if (length != lastCodeLength) {
-            code = editor.getText();
-            lastCodeLength = length;
-        }
+//        if (length != lastCodeLength) {
+//            code = editor.getText();
+//            lastCodeLength = length;
+//        }
         // In case we 'touch' a word on the right side
-        if (caret > 0 && caret < code.length() && !isValidChar(caret) && isValidChar(caret - 1)) {
-            caret--;
-        }
+//        if (caret > 0 && caret < code.length() && !isValidChar(caret) && isValidChar(caret - 1)) {
+//            caret--;
+//        }
 
         // if ((caret < code.length()) && isValidChar(caret)) {
 //            int startOffset = findWordStart(code, caret);
 //            int stopOffset = findWordEnd(code, caret);
-        int startOffset = caret;
-        int stopOffset = caret;
+//        int startOffset = caret;
+//        int stopOffset = caret;
 
-        String candidate = "" + caret;
+//        String candidate = "" + caret;
 //            if (startOffset == -1 || stopOffset == -1) {
 //                startOffset = caret;
 //                stopOffset = caret;
@@ -71,16 +89,16 @@ public class CodeContext implements CaretListener {
 //                candidate = code.substring(startOffset, stopOffset);                
 //            }
 
-        if (caret == length - 1) {
-            usedNodes.stream().forEach(n -> System.out.println(n));
-        }
+//        if (caret == length - 1) {
+//            usedNodes.stream().forEach(n -> System.out.println(n));
+//        }
 
         // if (!candidate.equals(prevCandidate)) {
         // System.err.println("\n *** candidate => " + candidate + " ***");
-        int start = startOffset;
-        int stop = stopOffset;
-        pps.whenDoneBlocking(ps -> getContext(ps, start, stop));
-        prevCandidate = candidate;
+//        int start = startOffset;
+//        int stop = stopOffset;
+//        pps.whenDoneBlocking(ps -> getContext(ps, caret));
+//        prevCandidate = candidate;
         // }
 //        } else {
 //            prevCandidate = null;
@@ -88,99 +106,181 @@ public class CodeContext implements CaretListener {
     }
 
     Set<String> usedNodes = new HashSet<>();
+    
+    boolean isStringLiteral, isCharacterLiteral, isComment;
+    SketchOffset sketchOffset;
+    
+    public boolean isStringLiteral() {        
+        pps.whenDoneBlocking(ps -> {
+            isStringLiteral = getContext(ps, editor.getCaretOffset(), ASTNode.STRING_LITERAL);
+        });
+        
+        return isStringLiteral;
+    }
+    
+    public boolean isCharacterLiteral() {        
+        pps.whenDoneBlocking(ps -> {
+            isCharacterLiteral = getContext(ps, editor.getCaretOffset(), ASTNode.CHARACTER_LITERAL);
+        });
+        
+        return isCharacterLiteral;
+    }
+    
+   
+    public boolean isComment() {        
+        pps.whenDoneBlocking(ps -> {
+            isComment = getContext(ps, editor.getCaretOffset(), ASTNode.BLOCK_COMMENT);
+        });
+        
+        if (isComment) return true;
+        
+        pps.whenDoneBlocking(ps -> {
+            isComment = getContext(ps, editor.getCaretOffset(), ASTNode.LINE_COMMENT);
+        });
+        
+        return isComment;
+    }
+    
+    public int[] offsets() {
+        return new int[] {sketchOffset.startOffset, sketchOffset.stopOffset};
+    }
 
-    private void getContext(PreprocSketch ps, int startTabOffset, int stopTabOffset) {
+    private boolean getContext(PreprocSketch ps, int offset, int nodeType) {
+        CompilationUnit root = ps.compilationUnit;
+        if (root.types().isEmpty()) return false;
+        
         // Map offsets
         int tab = editor.getSketch().getCurrentCodeIndex();
-        int startJavaOffset = ps.tabOffsetToJavaOffset(tab, startTabOffset);
-        int stopJavaOffset = ps.tabOffsetToJavaOffset(tab, stopTabOffset);
-
-        CompilationUnit root = ps.compilationUnit;
-        if (root.types().isEmpty()) {
-            System.out.println("No Type found in CU");
-            return;
+        int javaOffset = ps.tabOffsetToJavaOffset(tab, offset);
+        
+        ASTNode rootNode = findASTNodeAt(root, javaOffset);
+        
+        if (rootNode.getNodeType() == nodeType) {
+            sketchOffset = mapToSketchOffset(ps, rootNode);
+//            System.out.println(sketchOffset);
+            return true;
         }
+        return false;
+    }
+    
+    
+    private void getContext(PreprocSketch ps, int offset) {
+        CompilationUnit root = ps.compilationUnit;
+        if (root.types().isEmpty()) return;
+        
+        // Map offsets
+//        int tab = editor.getSketch().getCurrentCodeIndex();
+//        int javaOffset = ps.tabOffsetToJavaOffset(tab, offset);
 
-        SimpleName simpleName = getSimpleNameAt(root, startJavaOffset, stopJavaOffset);
-//        System.err.println("\nsimpleName: " + simpleName);
-//        if (simpleName == null)
-//            return;
-//        System.out.println("node type: " + simpleName.getNodeType());
+//        ASTNode rootNode = findASTNodeAt(root, javaOffset);
+        
+        root.getRoot().accept(new ASTVisitor() {
+            
+            public boolean visit(StringLiteral match) {
+                System.out.println("string: " + match);
+                return super.visit(match);
+            }
+            
+            public boolean visit(LineComment node) {
+//                int start = node.getStartPosition();
+//                int end = start + node.getLength();
+                //String commentContent = source.substring(start + 2, end);
+                //commentList.add(new CodeComment(commentContent, start, end));
+                System.out.println("Comment: " + node);
+                return true;
+            }
 
-        ASTNode node = findASTNodeAt(root, startJavaOffset, stopJavaOffset);
-        //editor.getConsole().clear();
-        // System.out.println("node: " + node);
-        String nodeType = getTypeName(node);
-        // System.out.println("node type: " + nodeType);
-        usedNodes.add(nodeType);
+            public boolean visit(SimpleName node) {
+//                int start = node.getStartPosition();
+//                int end = start + node.getLength();
+//                String commentContent = source.substring(start, end);
+//                commentList.add(new CodeComment(commentContent, start, end));
+                System.out.println("Name: " + node);
+                return true;
+            }
+        });
+        
+//        String nodeType = getTypeName(node);
+//        System.out.println("node type: " + nodeType);
+//        usedNodes.add(nodeType);
+
+//        if (node.getNodeType() == ASTNode.STRING_LITERAL) {
+//            System.out.println("INSIDE STRING");
+//            isStringLiteral = true;
+//        }
+
 
         // Find binding
 //        IBinding binding = ASTUtils.resolveBinding(simpleName);
 //        System.out.println("binding: " + binding);
 
-//        String key = binding.getKey();
-//        ASTNode node = ps.compilationUnit.findDeclaringNode(key);
-//        System.out.println("node.getNodeType: " + node.getNodeType());
-//        
-//        if(binding.getKind() == IBinding.METHOD) {
-//            IMethodBinding method = (IMethodBinding) binding;
-//            System.err.println("isArray: " + method.getReturnType().isArray());
-//        }
-//        
-//        SimpleName declName = null;
-//        switch (binding.getKind()) {
-//          case IBinding.TYPE: declName = ((TypeDeclaration) decl).getName(); break;
-//          case IBinding.METHOD: declName = ((MethodDeclaration) decl).getName(); break;
-//          case IBinding.VARIABLE: declName = ((VariableDeclaration) decl).getName(); break;
-//        }
-//        System.err.println("declName: " + declName);
 
-//        switch (binding.getKind()) {
-//        case IBinding.METHOD:
-//            if (((IMethodBinding) binding).isConstructor()) {
-//                System.out.println("Constructor");
-//            } else {
-//                System.out.println("Method");
-//            }
-//            IMethodBinding method = (IMethodBinding) binding;
-//            System.out.println("methodBinding: " + method);
-//            System.out.println("parent: " + method.getDeclaringClass().getName());
-//            System.out.print("params: ");
-//            for (ITypeBinding type : method.getParameterTypes()) {
-//                System.out.print(type.getName() + ", ");
-//            }
-//            System.out.println("\nreturn: " + method.getReturnType().getName());
-//            break;
-//            
-//        case IBinding.VARIABLE:
-//            IVariableBinding variable = (IVariableBinding) binding;
-//            
-//            if (variable.isField())
-//                System.out.println("Field");
-//            else if (variable.isParameter())
-//                System.out.println("Parameter");
-//            else if (variable.isEnumConstant())
-//                System.out.println("Enum constant");
-//            else
-//                System.out.println("Local variable");
-//            
-//            System.out.println("declaring method: " + variable.getDeclaringMethod());
-//            break;
-//            
-//        case IBinding.TYPE:
-//            ITypeBinding type = (ITypeBinding) binding;
-//            
-//            System.out.println("Type");
-//            if (type.isTypeVariable())
-//                System.out.println("Enum constant");
-//            break;
-//        }
+    }
+    
+    
+    private boolean firstReading = true;
+    private Method javaOffsetToPdeOffsetMethod;
+    
+    private SketchOffset mapToSketchOffset(PreprocSketch ps, ASTNode node) {
+        int length = node.getLength();
+        int startPdeOffset = 0, stopPdeOffset = 0;
+
+        try {
+            if (firstReading) {
+                javaOffsetToPdeOffsetMethod = ps.getClass().getDeclaredMethod("javaOffsetToPdeOffset", int.class);
+                javaOffsetToPdeOffsetMethod.setAccessible(true);
+                firstReading = false;
+            }
+
+            startPdeOffset = (int) javaOffsetToPdeOffsetMethod.invoke(ps, node.getStartPosition());
+
+            if (length == 0) {
+                stopPdeOffset = startPdeOffset;
+            } else {
+                stopPdeOffset = (int) javaOffsetToPdeOffsetMethod.invoke(ps, node.getStartPosition() + length - 1);
+                if (stopPdeOffset >= 0 && (stopPdeOffset > startPdeOffset || length == 1)) {
+                    stopPdeOffset += 1;
+                }
+            }
+        } catch (final ReflectiveOperationException e) {
+            System.err.println(e);
+        }
+
+        if (startPdeOffset < 0 || stopPdeOffset < 0) {
+            return new SketchOffset(-1, -1, -1, node.toString());
+        }
+
+        int tabIndex = ps.pdeOffsetToTabIndex(startPdeOffset);
+
+        if (startPdeOffset >= ps.pdeCode.length()) {
+            startPdeOffset = ps.pdeCode.length() - 1;
+            stopPdeOffset = startPdeOffset + 1;
+        }
+
+        return new SketchOffset(tabIndex, ps.pdeOffsetToTabOffset(tabIndex, startPdeOffset),
+                ps.pdeOffsetToTabOffset(tabIndex, stopPdeOffset), node.toString());
+    }
+    
+    class SketchOffset {
+        int tab, line, startOffset, stopOffset;
+        String text;
+
+        SketchOffset(int tab, int startOffset, int stopOffset, String text) {
+            this.tab = tab;
+            this.startOffset = startOffset;
+            this.stopOffset = stopOffset;
+            this.line = editor.getTextArea().getLineOfOffset(startOffset);
+            this.text = text;
+        }
+        @Override
+        public String toString() {
+            return "Occurrence [line=" + line + ", startOffset=" + startOffset + ", stopOffset=" + stopOffset
+                    + ", text=" + text + "]";
+        }
     }
 
-    public static ASTNode findASTNodeAt(ASTNode root, int startJavaOffset, int stopJavaOffset) {
-        int length = stopJavaOffset - startJavaOffset;
-
-        NodeFinder f = new NodeFinder(root, startJavaOffset, length);
+    public static ASTNode findASTNodeAt(ASTNode root, int offset) {
+        NodeFinder f = new NodeFinder(root, offset, 0);
         ASTNode node = f.getCoveredNode();
         if (node == null) {
             node = f.getCoveringNode();
@@ -189,52 +289,39 @@ public class CodeContext implements CaretListener {
         return node;
     }
 
-    public static SimpleName getSimpleNameAt(ASTNode root, int startJavaOffset, int stopJavaOffset) {
-        // Find node at offset
-        ASTNode node = ASTUtils.getASTNodeAt(root, startJavaOffset, stopJavaOffset);
+//    public static SimpleName getSimpleNameAt(ASTNode root, int startJavaOffset, int stopJavaOffset) {
+//        // Find node at offset
+//        ASTNode node = ASTUtils.getASTNodeAt(root, startJavaOffset, stopJavaOffset);
+//
+//        SimpleName result = null;
+//        if (node != null) {
+//            if (node.getNodeType() == ASTNode.SIMPLE_NAME) {
+//                result = (SimpleName) node;
+//            } else {
+//                // Return SimpleName with highest coverage
+//                List<SimpleName> simpleNames = getSimpleNameChildren(node);
+//                if (!simpleNames.isEmpty()) {
+//                    // Compute coverage <selection x node>
+//                    int[] coverages = simpleNames.stream().mapToInt(name -> {
+//                        int start = name.getStartPosition();
+//                        int stop = start + name.getLength();
+//                        return Math.min(stop, stopJavaOffset) - Math.max(startJavaOffset, start);
+//                    }).toArray();
+//                    // Select node with highest coverage
+//                    int maxIndex = IntStream.range(0, simpleNames.size())
+//                            .filter(i -> coverages[i] >= 0)
+//                            .reduce((i, j) -> coverages[i] > coverages[j] ? i : j)
+//                            .orElse(-1);
+//                    if (maxIndex == -1)
+//                        return null;
+//                    result = simpleNames.get(maxIndex);
+//                }
+//            }
+//        }
+//
+//        return result;
+//    }
 
-        SimpleName result = null;
-        if (node != null) {
-            if (node.getNodeType() == ASTNode.SIMPLE_NAME) {
-                result = (SimpleName) node;
-            } else {
-                // Return SimpleName with highest coverage
-                List<SimpleName> simpleNames = getSimpleNameChildren(node);
-                if (!simpleNames.isEmpty()) {
-                    // Compute coverage <selection x node>
-                    int[] coverages = simpleNames.stream().mapToInt(name -> {
-                        int start = name.getStartPosition();
-                        int stop = start + name.getLength();
-                        return Math.min(stop, stopJavaOffset) - Math.max(startJavaOffset, start);
-                    }).toArray();
-                    // Select node with highest coverage
-                    int maxIndex = IntStream.range(0, simpleNames.size())
-                            .filter(i -> coverages[i] >= 0)
-                            .reduce((i, j) -> coverages[i] > coverages[j] ? i : j)
-                            .orElse(-1);
-                    if (maxIndex == -1)
-                        return null;
-                    result = simpleNames.get(maxIndex);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    public static List<SimpleName> getSimpleNameChildren(ASTNode node) {
-        List<SimpleName> simpleNames = new ArrayList<>();
-        node.accept(new ASTVisitor() {
-            @Override
-            public boolean visit(SimpleName simpleName) {
-                System.out.println(" -> " + simpleName);
-                simpleNames.add(simpleName);
-                return super.visit(simpleName);
-            }
-        });
-        System.out.println("size: " + simpleNames.size());
-        return simpleNames;
-    }
 
     /*
      * for testing purposes

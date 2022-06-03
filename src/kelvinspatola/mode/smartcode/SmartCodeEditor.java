@@ -1,6 +1,7 @@
 package kelvinspatola.mode.smartcode;
 
 import static kelvinspatola.mode.smartcode.Constants.*;
+import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.OCCURRENCES_HIGHLIGHT;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -12,6 +13,7 @@ import java.awt.event.KeyEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,11 +53,14 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public LineBookmarks lineBookmarks; // arranjar forma de encapsular isto
     protected ShowBookmarks showBookmarks;
     protected Timer statusNoticeTimer;
+    protected Timer generalTimer;
 
     static protected SmartCodePreferencesFrame preferencesFrame;
 
     protected int tabSize;
     protected String tabSpaces;
+
+    CodeContext context;
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -83,13 +88,13 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         occurrences = new CodeOccurrences(this, preprocService);
         getSmartCodePainter().addLinePainter(occurrences);
-        if (SmartCodeTheme.OCCURRENCES_HIGHLIGHT) {
+        if (OCCURRENCES_HIGHLIGHT) {
             textarea.addCaretListener(occurrences);
         }
 
-        getSmartCodePainter().addLinePainter(getSmartCodeTextArea().snippetManager);
+        getSmartCodePainter().addLinePainter(getTextArea().snippetManager);
 
-//        CodeContext context = new CodeContext(this, preprocService);
+//        context = new CodeContext(this, preprocService);
 //        textarea.addCaretListener(context);
 
         timedAction(this::printHelloMessage, 500);
@@ -105,12 +110,13 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         return new SmartCodeTextArea(new PdeTextAreaDefaults(), this);
     }
 
-    public SmartCodeTextArea getSmartCodeTextArea() {
+    @Override
+    public SmartCodeTextArea getTextArea() {
         return (SmartCodeTextArea) textarea;
     }
 
     public SmartCodeTextAreaPainter getSmartCodePainter() {
-        return getSmartCodeTextArea().getSmartCodePainter();
+        return getTextArea().getSmartCodePainter();
     }
 
     protected void buildMarkerColumn(MarkerColumn errorColumn) {
@@ -142,11 +148,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         tabSpaces = addSpaces(tabSize);
 
         if (occurrences != null) {
-            boolean containsListener = getSmartCodeTextArea().containsListener(occurrences, CaretListener.class);
+            boolean containsListener = getTextArea().containsListener(occurrences, CaretListener.class);
 
-            if (SmartCodeTheme.OCCURRENCES_HIGHLIGHT && !containsListener) {
+            if (OCCURRENCES_HIGHLIGHT && !containsListener) {
                 occurrences.startTracking();
-            } else if (!SmartCodeTheme.OCCURRENCES_HIGHLIGHT && containsListener) {
+            } else if (!OCCURRENCES_HIGHLIGHT && containsListener) {
                 occurrences.stopTracking();
             }
         }
@@ -190,12 +196,13 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Delete line", "C+E", () -> deleteLine(textarea.getCaretLine()));
         createItem(menu, "Delete line content", "CS+E", () -> deleteLineContent(textarea.getCaretLine()));
-        createItem(menu, "Insert line bellow", "S+ENTER", () -> insertNewLineBellow(textarea.getCaretLine()));
+        createItem(menu, "Insert line bellow", "S+ENTER", () -> insertNewLineBelow(textarea.getCaretLine()));
         createItem(menu, "Insert line above", "CS+ENTER", () -> insertNewLineAbove(textarea.getCaretLine()));
         createItem(menu, "Insert line break", "A+ENTER", () -> insertLineBreak(getCaretOffset()));
 
         menu.addSeparator(); // ---------------------------------------------
-        JMenuItem[] updatableItems = { createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
+        JMenuItem[] updatableItems = { 
+                createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
                 createItem(menu, "Format selected text", "C+T", this::handleAutoFormat),
                 createItem(menu, "To upper case", "CS+U", () -> changeCase(true)),
                 createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) };
@@ -336,7 +343,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
         }
 
-        getSmartCodeTextArea().setGutterRightClickPopup(new GutterPopupMenu());
+        getTextArea().setGutterRightClickPopup(new GutterPopupMenu());
     }
 
     protected static JMenuItem createItem(JComponent menu, String title, String keyBinding, Runnable action) {
@@ -421,6 +428,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
 
         } else if (keyCode == KeyEvent.VK_BACK_SPACE) { // let's deal with bookmarks deletion here
+            pauseOccurrencesTracking(300);
+
             if (!lineBookmarks.hasBookmarks())
                 return false;
 
@@ -441,9 +450,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 int line = textarea.getCaretLine();
                 if (lineBookmarks.isBookmark(line)) {
                     int lineIndent = 0;
-                    int brace = getSmartCodeTextArea().getMatchingBraceLine(line, true);
+                    int brace = getTextArea().getMatchingBraceLine(line, true);
                     if (brace != -1) {
-                        lineIndent = getSmartCodeTextArea().getLineIndentation(brace) + tabSize;
+                        lineIndent = getTextArea().getLineIndentation(brace) + tabSize;
                     }
 
                     String lineText = getLineText(line);
@@ -463,14 +472,29 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     public void handleEnter() {
+        pauseOccurrencesTracking(300);
+
         int caret = getCaretOffset();
 
         if (!isSelectionActive()) {
-            int positionInLine = getSmartCodeTextArea().getPositionInsideLineWithOffset(caret);
+            int positionInLine = getTextArea().getPositionInsideLineWithOffset(caret);
             int caretLine = textarea.getCaretLine();
             String lineText = getLineText(caretLine);
+//
+//            long time = System.nanoTime();
+//            
+//            if (context.isStringLiteral()) {
+//                int start = context.offsets()[0];
+//                int end = context.offsets()[1];
+//
+//                if (caret > start && caret < end) {
+//                    splitString(caretLine);
+//                    System.out.println("time: " + (System.nanoTime() - time));
+//                    return;
+//                }
+//            }
 
-            if (lineText.matches(STRING_TEXT)) {
+            if (STRING_TEXT.matcher(lineText).matches()) {
                 int leftQuotes = 0, rightQuotes = 0;
 
                 for (int i = positionInLine - 1; i >= 0; i--) {
@@ -488,17 +512,18 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
                 if (isInsideQuotes) {
                     splitString(caretLine);
+//                    System.out.println("time: " + (System.nanoTime() - time));
                     return;
                 }
             }
 
-            if (lineText.matches(COMMENT_TEXT)) {
+            if (COMMENT_TEXT.matcher(lineText).matches()) {
                 if (SmartCodePreferences.AUTOCLOSE_BLOCK_COMMENTS) {
                     if (!lineText.contains(OPEN_COMMENT)) {
                         int line = caretLine - 1;
 
                         while (line >= 0) {
-                            if (!getLineText(line).matches(COMMENT_TEXT))
+                            if (!COMMENT_TEXT.matcher(getLineText(line)).matches())
                                 break;
                             line--;
                         }
@@ -518,11 +543,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
 
-            if (lineText.matches(BLOCK_OPENING)) {
+            if (BLOCK_OPENING.matcher(lineText).matches()) {
                 if (SmartCodePreferences.AUTOCLOSE_BRACKETS) { // TODO: make this condition a pref of its own
 
                     boolean bracketsAreBalanced = SmartCodeTextArea.checkBracketsBalance(getText(), "{", "}");
-                    boolean hasClosingBrace = lineText.matches(BLOCK_CLOSING);
+                    boolean hasClosingBrace = BLOCK_CLOSING.matcher(lineText).matches();
                     int openBrace = lineText.indexOf(OPEN_BRACE);
                     int closeBrace = lineText.indexOf(CLOSE_BRACE);
 
@@ -535,17 +560,19 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
         }
+//        long time = System.nanoTime();
         // if none of the above, then insert a new line
         insertNewLine(caret);
         errorColumn.repaint();
+//        System.out.println("time: " + (System.nanoTime() - time));
     }
 
     private void splitString(int caretLine) {
         int indent = 0;
         if (INDENT) {
-            indent = getSmartCodeTextArea().getLineIndentation(caretLine);
+            indent = getTextArea().getLineIndentation(caretLine);
 
-            if (!getLineText(caretLine).matches(SPLIT_STRING_TEXT))
+            if (!getLineText(caretLine).trim().startsWith("+ \""))
                 indent += tabSize;
         }
 
@@ -557,7 +584,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     private void splitComment(int caretLine) {
         int indent = 0;
         if (INDENT) {
-            indent = getSmartCodeTextArea().getLineIndentation(caretLine);
+            indent = getTextArea().getLineIndentation(caretLine);
         }
 
         startCompoundEdit();
@@ -584,7 +611,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         int indent = 0;
         if (INDENT) {
-            indent = getSmartCodeTextArea().getLineIndentation(line) + tabSize;
+            indent = getTextArea().getLineIndentation(line) + tabSize;
         }
 
         startCompoundEdit();
@@ -592,7 +619,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         String cutText = isSelectionActive() ? getSelectedText().trim() : "";
 
-        if (cutText.matches(BLOCK_CLOSING)) {
+        if (BLOCK_CLOSING.matcher(cutText).matches()) {
             cutText = cutText.replace(CLOSE_BRACE, '\0').trim();
         }
 
@@ -636,17 +663,17 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             int line = textarea.getLineOfOffset(offset);
             String lineText = getLineText(line);
 
-            int startBrace = getSmartCodeTextArea().getMatchingBraceLine(line, true);
+            int startBrace = getTextArea().getMatchingBraceLine(line, true);
 
             if (startBrace != -1) {
-                indent = getSmartCodeTextArea().getLineIndentation(startBrace);
+                indent = getTextArea().getLineIndentation(startBrace);
 
-                if (!lineText.matches(BLOCK_CLOSING))
+                if (!BLOCK_CLOSING.matcher(lineText).matches())
                     indent += tabSize;
 
-                int positionInLine = getSmartCodeTextArea().getPositionInsideLineWithOffset(offset);
+                int positionInLine = getTextArea().getPositionInsideLineWithOffset(offset);
 
-                if (lineText.matches(BLOCK_OPENING) && positionInLine <= lineText.indexOf(OPEN_BRACE))
+                if (BLOCK_OPENING.matcher(lineText).matches() && positionInLine <= lineText.indexOf(OPEN_BRACE))
                     indent -= tabSize;
             }
             setSelection(offset, getLineStopOffset(line) - 1);
@@ -662,7 +689,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     @Override
     public void handleAutoFormat() {
         if (isSelectionActive()) {
-
             if (getSelectedText().isBlank()) {
                 return;
             }
@@ -716,11 +742,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             String formattedText = createFormatter().format(selectedText);
 
             // but they need to be indented, anyway...
-            int brace = getSmartCodeTextArea().getMatchingBraceLine(s.startLine - 1, true);
+            int brace = getTextArea().getMatchingBraceLine(s.startLine - 1, true);
             int indent = 0;
 
             if (brace != -1) {
-                indent = getSmartCodeTextArea().getLineIndentation(brace) + tabSize;
+                indent = getTextArea().getLineIndentation(brace) + tabSize;
             }
 
             formattedText = SmartCodeTextArea.indentText(formattedText, indent);
@@ -795,7 +821,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         for (int i = 0; i < lines.size(); i++) {
             String lineText = lines.get(i);
 
-            if (lineText.matches(STRING_TEXT)) {
+            if (STRING_TEXT.matcher(lineText).matches()) {
                 int stringStart = lineText.indexOf("\"");
                 int stringEnd = lineText.lastIndexOf("\"");
 
@@ -883,6 +909,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
+    
     /**
      * Change the case for selected text to <b>upper</b> or <b>lower</b> case.
      * 
@@ -890,221 +917,254 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
      *                    otherwise.
      */
     public void changeCase(boolean toUpperCase) {
-        if (isSelectionActive()) {
-            int start = getSelectionStart();
-            int end = getSelectionStop();
+        if (!isSelectionActive())
+            return;
 
-            if (toUpperCase) {
-                setSelectedText(getSelectedText().toUpperCase(), true);
-            } else {
-                setSelectedText(getSelectedText().toLowerCase(), true);
-            }
-            setSelection(start, end);
+        int start = getSelectionStart();
+        int end = getSelectionStop();
+
+        String original = getSelectedText();
+        String modified = toUpperCase ? original.toUpperCase() : original.toLowerCase();
+
+        setSelectedText(modified, true);
+        setSelection(start, end);
+
+        // flag the sketch as modified only if any changes have taken place
+        if (!modified.equals(original)) {
+            getSketch().setModified(true);
         }
     }
 
+    /**
+     * Duplicates selected lines of text. Can duplicate a selection block or just a
+     * line if no text is selected.
+     * 
+     * @param up insert the duplicate lines above the cursor line, otherwise insert
+     *           them below the cursor line
+     */
     public void duplicateLines(boolean up) {
         Selection s = new Selection();
 
         if (s.endLine == getLineCount() - 1) {
-            int caret = getLineStopOffset(s.endLine);
+            int caret = s.end;
             setSelection(caret, caret);
-            insertText(LF + s.text);
-
+            setSelectedText(LF + s.text, true);
         } else {
             int caret = s.end + 1;
             setSelection(caret, caret);
-            insertText(s.text + LF);
+            setSelectedText(s.text + LF, true);
         }
 
-        if (up)
+        if (up) {
             setSelection(s.end, s.start);
-        else
-            setSelection(getCaretOffset() - 1, s.end + 1);
+        } else {
+            setSelection(getCaretOffset(), s.end + 1);
+        }
+        getSketch().setModified(true);
     }
 
+    
+    /**
+     * Moves text up or down. Can move a selection block or just a line if no text
+     * is selected.
+     * <p>
+     * After changing lines, the selected text will be indented automatically. This
+     * functionality (automatic indentation) can be disabled if
+     * {@link SmartCodePreferences#MOVE_LINES_AUTO_INDENT}.
+     * 
+     * @param moveUp move text up one line, otherwise move down one line.
+     * @see SmartCodePreferences
+     */
     public void moveLines(boolean moveUp) {
         Selection s = new Selection();
-
         int targetLine = moveUp ? s.startLine - 1 : s.endLine + 1;
-
         if (targetLine < 0 || targetLine >= getLineCount()) {
             getToolkit().beep();
             return;
         }
-
-        int target_start = getLineStartOffset(targetLine);
-        int target_end = getLineStopOffset(targetLine) - 1;
-
-        String selectedText = s.text;
-        String replacedText = getText(target_start, target_end);
-
-        startCompoundEdit();
-        setSelection(s.start, s.end);
-
-        int newSelectionStart, newSelectionEnd;
-        int selectionStartLine = s.startLine;
-        int selectionEndLine = s.endLine;
-
-        // SWAP LINES
-
-        lineBookmarks.stopBookmarkTracking();
+        int targetStart = getLineStartOffset(targetLine);
+        int targetEnd = getLineStopOffset(targetLine) - 1;
+        String targetText = getText(targetStart, targetEnd);
 
         boolean isTargetLineBookmarked;
         Bookmark targetBookmark = lineBookmarks.getBookmark(getLineIDInCurrentTab(targetLine));
         ColorTag targetColorTag = null;
-
         if (isTargetLineBookmarked = (targetBookmark != null)) {
             targetColorTag = targetBookmark.getColorTag();
             lineBookmarks.removeBookmark(targetBookmark);
         }
 
+        // SWAP LINES
+        String replacedText;
+        int replacedTextStart, replacedTextEnd;
+        int newSelectionStart, newSelectionEnd;
+
+        startCompoundEdit();
+        pauseOccurrencesTracking(300);
+        lineBookmarks.stopBookmarkTracking();
+        
         if (moveUp) {
-            setSelection(target_start, s.end);
-            setSelectedText(selectedText + LF + replacedText);
-
+            replacedText = s.text + LF + targetText;
+            replacedTextStart = targetStart;
+            replacedTextEnd = targetStart + replacedText.length();
+            setSelection(replacedTextStart, replacedTextEnd);
+            setSelectedText(replacedText, false);
             newSelectionStart = getLineStartOffset(targetLine);
-            newSelectionEnd = getLineStopOffset(s.endLine - 1) - 1;
+            newSelectionEnd = newSelectionStart + s.text.length();
 
-            for (int line = selectionStartLine; line <= selectionEndLine; line++)
+            for (int line = s.startLine; line <= s.endLine; line++) {
                 moveBookmarkTo(line, line - 1);
+            }
 
         } else {
-            setSelection(s.start, target_end);
-            setSelectedText(replacedText + LF + selectedText);
-
+            replacedText = targetText + LF + s.text;
+            replacedTextStart = s.start;
+            replacedTextEnd = s.start + replacedText.length();
+            setSelection(replacedTextStart, replacedTextEnd);
+            setSelectedText(replacedText, false);
             newSelectionStart = getLineStartOffset(s.startLine + 1);
-            newSelectionEnd = getLineStopOffset(targetLine) - 1;
+            newSelectionEnd = newSelectionStart + s.text.length();
 
-            for (int line = selectionEndLine; line >= selectionStartLine; line--)
+            for (int line = s.endLine; line >= s.startLine; line--) {
                 moveBookmarkTo(line, line + 1);
+            }
         }
-
+        lineBookmarks.startBookmarkTracking();
+        
         if (isTargetLineBookmarked) {
-            LineID lineID = getLineIDInCurrentTab(moveUp ? selectionEndLine : selectionStartLine);
+            LineID lineID = getLineIDInCurrentTab(moveUp ? s.endLine : s.startLine);
             lineBookmarks.addBookmark(lineID, targetColorTag);
         }
 
-        lineBookmarks.startBookmarkTracking();
-
-        // UPDATE SELECTION
         setSelection(newSelectionStart, newSelectionEnd);
 
-        // RESOLVE INDENTATION
         if (!SmartCodePreferences.MOVE_LINES_AUTO_INDENT) {
             stopCompoundEdit();
             return;
         }
-
-        final SmartCodeTextArea ta = getSmartCodeTextArea();
-
-        s = new Selection();
-
-        int line = s.startLine;
-        String lineText = getLineText(line);
-
-        int blockIndent = 0;
-        int brace = ta.getMatchingBraceLineAlt(line);
-
-        if (brace != -1) { // we are inside a block here
-            if (lineText.matches(BLOCK_OPENING)) {
-                brace = ta.getMatchingBraceLineAlt(line);
-                blockIndent = ta.getLineIndentation(brace) + tabSize;
-
-            } else if (lineText.matches(BLOCK_CLOSING)) {
-                brace = ta.getMatchingBraceLine(line, true);
-                blockIndent = ta.getLineIndentation(brace);
-
-            } else {
-                blockIndent = ta.getLineIndentation(brace) + tabSize;
-            }
+        
+        // RESOLVE INDENTATION
+        String indentedText;
+        if (BLOCK_OPENING.matcher(targetText).matches()) {
+            indentedText = SmartCodeTextArea.indentOutdentText(s.text, tabSize, !moveUp);
+        } else if (BLOCK_CLOSING.matcher(targetText).matches()) {
+            indentedText = SmartCodeTextArea.indentOutdentText(s.text, tabSize, moveUp);
+        } else {
+            indentedText = s.text;
         }
-
-        int selectionIndent = SmartCodeTextArea.getLineIndentation(lineText);
-
-        if (selectionIndent < blockIndent)
-            handleIndent();
-
-        else if (selectionIndent > blockIndent)
-            handleOutdent();
-
+        
+        lineBookmarks.stopBookmarkTracking();
+        setSelectedText(indentedText, false);
+        lineBookmarks.startBookmarkTracking();
         stopCompoundEdit();
+
+        // UPDATE SELECTION
+        newSelectionEnd = newSelectionStart + indentedText.length();
+        setSelection(newSelectionStart, newSelectionEnd);
+        sketch.setModified(true);
     }
 
-    public void insertNewLineBellow(int line) {
+    
+    /**
+     * Inserts an empty line below the current caret position with the appropriate
+     * indentation. This operation does not affect any text.
+     * 
+     * @param line the current caret line
+     */
+    public void insertNewLineBelow(int line) {
+        String lineText = getLineText(line);
         int indent = 0;
 
         if (INDENT) {
-            if (getLineText(line).matches(BLOCK_CLOSING)) {
-                indent = getSmartCodeTextArea().getLineIndentation(line);
+            if (BLOCK_CLOSING.matcher(lineText).matches()) {
+                indent = getLineIndentation(lineText);
 
             } else {
-                int startBrace = getSmartCodeTextArea().getMatchingBraceLine(line, true);
+                int startBrace = getTextArea().getMatchingBraceLine(line, true);
                 if (startBrace != -1) {
-                    indent = getSmartCodeTextArea().getLineIndentation(startBrace) + tabSize;
+                    indent = getTextArea().getLineIndentation(startBrace) + tabSize;
                 }
             }
         }
-
         int lineEnd = getLineStopOffset(line) - 1;
-
-        startCompoundEdit();
         setSelection(lineEnd, lineEnd);
-        insertText(LF + addSpaces(indent));
-        stopCompoundEdit();
+        setSelectedText(LF + addSpaces(indent), true);
     }
+    
 
+    /**
+     * Inserts an empty line above the current caret position with the appropriate
+     * indentation. This operation does not affect any text.
+     * 
+     * @param line the current caret line
+     */
     public void insertNewLineAbove(int line) {
-        String indent = addSpaces(getSmartCodeTextArea().getLineIndentation(line));
-        int lineStart = getTextArea().getLineStartNonWhiteSpaceOffset(line);
-
+        int start = getLineStartOffset(line);
+        int newCaretPos = getTextArea().getLineStartNonWhiteSpaceOffset(line);
+        String lineText = getLineText(line);
+        
         startCompoundEdit();
-        setSelection(lineStart, lineStart);
-        insertText(LF + indent);
-        setSelection(lineStart, lineStart);
+        setSelection(newCaretPos, newCaretPos);
+        setSelectedText(LF + addSpaces(newCaretPos - start), false);
+        setSelection(newCaretPos, newCaretPos);
+        
+        if (BLOCK_CLOSING.matcher(lineText).matches()) {
+            setSelectedText(addSpaces(tabSize), false);
+        }
         stopCompoundEdit();
     }
+    
 
+    /**
+     * Inserts a line feed at the specified location.
+     * <p>
+     * The remaining text after the line feed will be indented according to its
+     * relative scope, and the caret will remain in its original location.
+     * 
+     * @param offset the caret position
+     */
     public void insertLineBreak(int offset) {
-        final SmartCodeTextArea ta = getSmartCodeTextArea();
-        int line = ta.getLineOfOffset(offset);
-        String lineText = getLineText(line);
+        Selection s = new Selection();
 
+        int caretPos = offset - s.start;
+        String s1 = s.text.substring(0, caretPos);
+        String s2 = s.text.substring(caretPos).trim();
         int indent = 0;
-        int caretPos = ta.caretPositionInsideLine();
-
+        
         if (INDENT) {
-            if (lineText.matches(BLOCK_OPENING)) {
-                indent = ta.getLineIndentation(line);
+            if (BLOCK_OPENING.matcher(s.text).matches()) {
+                indent = getLineIndentation(s.text);
 
-                if (caretPos > lineText.indexOf('{'))
+                if (caretPos > s.text.indexOf('{'))
                     indent += tabSize;
 
-            } else if (lineText.matches(BLOCK_CLOSING)) {
-                indent = ta.getLineIndentation(line);
-                int closeBrace = lineText.indexOf('}');
+            } else if (BLOCK_CLOSING.matcher(s.text).matches()) {
+                indent = getLineIndentation(s.text);
+                int closeBrace = s.text.indexOf('}');
 
                 if (caretPos <= closeBrace) {
-                    offset += (closeBrace - caretPos);
-                    setSelection(offset, offset);
-                    insertText(tabSpaces);
-                    offset += tabSize;
+                    offset += closeBrace + tabSize - caretPos;
+                    s1 += addSpaces(indent + tabSize - caretPos);
                 }
 
             } else {
-                int startBrace = ta.getMatchingBraceLine(line, true);
-
+                int startBrace = getTextArea().getMatchingBraceLine(s.startLine, true);
+                
                 if (startBrace != -1) // an opening brace was found, we are in a block scope
-                    indent = ta.getLineIndentation(startBrace) + tabSize;
+                    indent = getTextArea().getLineIndentation(startBrace) + tabSize;
             }
         }
-
-        startCompoundEdit();
-        insertText(LF + addSpaces(indent));
+        setSelection(s.start, s.end);
+        setSelectedText(s1 + LF + addSpaces(indent) + s2, true);
         setSelection(offset, offset);
-        stopCompoundEdit();
     }
-
+    
+    
+    /**
+     * Handles text tabulation at current caret position.
+     * 
+     * @param isShiftDown indent if true, outdent otherwise.
+     */
     public void handleTabulation(boolean isShiftDown) {
         if (isShiftDown) {
             handleOutdent();
@@ -1121,6 +1181,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             setSelectedText("\t");
         }
     }
+    
 
     // TODO: corrigir bug quando ha dois braces na mesma linha
     // ex: if() {
@@ -1158,7 +1219,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             }
         }
 
-        final SmartCodeTextArea ta = getSmartCodeTextArea();
+        final SmartCodeTextArea ta = getTextArea();
 
         // go up and search for the corresponding open brace
         int brace = ta.getMatchingBraceLine(startLine, true);
@@ -1184,18 +1245,20 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         setSelection(start, end);
     }
+    
+    
 
-    /****************
+    /*
      * 
      * TEXT UTILS
      * 
      */
 
-    class Selection {
-        String text;
-        int start, end, startLine, endLine;
+    protected class Selection {
+        public int start, end, startLine, endLine;
+        public String text;
 
-        Selection() {
+        public Selection() {
             startLine = textarea.getSelectionStartLine();
             endLine = textarea.getSelectionStopLine();
 
@@ -1211,16 +1274,27 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             text = getText(start, end);
         }
 
-        boolean isEmpty() {
+        public boolean isEmpty() {
             return text.isEmpty();
         }
     }
+    
 
-    static String addSpaces(int length) {
-        if (length <= 0)
-            return "";
-        return String.format("%1$" + length + "s", "");
+    static protected String addSpaces(int length) {
+        return new String(new char[length]).replace('\0', ' ');
     }
+    
+    
+    static protected int getLineIndentation(String lineText) {
+        char[] chars = lineText.toCharArray();
+        int index = 0;
+
+        while (index < chars.length && Character.isWhitespace(chars[index])) {
+            index++;
+        }
+        return index;
+    }
+    
 
     /****************
      * 
@@ -1241,8 +1315,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     public boolean moveBookmarkTo(int oldLinePos, int newLinePos) {
-        final LineID lineID = getLineIDInCurrentTab(oldLinePos);
-        Bookmark bm = lineBookmarks.getBookmark(lineID);
+        Bookmark bm = lineBookmarks.getBookmark(getLineIDInCurrentTab(oldLinePos));
 
         if (bm != null) { // it's faster than checking with isLineBookmark()
             ColorTag colorTag = bm.getColorTag();
@@ -1254,22 +1327,14 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     public boolean hasBookmarksInCurrentTab() {
-        int currentTab = getSketch().getCurrentCodeIndex();
-        for (LineMarker lm : lineBookmarks.getMarkers()) {
-            if (lm.getTabIndex() == currentTab) {
-                return true;
-            }
-        }
-        return false;
+        final int currentTab = getSketch().getCurrentCodeIndex();
+        return lineBookmarks.getMarkers().stream().anyMatch(lm -> lm.getTabIndex() == currentTab);
     }
 
     public void clearBookmarksFromTab(int tabIndex) {
-        for (int i = lineBookmarks.markerCount() - 1; i >= 0; i--) {
-            LineMarker lm = lineBookmarks.getMarkers().get(i);
-            if (lm.getTabIndex() == tabIndex) {
-                lineBookmarks.removeBookmark(lm);
-            }
-        }
+        lineBookmarks.getMarkers().stream().filter(lm -> lm.getTabIndex() == tabIndex)
+                .sorted(Collections.reverseOrder()).forEach(lineBookmarks::removeBookmark);
+
         getSketch().setModified(true);
     }
 
@@ -1342,24 +1407,29 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     @Override
     public void setCode(SketchCode code) {
         super.setCode(code);
-        // send information to SmartCodeTextAreaPainter.paintLeftGutter()
-        // to paint these lines
-        if (lineBookmarks != null) {
-            for (LineMarker lm : lineBookmarks.getMarkers()) {
-                Bookmark bm = (Bookmark) lm;
-                if (isInCurrentTab(bm.getLineID())) {
-                    bm.paint();
-                }
-            }
+
+        if (occurrences != null) {
+            occurrences.updateAST();
         }
     }
+
+    int sketchChangedCount = 0;
 
     @Override
     public void sketchChanged() {
         super.sketchChanged();
+
         if (showBookmarks != null) {
             showBookmarks.updateTree();
         }
+        // getSketch().setModified(true);
+//        System.out.println("sketch changed " + ++sketchChangedCount);
+
+        if (occurrences != null) {
+            occurrences.updateAST();
+        }
+
+        sketchChangedCount++;
     }
 
     @Override
@@ -1420,27 +1490,40 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         ((SmartCodeMarkerColumn) errorColumn).updatePoints(points, parent);
     }
 
-    public void timedStatusNotice(String msg, int millis) {
-        if (statusNoticeTimer != null) {
-            statusNoticeTimer.cancel();
+//    int resumeCount;
+    protected final void pauseOccurrencesTracking(int millis) {
+        if (!OCCURRENCES_HIGHLIGHT || occurrences == null) {
+            return;
         }
-        statusNotice(msg);
 
-        statusNoticeTimer = new Timer();
-        statusNoticeTimer.schedule(new TimerTask() {
-            public void run() {
-                statusEmpty(); // Clear the status area.
-                statusNoticeTimer.cancel(); // Terminate the timer thread
-            }
+        if (getTextArea().containsListener(occurrences, CaretListener.class)) {
+            occurrences.stopTracking();
+//            System.out.println("stop AST tracking");
+        }
+
+        timedAction(() -> {
+            occurrences.startTracking();
+            occurrences.updateAST();
+//            System.out.println("resume AST tracking: " + ++resumeCount);
         }, millis);
     }
 
-    static public void timedAction(Runnable task, int millis) {
-        Timer timer = new Timer();
-        timer.schedule(new TimerTask() {
+    public void timedStatusNotice(String msg, int millis) {
+        statusNotice(msg);
+        timedAction(this::statusEmpty, millis);
+
+    }
+
+    public void timedAction(Runnable task, int millis) {
+        if (generalTimer != null) {
+            generalTimer.cancel();
+            generalTimer.purge();
+        }
+        generalTimer = new Timer();
+        generalTimer.schedule(new TimerTask() {
             public void run() {
                 task.run();
-                timer.cancel(); // Terminate the timer thread
+                generalTimer.cancel(); // Terminate the timer thread
             }
         }, millis);
     }

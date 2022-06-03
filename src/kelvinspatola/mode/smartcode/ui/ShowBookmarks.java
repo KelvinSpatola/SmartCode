@@ -7,52 +7,46 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import javax.swing.JDialog;
 import javax.swing.JScrollPane;
 import javax.swing.JTree;
-import javax.swing.WindowConstants;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
+import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
+import kelvinspatola.mode.smartcode.ui.LineBookmarks.BookmarkListListener;
 import processing.app.ui.Toolkit;
 import processing.app.ui.ZoomTreeCellRenderer;
 
-public class ShowBookmarks {
-    private List<LineMarker> bookmarks = new ArrayList<>();
-    private SmartCodeEditor editor;
-    private boolean showWindow;
 
-    private JDialog window;
-    private JTree tree;
+public class ShowBookmarks {
+    private final List<LineMarker> bookmarks;
+    private final SmartCodeEditor editor;
+    private final JDialog window;
+    private final JTree tree;
+    private final DefaultMutableTreeNode rootNode;
 
     // CONSTRUCTOR
     public ShowBookmarks(SmartCodeEditor editor) {
         this.editor = editor;
+        rootNode = new DefaultMutableTreeNode(editor.getSketch().getName());
         bookmarks = editor.lineBookmarks.getMarkers();
 
-        // Show Usage window
         window = new JDialog(editor);
-        window.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+        window.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
+        window.setSize(Toolkit.zoom(300, 400));
         window.setAutoRequestFocus(false);
+        window.setFocusableWindowState(false);
         window.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentHidden(ComponentEvent e) {
                 tree.setModel(null);
-                showWindow = false;
-            }
-
-            @Override
-            public void componentShown(ComponentEvent e) {
-                updateTree();
             }
         });
-        window.setSize(Toolkit.zoom(300, 400));
-        window.setFocusableWindowState(false);
         Toolkit.setIcon(window);
 
         ZoomTreeCellRenderer renderer = new ZoomTreeCellRenderer();
@@ -62,114 +56,101 @@ public class ShowBookmarks {
         renderer.setBackgroundSelectionColor(new Color(228, 248, 246));
         renderer.setBorderSelectionColor(Color.BLACK);
         renderer.setTextSelectionColor(Color.BLACK);
+
         tree = new JTree();
         tree.setCellRenderer(renderer);
-
-        JScrollPane sp = new JScrollPane();
-        sp.setViewportView(tree);
-        window.add(sp);
-
         tree.addTreeSelectionListener(e -> {
-            if (tree.getLastSelectedPathComponent() != null) {
-                DefaultMutableTreeNode tnode = (DefaultMutableTreeNode) tree.getLastSelectedPathComponent();
+            Object lastSelectedPathComponent = tree.getLastSelectedPathComponent();
 
-                if (tnode.getUserObject() instanceof BookmarkTreeNode) {
-                    BookmarkTreeNode node = (BookmarkTreeNode) tnode.getUserObject();
-                    editor.highlight(node.tabIndex, node.startOffset, node.stopOffset);
+            if (lastSelectedPathComponent != null) {
+                Object userObj = ((DefaultMutableTreeNode) lastSelectedPathComponent).getUserObject();
+
+                if (userObj instanceof LineMarker) {
+                    editor.highlight((LineMarker) userObj);
                 }
             }
         });
-        
-        editor.lineBookmarks.notifyChanges(b -> updateTree());
+        window.add(new JScrollPane(tree));
+
+        editor.lineBookmarks.addBookmarkListListener(new BookmarkListListener() {
+            public void bookmarkAdded(Bookmark bm) {
+                updateTree(); 
+            }
+
+            public void bookmarkRemoved(Bookmark bm) {
+                if (bookmarks.isEmpty()) {
+                    window.setVisible(false);
+                } else {
+                    updateTree();
+                }
+            }
+        });
     }
 
     public void handleShowBookmarks() {
-        showWindow = true;
+        if (window.isVisible())
+            return; // do nothing if the window is already visible.
+
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        GraphicsDevice defaultScreen = ge.getDefaultScreenDevice();
+        Rectangle rect = defaultScreen.getDefaultConfiguration().getBounds();
+        int maxX = (int) rect.getMaxX() - window.getWidth();
+        int x = Math.min(editor.getX() + editor.getWidth(), maxX);
+        int y = (x == maxX) ? 10 : editor.getY();
+        window.setLocation(x, y);
+        window.setVisible(true);
+        window.toFront();
+
         updateTree();
     }
 
     public void updateTree() {
-        // Create root node
-        DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode(editor.getSketch().getName());
+        if (!window.isVisible())
+            return;
 
-        bookmarks.stream().map(BookmarkTreeNode::new)
+        rootNode.removeAllChildren();
+
+        bookmarks.stream()
                 // Group nodes by tab index
-                .collect(Collectors.groupingBy(marker -> marker.tabIndex))
-                // Stream Map Entries of (tab index) <-> (List<BookmarkTreeNode>)
-                .entrySet().stream().map(entry -> {
-                    List<BookmarkTreeNode> nodes = entry.getValue(); // bookmarks per tab
+                .collect(Collectors.groupingBy(LineMarker::getTabIndex))
+                // Stream Map Entries of (tab index, List<LineMarker>)
+                .entrySet().stream()
+                .map(nodesPerTab -> {
+                    int tabIndex = nodesPerTab.getKey();
+                    int count = nodesPerTab.getValue().size();
 
-                    int count = nodes.size();
-                    String bookmarkLabel = (count == 1) ? "bookmark" : "bookmarks";
-                    String tabName = editor.getSketch().getCode(entry.getKey()).getPrettyName();
+                    String tabName = editor.getSketch().getCode(tabIndex).getPrettyName();
+                    String tabTitle = "<html><font color=#222222>" + tabName + "</font> <font color=#999999>" + count
+                            + " bookmark" + ((count == 1) ? "" : "s") + "</font></html>";
 
                     // Create new DefaultMutableTreeNode for this tab
-                    String tabLabel = "<html><font color=#222222>" + tabName + "</font> <font color=#999999>" + count
-                            + " " + bookmarkLabel + "</font></html>";
-
-                    DefaultMutableTreeNode tabNode = new DefaultMutableTreeNode(tabLabel);
+                    DefaultMutableTreeNode tabNode = new DefaultMutableTreeNode(tabTitle);
 
                     // Stream nodes belonging to this tab
-                    nodes.stream()
-                            //.sorted((n1, n2) -> n1.startOffset - n2.startOffset)
+                    nodesPerTab.getValue().stream()
                             // Convert TreeNodes to DefaultMutableTreeNodes
                             .map(DefaultMutableTreeNode::new)
                             // Add all as children of tab node
                             .forEach(tabNode::add);
+                    
                     return tabNode;
-
                 }).forEach(rootNode::add);
 
-        if (showWindow) {
-            // Update tree
-            EventQueue.invokeLater(() -> {
-                tree.setModel(new DefaultTreeModel(rootNode));
-
-                // Expand all nodes
-                for (int i = 0; i < tree.getRowCount(); i++) {
-                    tree.expandRow(i);
-                }
-
-                tree.setRootVisible(true);
-
-                if (!window.isVisible()) {
-                    window.setVisible(true);
-                    GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-                    GraphicsDevice defaultScreen = ge.getDefaultScreenDevice();
-                    Rectangle rect = defaultScreen.getDefaultConfiguration().getBounds();
-                    int maxX = (int) rect.getMaxX() - window.getWidth();
-                    int x = Math.min(editor.getX() + editor.getWidth(), maxX);
-                    int y = (x == maxX) ? 10 : editor.getY();
-                    window.setLocation(x, y);
-                }
-                window.toFront();
-                window.setTitle("Bookmarks encoutered: " + bookmarks.size());
-            });
-        }
+        // Update tree
+        EventQueue.invokeLater(() -> {
+            tree.setModel(new DefaultTreeModel(rootNode));
+            // Expand all nodes
+            for (int i = 0; i < tree.getRowCount(); i++) {
+                tree.expandRow(i);
+            }
+            tree.setRootVisible(true);
+            window.setTitle("Bookmarks encoutered: " + bookmarks.size());
+        });
     }
 
     public void dispose() {
         if (window != null) {
             window.dispose();
-        }
-    }
-
-    class BookmarkTreeNode {
-        final int tabIndex;
-        final int startOffset;
-        final int stopOffset;
-        final String text;
-
-        BookmarkTreeNode(LineMarker b) {
-            tabIndex = b.getTabIndex();
-            startOffset = b.getStartOffset();
-            stopOffset = b.getStopOffset();
-            text = b.getText();
-        }
-
-        @Override
-        public String toString() {
-            return text;
         }
     }
 }

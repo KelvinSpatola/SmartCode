@@ -4,6 +4,7 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
+import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Platform;
 import processing.app.syntax.PdeInputHandler;
 
@@ -25,7 +26,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         addKeyBinding("CS+E", e -> editor.deleteLineContent(getTextArea(e).getCaretLine()));
         addKeyBinding("A+ENTER", e -> editor.insertLineBreak(getTextArea(e).getCaretPosition()));
         addKeyBinding("CS+ENTER", e -> editor.insertNewLineAbove(getTextArea(e).getCaretLine()));
-        addKeyBinding("S+ENTER", e -> editor.insertNewLineBellow(getTextArea(e).getCaretLine()));
+        addKeyBinding("S+ENTER", e -> editor.insertNewLineBelow(getTextArea(e).getCaretLine()));
         addKeyBinding("C+PLUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() + 1));
         addKeyBinding("C+MINUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() - 1));
         addKeyBinding("CS+COMMA", e -> editor.handlePrefs());
@@ -43,6 +44,10 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     void testing() {
         //((SmartCodeEditor) editor).getSmartCodeTextArea().test();
         System.out.println("test");
+    }
+    
+    protected SmartCodeEditor getSmartCodeEditor() {
+        return (SmartCodeEditor) editor;
     }
 
     public void addKeyListener(KeyListener listener) {
@@ -63,6 +68,14 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     public boolean handlePressed(KeyEvent e) {
         if (e.isMetaDown())
             return false;
+        
+        final int keyCode = e.getKeyCode();
+        final char keyChar = e.getKeyChar();
+
+        if ((keyCode == KeyEvent.VK_BACK_SPACE) || (keyCode == KeyEvent.VK_TAB) || (keyCode == KeyEvent.VK_ENTER)
+                || ((keyChar >= 32) && (keyChar <= 127))) {
+            editor.getSketch().setModified(true);
+        }
 
         if (e.getKeyChar() == '}') {
             insertCloseBrace();

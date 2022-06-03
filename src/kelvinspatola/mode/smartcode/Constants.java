@@ -1,13 +1,14 @@
 package kelvinspatola.mode.smartcode;
 
+import java.util.regex.Pattern;
+
 import processing.app.Preferences;
 
 public final class Constants {
-    static public final String COMMENT_TEXT = "^(?!.*\\\".*\\/\\*.*\\\")(?:.*\\/\\*.*|\\h*\\*.*)";
-    static public final String STRING_TEXT = "^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}";
-    static public final String SPLIT_STRING_TEXT = "^\\h*\\+\\s*(?:\\\".*){2}";
-    static public final String BLOCK_OPENING = "^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$";
-    static public final String BLOCK_CLOSING = "^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*";
+    static public final Pattern BLOCK_OPENING = Pattern.compile("^(?!.*?\\/+.*?\\{.*|\\h*\\*.*|.*?\\\".*?\\{.*?\\\".*).*?\\{.*$");
+    static public final Pattern BLOCK_CLOSING = Pattern.compile("^(?!.*?\\/+.*?\\}.*|.*\\/\\*.*|\\h*\\*.*).*?\\}.*");
+    static public final Pattern COMMENT_TEXT = Pattern.compile("^(?!.*\\\".*\\/\\*.*\\\")(?:.*\\/\\*.*|\\h*\\*.*)"); // Editor
+    static public final Pattern STRING_TEXT = Pattern.compile("^(?!(.*?(\\*|\\/+).*?\\\".*\\\")).*(?:\\\".*){2}"); // Constants
 
     static public final String OPEN_COMMENT = "/*";
     static public final String CLOSE_COMMENT = "*/";
@@ -19,7 +20,5 @@ public final class Constants {
     
     static public final String PIN_MARKER = " //<bookmark>//";
 
-    private Constants() {
-    }
-
+    private Constants() { }
 }

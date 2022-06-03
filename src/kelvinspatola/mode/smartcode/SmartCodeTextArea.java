@@ -13,6 +13,7 @@ import java.awt.event.MouseMotionListener;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EventListener;
+import java.util.stream.Stream;
 
 import javax.swing.JPopupMenu;
 import javax.swing.event.CaretListener;
@@ -32,6 +33,9 @@ public class SmartCodeTextArea extends JavaTextArea {
     private MouseMotionListener pdeDragHandlerListener;
     protected JPopupMenu gutterRightClickPopup;
     protected SnippetManager snippetManager;
+
+    protected static int tabSize;
+    protected static String tabSpaces;
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -150,33 +154,23 @@ public class SmartCodeTextArea extends JavaTextArea {
     public void setGutterRightClickPopup(JPopupMenu popupMenu) {
         gutterRightClickPopup = popupMenu;
     }
-    
-    public boolean containsListener(final CaretListener listener, final Class<? extends EventListener> type) {
-        final Object[] listeners = eventListenerList.getListeners(type);
-        for (Object l : listeners) {
-            if (listener == l) 
-                return true;
-        }
-        return false;
+
+    public boolean containsListener(final EventListener listener, final Class<? extends EventListener> type) {
+        return Stream.of(eventListenerList.getListeners(type)).anyMatch(ls -> ls == listener);
     }
 
-//    public void addCaretListenerIfAbsent(CaretListener listener) {
-//        boolean containsListener = false;
-//
-//        containsListener = containsListener(listener, CaretListener.class);
-//
-//        if (!containsListener) {
-//            addCaretListener(listener);
-//            System.out.println("Listener added");
-//        } else {
-//            System.out.println("Listener already exists!!!");            
-//        }
-//    }
+    public void addCaretListenerIfAbsent(CaretListener listener) {
+        if (!containsListener(listener, CaretListener.class)) {
+            addCaretListener(listener);
+        }
+    }
 
-//    @Override
-//    public void updateTheme() {
-//        super.updateTheme();
-//    }
+    @Override
+    public void updateTheme() {
+        super.updateTheme();
+        tabSize = Preferences.getInteger("editor.tabs.size");
+        tabSpaces = addSpaces(tabSize);
+    }
 
     /**
      * Converts a y co-ordinate to a line index. Rewriting this because i need it to
@@ -231,7 +225,7 @@ public class SmartCodeTextArea extends JavaTextArea {
             final String lineText = getLineText(getCaretLine());
             boolean isInsideQuotes = false;
 
-            if (lineText.matches(STRING_TEXT)) {
+            if (STRING_TEXT.matcher(lineText).matches()) {
                 final int caret = caretPositionInsideLine();
                 int leftQuotes = 0, rightQuotes = 0;
 
@@ -339,30 +333,27 @@ public class SmartCodeTextArea extends JavaTextArea {
         int line = getLineOfOffset(offset);
         return getLineIndentation(line);
     }
-
-    public static String indentText(String text, int indent) {
-        String[] lines = text.split(LF);
-        StringBuilder sb = new StringBuilder();
-
-        for (String line : lines) {
-            sb.append(addSpaces(indent)).append(line).append(LF);
-        }
-        return sb.toString();
+    
+    public static String indentOutdentText(String text, int length, boolean indent) {
+        return indent ? indentText(text, length) : outdentText(text, length);
     }
 
-    public static String outdentText(String text) {
-        String[] lines = text.split(LF);
-        StringBuilder sb = new StringBuilder();
-        int tabSize = Preferences.getInteger("editor.tabs.size");
+    public static String indentText(String text, int length) {
+        return Stream.of(text.split(LF))
+                .map(s -> addSpaces(length) + s + LF)
+                .reduce("", String::concat).stripTrailing();
+    }
 
-        for (int i = 0; i < lines.length; i++) {
-            String str = lines[i].substring(tabSize);
-            if (i < lines.length - 1)
-                sb.append(str).append(LF);
-            else
-                sb.append(str);
-        }
-        return sb.toString();
+    public static String outdentText(String text, int length) {
+        return Stream.of(text.split(LF)).map(s -> {
+            int firstChar;
+            for (firstChar = 0; firstChar < s.length(); firstChar++) {
+                if (s.charAt(firstChar) != ' ') {
+                    break;
+                }
+            }
+            return s.substring(Math.min(firstChar, length)) + LF;
+        }).reduce("", String::concat).stripTrailing();
     }
 
     public int getBlockDepth(int line) {
@@ -378,11 +369,11 @@ public class SmartCodeTextArea extends JavaTextArea {
         while (lineIndex >= 0) {
             String lineText = getLineText(lineIndex);
 
-            if (lineText.matches(BLOCK_OPENING)) {
+            if (BLOCK_OPENING.matcher(lineText).matches()) {
                 depthUp++;
             }
 
-            else if (lineText.matches(BLOCK_CLOSING)) {
+            else if (BLOCK_CLOSING.matcher(lineText).matches()) {
                 depthUp--;
                 isTheFirstBlock = false;
             }
@@ -393,17 +384,17 @@ public class SmartCodeTextArea extends JavaTextArea {
         lineIndex = line;
         boolean isTheLastBlock = true;
 
-        if (getLineText(lineIndex).matches(BLOCK_OPENING)) {
+        if (BLOCK_OPENING.matcher(getLineText(lineIndex)).matches()) {
             depthDown = 1;
         }
 
         while (lineIndex < getLineCount()) {
             String lineText = getLineText(lineIndex);
 
-            if (lineText.matches(BLOCK_CLOSING))
+            if (BLOCK_CLOSING.matcher(lineText).matches())
                 depthDown++;
 
-            else if (lineText.matches(BLOCK_OPENING)) {
+            else if (BLOCK_OPENING.matcher(lineText).matches()) {
                 depthDown--;
                 isTheLastBlock = false;
             }
@@ -435,17 +426,17 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         if (goUp) {
 
-            if (getLineText(lineIndex).matches(BLOCK_CLOSING)) {
+            if (BLOCK_CLOSING.matcher(getLineText(lineIndex)).matches()) {
                 lineIndex--;
             }
 
             while (lineIndex >= 0) {
                 String lineText = getLineText(lineIndex);
 
-                if (lineText.matches(BLOCK_CLOSING)) {
+                if (BLOCK_CLOSING.matcher(lineText).matches()) {
                     blockDepth++;
 
-                } else if (lineText.matches(BLOCK_OPENING)) {
+                } else if (BLOCK_OPENING.matcher(lineText).matches()) {
                     blockDepth--;
 
                     if (blockDepth == 0)
@@ -456,17 +447,17 @@ public class SmartCodeTextArea extends JavaTextArea {
             }
         } else { // go down
 
-            if (getLineText(lineIndex).matches(BLOCK_OPENING)) {
+            if (BLOCK_OPENING.matcher(getLineText(lineIndex)).matches()) {
                 lineIndex++;
             }
 
             while (lineIndex < getLineCount()) {
                 String lineText = getLineText(lineIndex);
 
-                if (lineText.matches(BLOCK_OPENING)) {
+                if (BLOCK_OPENING.matcher(lineText).matches()) {
                     blockDepth++;
 
-                } else if (lineText.matches(BLOCK_CLOSING)) {
+                } else if (BLOCK_CLOSING.matcher(lineText).matches()) {
                     blockDepth--;
 
                     if (blockDepth == 0)
@@ -491,10 +482,10 @@ public class SmartCodeTextArea extends JavaTextArea {
         while (lineIndex >= 0) {
             String lineText = getLineText(lineIndex);
 
-            if (lineText.matches(BLOCK_CLOSING)) {
+            if (BLOCK_CLOSING.matcher(lineText).matches()) {
                 blockDepth++;
 
-            } else if (lineText.matches(BLOCK_OPENING) && !first) {
+            } else if (BLOCK_OPENING.matcher(lineText).matches() && !first) {
                 blockDepth--;
 
                 if (blockDepth == 0)
@@ -576,9 +567,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     }
 
     private static String addSpaces(int length) {
-        if (length <= 0)
-            return "";
-        return String.format("%1$" + length + "s", "");
+        return new String(new char[length]).replace('\0', ' ');
     }
 
 }

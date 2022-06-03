@@ -89,7 +89,7 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
 
             if (snippets.containsKey(trigger)) {
                 int line = editor.getTextArea().getCaretLine();
-                int indent = editor.getSmartCodeTextArea().getLineIndentation(line);
+                int indent = editor.getTextArea().getLineIndentation(line);
 
                 currentSnippet = snippets.get(trigger);
 
@@ -187,7 +187,7 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
         String lineText = editor.getLineText(line);
 
         StringBuilder sb = new StringBuilder();
-        int index = editor.getSmartCodeTextArea().caretPositionInsideLine() - 1;
+        int index = editor.getTextArea().caretPositionInsideLine() - 1;
 
         while (index >= 0) {
             char ch = lineText.charAt(index);

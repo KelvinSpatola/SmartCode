@@ -6,7 +6,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 
 import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
@@ -15,18 +14,26 @@ import processing.app.SketchCode;
 import processing.mode.java.debug.LineHighlight;
 import processing.mode.java.debug.LineID;
 
+
 public class LineBookmarks implements LinePainter {
     private final List<LineMarker> markers = new ArrayList<>();
-    private Consumer<LineBookmarks> receiver;
+    private final List<BookmarkListListener> listeners = new ArrayList<>();
     private Color columnColor;
     protected SmartCodeEditor editor;
-
+    
+    public interface BookmarkListListener {
+        void bookmarkAdded(Bookmark bm);
+        void bookmarkRemoved(Bookmark bm);
+    }
+    
+    
     // CONSTRUCTOR
     public LineBookmarks(SmartCodeEditor editor) {
         this.editor = editor;
         updateTheme();
     }
 
+    
     /**
      * Adds a bookmark with a location assigned by a {@code LineID}.
      * 
@@ -37,11 +44,14 @@ public class LineBookmarks implements LinePainter {
      *      target="_blank"> LineID</a>
      */
     public void addBookmark(LineID lineID, ColorTag colorTag) {
-        markers.add(new Bookmark(lineID, colorTag));
+        Bookmark bm = new Bookmark(lineID, colorTag);
+        markers.add(bm);
         markers.sort(null);
-        notifyChanges();
+        listeners.stream().forEach(ls -> ls.bookmarkAdded(bm));
+        editor.updateColumnPoints(markers, Bookmark.class);
     }
 
+    
     /**
      * Removes a bookmark line with the provided {@code lineID}.
      * 
@@ -52,15 +62,16 @@ public class LineBookmarks implements LinePainter {
      */
     public void removeBookmark(LineID lineID) {
         Bookmark bm = getBookmark(lineID);
-
+        
         if (bm != null) {
             bm.dispose();
             markers.remove(bm);
-            bm = null;
-            notifyChanges();
+            listeners.stream().forEach(ls -> ls.bookmarkRemoved(bm));
+            editor.updateColumnPoints(markers, Bookmark.class);
         }
     }
 
+    
     /**
      * Removes a bookmark line with the provided {@code marker}.
      * 
@@ -74,15 +85,16 @@ public class LineBookmarks implements LinePainter {
             throw new IllegalArgumentException("Params for this method should be of subtype " + Bookmark.class);
         }
         Bookmark bm = (Bookmark) marker;
-
+        
         if (bm != null) {
             bm.dispose();
             markers.remove(bm);
-            bm = null;
-            notifyChanges();
+            listeners.stream().forEach(ls -> ls.bookmarkRemoved(bm));
+            editor.updateColumnPoints(markers, Bookmark.class);
         }
     }
 
+    
     /**
      * Checks whether there's a bookmark on the current tab with the line index
      * provided.
@@ -91,16 +103,11 @@ public class LineBookmarks implements LinePainter {
      * @return true if there's a bookmark on the current tab with this line index
      */
     public boolean isBookmark(int line) {
-        LineID lineID = editor.getLineIDInCurrentTab(line);
-        for (LineMarker lm : markers) {
-            Bookmark bm = (Bookmark) lm;
-            if (bm.isOnLine(lineID)) {
-                return true;
-            }
-        }
-        return false;
+        final LineID lineID = editor.getLineIDInCurrentTab(line);
+        return markers.stream().anyMatch(lm -> ((Bookmark) lm).isOnLine(lineID));
     }
 
+    
     /**
      * Returns an existing bookmark with the provided {@link LineID}.
      * 
@@ -109,15 +116,14 @@ public class LineBookmarks implements LinePainter {
      *         bookmarked. Null otherwise.
      */
     public Bookmark getBookmark(LineID lineID) {
-        for (LineMarker lm : markers) {
-            Bookmark bm = (Bookmark) lm;
-            if (bm.isOnLine(lineID)) {
-                return bm;
-            }
-        }
-        return null;
+        return markers.stream()
+                .map(Bookmark.class::cast)
+                .filter(lm -> lm.isOnLine(lineID))
+                .findAny()
+                .orElse(null);
     }
 
+    
     /**
      * Returns a list with all bookmarks in this sketch.
      * 
@@ -127,6 +133,7 @@ public class LineBookmarks implements LinePainter {
         return markers;
     }
 
+    
     /**
      * Checks if there are bookmarks in the sketch.
      * 
@@ -136,33 +143,31 @@ public class LineBookmarks implements LinePainter {
         return !markers.isEmpty();
     }
 
+    
     /**
      * Returns the number of bookmarks in this sketch.
      */
     public int markerCount() {
         return markers.size();
     }
-
-    public void notifyChanges(Consumer<LineBookmarks> receiver) {
-        if (receiver != null)
-            this.receiver = receiver;
-    }
-
-    protected void notifyChanges() {
-        if (receiver != null) {
-            receiver.accept(this);
+    
+    
+    public void addBookmarkListListener(BookmarkListListener ls) {
+        if (ls != null) {
+            listeners.add(ls);
         }
-        editor.updateColumnPoints(markers, Bookmark.class);
     }
-
+    
     public void stopBookmarkTracking() {
         markers.forEach(bm -> ((Bookmark) bm).stopTracking());
     }
 
+    
     public void startBookmarkTracking() {
         markers.forEach(bm -> ((Bookmark) bm).startTracking());
     }
 
+    
     @Override
     public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
         if (!SmartCodeTheme.BOOKMARKS_HIGHLIGHT || markers.isEmpty() || editor.isDebuggerEnabled())
@@ -227,6 +232,7 @@ public class LineBookmarks implements LinePainter {
         return false;
     }
 
+    
     @Override
     public void updateTheme() {
         short i = 1;
@@ -236,6 +242,7 @@ public class LineBookmarks implements LinePainter {
         columnColor = SmartCodeTheme.getColor("column.bookmark.color");
     }
 
+    
     /**
      * This class represents a single marker. Each marker is unique. This class
      * wraps a <a href=
@@ -247,9 +254,6 @@ public class LineBookmarks implements LinePainter {
      * This class implements the {@code compareTo(Object)} method of the <a href=
      * "https://docs.oracle.com/javase/8/docs/api/java/lang/Comparable.html">
      * Comparable</a> interface to order each marker at the time of its creation.
-     * 
-     * @author Kelvin Spátola
-     *
      */
     public class Bookmark implements LineMarker, Comparable<Bookmark> {
         private LineHighlight highlight;
@@ -309,6 +313,11 @@ public class LineBookmarks implements LinePainter {
         }
 
         @Override
+        public Class<?> getParent() {
+            return this.getClass();
+        }
+
+        @Override
         public int getTabIndex() {
             SketchCode[] code = editor.getSketch().getCode();
             for (int i = 0; i < code.length; i++) {
@@ -326,27 +335,28 @@ public class LineBookmarks implements LinePainter {
 
         @Override
         public int getStartOffset() {
-            return editor.getSmartCodeTextArea().getLineStartOffset(getTabIndex(), getLine());
+            return editor.getTextArea().getLineStartOffset(getTabIndex(), getLine());
         }
 
         @Override
         public int getStopOffset() {
-            return editor.getSmartCodeTextArea().getLineStopOffset(getTabIndex(), getLine()) - 1;
+            return editor.getTextArea().getLineStopOffset(getTabIndex(), getLine()) - 1;
         }
 
         @Override
         public String getText() {
             String colorHex = Integer.toHexString(colorTag.getColor().getRGB()).substring(2);
-            String lineText = editor.getSmartCodeTextArea().getLineText(getTabIndex(), getLine()).trim();
+            String lineText = editor.getTextArea().getLineText(getTabIndex(), getLine()).trim();
             String colorIndicator = "<font color=" + colorHex + "> &#x25A0; </font>"; // &#x25A0; -> HTML code for the
                                                                                       // square
             String lineNumberIndicator = "<font color=#bbbbbb>" + (getLine() + 1) + ": </font>";
             String lineTextIndicator = "<font color=#000000>" + lineText + "</font>";
             return "<html>" + colorIndicator + lineNumberIndicator + lineTextIndicator + "</html>";
         }
-
-        public Class<?> getParent() {
-            return this.getClass();
+        
+        @Override
+        public String toString() {
+            return getText();
         }
 
         @Override

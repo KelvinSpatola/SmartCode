@@ -14,6 +14,6 @@ public interface LineMarker {
     int getStopOffset();
 
     String getText();
-    
+        
     void paintMarker(Graphics gfx, int x, int y, int w, int h);
 }
