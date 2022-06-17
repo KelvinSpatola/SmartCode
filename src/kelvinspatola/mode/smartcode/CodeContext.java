@@ -1,4 +1,4 @@
-package kelvinspatola.mode.smartcode.completion;
+package kelvinspatola.mode.smartcode;
 
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
@@ -26,7 +26,6 @@ import org.eclipse.jdt.core.dom.StringLiteral;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.VariableDeclaration;
 
-import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.ui.LineMarker;
 import processing.app.syntax.InputHandler;
 import processing.mode.java.ASTUtils;

@@ -313,25 +313,10 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
     }
 
-    static public int getLineIndentation(String lineText) {
-        char[] chars = lineText.toCharArray();
-        int index = 0;
-
-        while (index < chars.length && Character.isWhitespace(chars[index])) {
-            index++;
-        }
-        return index;
-    }
-
     public int getLineIndentation(int line) {
         int start = getLineStartOffset(line);
         int end = getLineStartNonWhiteSpaceOffset(line);
         return end - start;
-    }
-
-    public int getLineIndentationOfOffset(int offset) {
-        int line = getLineOfOffset(offset);
-        return getLineIndentation(line);
     }
     
     public static String indentOutdentText(String text, int length, boolean indent) {
@@ -413,10 +398,6 @@ public class SmartCodeTextArea extends JavaTextArea {
         return Math.max(0, Math.min(depthUp, depthDown));
     }
 
-    public int getMatchingBraceLine(boolean goUp) {
-        return getMatchingBraceLine(getCaretLine(), goUp);
-    }
-
     public int getMatchingBraceLine(int lineIndex, boolean goUp) {
         if (lineIndex < 0 || lineIndex >= getLineCount()) {
             return -1;
@@ -470,34 +451,6 @@ public class SmartCodeTextArea extends JavaTextArea {
         return -1;
     }
 
-    // HACK
-    public int getMatchingBraceLineAlt(int lineIndex) {
-        if (lineIndex < 0) {
-            return -1;
-        }
-
-        int blockDepth = 1;
-        boolean first = true;
-
-        while (lineIndex >= 0) {
-            String lineText = getLineText(lineIndex);
-
-            if (BLOCK_CLOSING.matcher(lineText).matches()) {
-                blockDepth++;
-
-            } else if (BLOCK_OPENING.matcher(lineText).matches() && !first) {
-                blockDepth--;
-
-                if (blockDepth == 0)
-                    return lineIndex;
-
-            }
-            lineIndex--;
-            first = false;
-        }
-        return -1;
-    }
-
     public static boolean checkBracketsBalance(String text, String leftBrackets, String rightBrackets) {
         // Using ArrayDeque is faster than using Stack class
         Deque<Character> stack = new ArrayDeque<>();
@@ -521,17 +474,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     }
 
     public int caretPositionInsideLine() {
-        return getPositionInsideLineWithOffset(getCaretPosition());
-    }
-
-    public int getPositionInsideLineWithOffset(int offset) {
-        int line = getLineOfOffset(offset);
-        int lineStartOffset = getLineStartOffset(line);
-        return offset - lineStartOffset;
-    }
-
-    public int getOffsetOfPrevious(char ch) {
-        return getOffsetOfPrevious(ch, getCaretPosition());
+        return getCaretPosition() - getLineStartOffset(getCaretLine());
     }
 
     public int getOffsetOfPrevious(char ch, int offset) {
@@ -546,28 +489,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         return -1;
     }
 
-    public char prevChar() {
-        return prevChar(getText(), getCaretPosition() - 1);
-    }
-
-    public char prevChar(int index) {
-        return prevChar(getText(), index);
-    }
-
-    public static char prevChar(String text, int index) {
-        char[] code = text.toCharArray();
-
-        while (index >= 0) {
-            if (!Character.isWhitespace(code[index])) {
-                return code[index];
-            }
-            index--;
-        }
-        return Character.UNASSIGNED;
-    }
-
-    private static String addSpaces(int length) {
+    static private String addSpaces(int length) {
         return new String(new char[length]).replace('\0', ' ');
     }
-
 }

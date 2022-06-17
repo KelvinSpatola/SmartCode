@@ -4,7 +4,6 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,6 @@ import processing.mode.java.PreprocSketch;
 
 public class CodeOccurrences implements CaretListener, LinePainter {
     private Map<Integer, List<LineMarker>> occurrences = new HashMap<>();
-//    private List<LineMarker> occurrences = new ArrayList<>();
     private SmartCodeEditor editor;
     private PreprocService pps;
 
@@ -106,16 +104,10 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         if (candidate == null) 
             return;
 
-//        occurrences = Collections.synchronizedList(
-//                findAllOccurrences(root, candidate).stream()
-//                .map(node -> mapToOccurrence(ps, node))
-//                .filter(o -> o.getTabIndex() == tab) // get only the ones in the current tab
-//                .collect(Collectors.toList())); 
-        occurrences = Collections.synchronizedMap(
-                findAllOccurrences(root, candidate).stream()
+        occurrences = findAllOccurrences(root, candidate).stream()
                 .map(node -> mapToOccurrence(ps, node))
                 .filter(o -> o.getTabIndex() == tab) // get only the ones in the current tab
-                .collect(Collectors.groupingBy(o -> o.getLine())));        
+                .collect(Collectors.groupingBy(o -> o.getLine()));        
     }
 
     
@@ -248,11 +240,7 @@ public class CodeOccurrences implements CaretListener, LinePainter {
 
     
     static private List<LineMarker> toList(Map<Integer, List<LineMarker>> map) {
-      List<LineMarker> mergedList = new ArrayList<>();
-      map.values().forEach(list -> {
-          mergedList.addAll(list);
-      });
-      return mergedList;
+        return map.values().stream().flatMap(List::stream).collect(Collectors.toList());
     }
     
     
@@ -261,26 +249,12 @@ public class CodeOccurrences implements CaretListener, LinePainter {
         if (occurrences.isEmpty() || !SmartCodeTheme.OCCURRENCES_HIGHLIGHT)
             return false;
 
-        // This block needs to be synchronized because it may sometimes throw a
-        // ConcurrentModificationException while we're clearing the occurrences list
-        // when stopTracking() is called. 
-//        synchronized (occurrences) {
-//            occurrences.stream()
-//                    .filter(lm -> lm.getLine() == line && !(ta.isSelectionActive() && ta.getCaretLine() == line))
-//                    .forEach(o -> {
-//                        int lineStart = ta.getLineStartOffset(line);
-//                        int wordStart = o.getStartOffset() - lineStart;
-//                        int wordEnd = o.getStopOffset() - lineStart;
-//                        int x = ta._offsetToX(line, wordStart);
-//                        int w = ta._offsetToX(line, wordEnd) - x;
-//
-//                        gfx.setColor(occurenceColor);
-//                        gfx.fillRect(x, y, w, h);
-//                    });
-//        }
-        
         if (occurrences.containsKey(line)) {
-            occurrences.get(line).forEach(o -> {
+            List<LineMarker> occurrencesInThisLine = occurrences.get(line);
+            if (occurrencesInThisLine == null)
+                return false;
+
+            occurrencesInThisLine.forEach(o -> {
                 if (!(ta.isSelectionActive() && ta.getCaretLine() == line)) {
                     int lineStart = ta.getLineStartOffset(line);
                     int wordStart = o.getStartOffset() - lineStart;

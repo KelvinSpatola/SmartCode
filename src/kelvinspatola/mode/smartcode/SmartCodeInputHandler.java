@@ -4,7 +4,6 @@ import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Platform;
 import processing.app.syntax.PdeInputHandler;
 
@@ -42,10 +41,10 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     }
 
     void testing() {
-        //((SmartCodeEditor) editor).getSmartCodeTextArea().test();
-        System.out.println("test");
+        int line = editor.getTextArea().getCaretLine();
+        System.out.println("depth: " + getSmartCodeEditor().getTextArea().getBlockDepth(line));
     }
-    
+
     protected SmartCodeEditor getSmartCodeEditor() {
         return (SmartCodeEditor) editor;
     }
@@ -68,7 +67,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     public boolean handlePressed(KeyEvent e) {
         if (e.isMetaDown())
             return false;
-        
+
         final int keyCode = e.getKeyCode();
         final char keyChar = e.getKeyChar();
 

@@ -1,6 +1,16 @@
 package kelvinspatola.mode.smartcode;
 
-import static kelvinspatola.mode.smartcode.Constants.*;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_CLOSING;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_OPENING;
+import static kelvinspatola.mode.smartcode.Constants.CLOSE_BRACE;
+import static kelvinspatola.mode.smartcode.Constants.CLOSE_COMMENT;
+import static kelvinspatola.mode.smartcode.Constants.COMMENT_TEXT;
+import static kelvinspatola.mode.smartcode.Constants.INDENT;
+import static kelvinspatola.mode.smartcode.Constants.LF;
+import static kelvinspatola.mode.smartcode.Constants.OPEN_BRACE;
+import static kelvinspatola.mode.smartcode.Constants.OPEN_COMMENT;
+import static kelvinspatola.mode.smartcode.Constants.PIN_MARKER;
+import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.OCCURRENCES_HIGHLIGHT;
 
 import java.awt.BorderLayout;
@@ -17,24 +27,40 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import javax.swing.*;
-import javax.swing.event.*;
+import javax.swing.JComponent;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.KeyStroke;
+import javax.swing.event.CaretListener;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 
-import kelvinspatola.mode.smartcode.completion.CodeContext;
-import kelvinspatola.mode.smartcode.ui.*;
+import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
+import kelvinspatola.mode.smartcode.ui.ColorTag;
+import kelvinspatola.mode.smartcode.ui.LineBookmarks;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
+import kelvinspatola.mode.smartcode.ui.LineMarker;
+import kelvinspatola.mode.smartcode.ui.ShowBookmarks;
+import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
+import kelvinspatola.mode.smartcode.ui.SmartCodePreferencesFrame;
+import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Base;
 import processing.app.Language;
 import processing.app.Messages;
 import processing.app.Mode;
 import processing.app.Platform;
 import processing.app.Preferences;
-import processing.app.Sketch;
 import processing.app.SketchCode;
 import processing.app.syntax.DefaultInputHandler;
 import processing.app.syntax.JEditTextArea;
@@ -82,7 +108,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             lineBookmarks.addBookmark(lineID, loadedBookmarks.get(lineID));
         }
         // setting bookmarks will flag sketch as modified, so override this here
-        getSketch().setModified(false);
+        sketch.setModified(false);
         // report to the preprocService that we made changes to the sketch's documents
         preprocService.notifySketchChanged();
 
@@ -205,7 +231,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 createItem(menu, "Toggle block comment", "C+7", this::toggleBlockComment),
                 createItem(menu, "Format selected text", "C+T", this::handleAutoFormat),
                 createItem(menu, "To upper case", "CS+U", () -> changeCase(true)),
-                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) };
+                createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) 
+                };
         createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
 
         menu.addSeparator(); // ---------------------------------------------
@@ -218,7 +245,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                     JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
 
             if (choice == JOptionPane.YES_OPTION) {
-                clearBookmarksFromTab(getSketch().getCurrentCodeIndex());
+                clearBookmarksFromTab(sketch.getCurrentCodeIndex());
             }
         });
 
@@ -338,7 +365,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                     bm.setColorTag(colorTag);
                     showBookmarks.updateTree();
                 }
-                getSketch().setModified(true);
+                sketch.setModified(true);
                 currentBookmarkColor = colorTag;
             }
         }
@@ -477,9 +504,9 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         int caret = getCaretOffset();
 
         if (!isSelectionActive()) {
-            int positionInLine = getTextArea().getPositionInsideLineWithOffset(caret);
             int caretLine = textarea.getCaretLine();
-            String lineText = getLineText(caretLine);
+            int positionInLine = caret - getLineStartOffset(caretLine);
+            String lineText = getLineText(caretLine);            
 //
 //            long time = System.nanoTime();
 //            
@@ -671,8 +698,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 if (!BLOCK_CLOSING.matcher(lineText).matches())
                     indent += tabSize;
 
-                int positionInLine = getTextArea().getPositionInsideLineWithOffset(offset);
-
+                int positionInLine = offset - getLineStartOffset(line);
                 if (BLOCK_OPENING.matcher(lineText).matches() && positionInLine <= lineText.indexOf(OPEN_BRACE))
                     indent -= tabSize;
             }
@@ -704,7 +730,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             if (hasBookmarksInCurrentTab()) {
                 taggedLines = new ArrayList<>();
                 colorTags = new ArrayList<>();
-                final int currentTab = getSketch().getCurrentCodeIndex();
+                final int currentTab = sketch.getCurrentCodeIndex();
 
                 for (int i = lineBookmarks.markerCount() - 1; i >= 0; i--) {
                     LineMarker lm = lineBookmarks.getMarkers().get(i);
@@ -789,7 +815,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
 
                 stopCompoundEdit();
-                getSketch().setModified(true);
+                sketch.setModified(true);
                 statusNotice(Language.text("editor.status.autoformat.finished"));
             }
 
@@ -827,7 +853,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
                 if ((stringEnd - stringStart) > maxLength) {
                     if (depth == 0) {
-                        indent = SmartCodeTextArea.getLineIndentation(lineText);
+                        indent = getLineIndentation(lineText);
                     }
                     String preffix = addSpaces(indent) + tabSpaces + "+ \"";
                     String currLine = lineText.substring(0, stringStart + maxLength - 1) + "\"";
@@ -850,41 +876,57 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         return result.toString();
     }
 
+    
+    /**
+     * Deletes the line provided by the index. If text is selected, delete all lines that are selected.
+     * 
+     * @param line the line index
+     */
     public void deleteLine(int line) {
+        if (getText().isEmpty()) {
+            getToolkit().beep();
+            return;
+        }
+                
         if (lineBookmarks.hasBookmarks()) {
             lineBookmarks.removeBookmark(getCurrentLineID());
-        }
-
+        } 
+        
+        Selection s = new Selection();
+        
         // in case we are in the last line of text (but not when it's also first one)
         if (line == getLineCount() - 1 && line != 0) {
             // subtracting 1 from getLineStartOffset() will delete the line break prior
             // to this line, causing the caret to move to the end of the previous line
-            int start = getLineStartOffset(line) - 1;
-            int end = getLineStopOffset(line) - 1;
-
-            setSelection(start, end);
-            setSelectedText("");
-
-        } else if (getLineCount() > 1) {
-            setLineText(line, "");
-
-        } else { // in case we are deleting the only line that remains
-            if (getLineText(line).isEmpty()) {
-                getToolkit().beep();
-                return;
-            }
-            setText("");
-        }
+            s.start--;
+            s.end--;
+        } 
+        
+        setSelection(s.start, s.end + 1);
+        setSelectedText("", true);
+        sketch.setModified(true);
     }
 
+    
+    /**
+     * Deletes the text on the given line, leaving the appropriate indentation.
+     * 
+     * @param line the line index
+     */
     public void deleteLineContent(int line) {
-        int start = getTextArea().getLineStartNonWhiteSpaceOffset(line);
-        int end = getLineStopOffset(line) - 1;
+        int indent = 0;
+        int brace = getTextArea().getMatchingBraceLine(line, true);
+        if (brace != -1) {
+            indent = getTextArea().getLineIndentation(brace) + tabSize;
+        }
 
-        setSelection(start, end);
-        setSelectedText("");
+        setSelection(getLineStartOffset(line), getLineStopOffset(line) - 1);
+        setSelectedText(addSpaces(indent), true);
+        sketch.setModified(true);
     }
 
+    
+    
     public void toggleBlockComment() {
         if (isSelectionActive()) {
             String selectedText = getSelectedText();
@@ -892,20 +934,18 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
             if (selectedText.startsWith(OPEN_COMMENT) && selectedText.endsWith(CLOSE_COMMENT)) {
                 result.append(selectedText);
-                result.delete(0, 3);
-                result.delete(result.length() - 3, result.length());
+                result.delete(0, 2);
+                result.delete(result.length() - 2, result.length());
 
             } else {
-                result.append(OPEN_COMMENT).append(" " + selectedText + " ").append(CLOSE_COMMENT);
+                result.append(OPEN_COMMENT).append(selectedText).append(CLOSE_COMMENT);
             }
 
             int selectionStart = getSelectionStart();
             int selectionEnd = selectionStart + result.length();
 
-            startCompoundEdit();
-            setSelectedText(result.toString());
+            setSelectedText(result.toString(), true);
             setSelection(selectionStart, selectionEnd);
-            stopCompoundEdit();
         }
     }
 
@@ -931,10 +971,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         // flag the sketch as modified only if any changes have taken place
         if (!modified.equals(original)) {
-            getSketch().setModified(true);
+            sketch.setModified(true);
         }
     }
 
+    
     /**
      * Duplicates selected lines of text. Can duplicate a selection block or just a
      * line if no text is selected.
@@ -960,7 +1001,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         } else {
             setSelection(getCaretOffset(), s.end + 1);
         }
-        getSketch().setModified(true);
+        sketch.setModified(true);
     }
 
     
@@ -1255,10 +1296,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
      */
 
     protected class Selection {
-        public int start, end, startLine, endLine;
-        public String text;
+        int start, end, startLine, endLine;
+        String text;
 
-        public Selection() {
+        Selection() {
             startLine = textarea.getSelectionStartLine();
             endLine = textarea.getSelectionStopLine();
 
@@ -1270,12 +1311,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
             start = getLineStartOffset(startLine);
             end = Math.max(start, getLineStopOffset(endLine) - 1);
-
             text = getText(start, end);
-        }
-
-        public boolean isEmpty() {
-            return text.isEmpty();
         }
     }
     
@@ -1311,7 +1347,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         } else {
             lineBookmarks.removeBookmark(bm);
         }
-        getSketch().setModified(true);
+        sketch.setModified(true);
     }
 
     public boolean moveBookmarkTo(int oldLinePos, int newLinePos) {
@@ -1327,7 +1363,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     }
 
     public boolean hasBookmarksInCurrentTab() {
-        final int currentTab = getSketch().getCurrentCodeIndex();
+        final int currentTab = sketch.getCurrentCodeIndex();
         return lineBookmarks.getMarkers().stream().anyMatch(lm -> lm.getTabIndex() == currentTab);
     }
 
@@ -1335,7 +1371,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         lineBookmarks.getMarkers().stream().filter(lm -> lm.getTabIndex() == tabIndex)
                 .sorted(Collections.reverseOrder()).forEach(lineBookmarks::removeBookmark);
 
-        getSketch().setModified(true);
+        sketch.setModified(true);
     }
 
     protected void addBookmarkComments(String tabFilename) {
@@ -1375,7 +1411,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         final Map<LineID, ColorTag> bms = new HashMap<>();
 
         // iterate over all tabs
-        Sketch sketch = getSketch();
         for (SketchCode tab : sketch.getCode()) {
             String code = tab.getProgram();
             String[] codeLines = code.split("\\r?\\n");
@@ -1490,7 +1525,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         ((SmartCodeMarkerColumn) errorColumn).updatePoints(points, parent);
     }
 
-//    int resumeCount;
     protected final void pauseOccurrencesTracking(int millis) {
         if (!OCCURRENCES_HIGHLIGHT || occurrences == null) {
             return;
