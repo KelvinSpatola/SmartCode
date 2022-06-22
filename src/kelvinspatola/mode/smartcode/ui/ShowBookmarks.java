@@ -34,7 +34,7 @@ public class ShowBookmarks {
     public ShowBookmarks(SmartCodeEditor editor) {
         this.editor = editor;
         rootNode = new DefaultMutableTreeNode(editor.getSketch().getName());
-        bookmarks = editor.lineBookmarks.getMarkers();
+        bookmarks = editor.getBookmarks();
 
         window = new JDialog(editor);
         window.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
@@ -72,7 +72,7 @@ public class ShowBookmarks {
         });
         window.add(new JScrollPane(tree));
 
-        editor.lineBookmarks.addBookmarkListListener(new BookmarkListListener() {
+        editor.addBookmarkListListener(new BookmarkListListener() {
             public void bookmarkAdded(Bookmark bm) {
                 updateTree(); 
             }

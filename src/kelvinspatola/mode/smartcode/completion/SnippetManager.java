@@ -19,7 +19,6 @@ import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodeMode;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
 import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
-import processing.app.ui.Theme;
 import processing.core.PApplet;
 import processing.data.JSONArray;
 import processing.data.JSONObject;
@@ -147,34 +146,34 @@ public class SnippetManager implements KeyListener, CaretListener, LinePainter {
         return false;
     }
 
+    
     @Override
-    public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
-        if (isReadingKeyboardInput) {
-            int lineStart = ta.getLineStartOffset(line);
-            if (line == ta.getCaretLine()) {
-                int start = currentSnippet.leftBoundary - lineStart;
-                int end = currentSnippet.rightBoundary - lineStart - 1;
+    public void paintLine(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
+        if (!isReadingKeyboardInput)
+            return;
+
+        int lineStart = ta.getLineStartOffset(line);
+        if (line == ta.getCaretLine()) {
+            int start = currentSnippet.leftBoundary - lineStart;
+            int end = currentSnippet.rightBoundary - lineStart - 1;
+            int x = ta._offsetToX(line, start);
+            int w = ta._offsetToX(line, end) - x;
+
+            gfx.setColor(boundingBoxColor);
+            gfx.drawRect(x, y, w, h);
+        }
+
+        int nextStopOffset = currentSnippet.getNextStopPosition();
+        if (nextStopOffset != -1) {
+            int stopLine = ta.getLineOfOffset(nextStopOffset);
+            if (line == stopLine) {
+                int start = currentSnippet.getNextStopPosition() - lineStart;
                 int x = ta._offsetToX(line, start);
-                int w = ta._offsetToX(line, end) - x;
 
                 gfx.setColor(boundingBoxColor);
-                gfx.drawRect(x, y, w, h);
+                gfx.fillRect(x, y, 1, h);
             }
-
-            int nextStopOffset = currentSnippet.getNextStopPosition();
-            if (nextStopOffset != -1) {
-                int stopLine = ta.getLineOfOffset(nextStopOffset);
-                if (line == stopLine) {
-                    int start = currentSnippet.getNextStopPosition() - lineStart;
-                    int x = ta._offsetToX(line, start);
-
-                    gfx.setColor(boundingBoxColor);
-                    gfx.fillRect(x, y, 1, h);
-                }
-            }
-            return true;
         }
-        return false;
     }
     
     @Override

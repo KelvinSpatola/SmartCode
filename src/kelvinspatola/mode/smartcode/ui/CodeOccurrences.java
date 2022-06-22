@@ -242,32 +242,29 @@ public class CodeOccurrences implements CaretListener, LinePainter {
     static private List<LineMarker> toList(Map<Integer, List<LineMarker>> map) {
         return map.values().stream().flatMap(List::stream).collect(Collectors.toList());
     }
-    
-    
+ 
+
     @Override
-    public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
-        if (occurrences.isEmpty() || !SmartCodeTheme.OCCURRENCES_HIGHLIGHT)
-            return false;
+    public void paintLine(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
+        if (occurrences.isEmpty() || !occurrences.containsKey(line) || !SmartCodeTheme.OCCURRENCES_HIGHLIGHT)
+            return;
 
-        if (occurrences.containsKey(line)) {
-            List<LineMarker> occurrencesInThisLine = occurrences.get(line);
-            if (occurrencesInThisLine == null)
-                return false;
+        List<LineMarker> occurrencesInThisLine = occurrences.get(line);
+        if (occurrencesInThisLine == null)
+            return;
 
-            occurrencesInThisLine.forEach(o -> {
-                if (!(ta.isSelectionActive() && ta.getCaretLine() == line)) {
-                    int lineStart = ta.getLineStartOffset(line);
-                    int wordStart = o.getStartOffset() - lineStart;
-                    int wordEnd = o.getStopOffset() - lineStart;
-                    int x = ta._offsetToX(line, wordStart);
-                    int w = ta._offsetToX(line, wordEnd) - x;
+        occurrencesInThisLine.forEach(o -> {
+            if (!(ta.isSelectionActive() && ta.getCaretLine() == line)) {
+                int lineStart = ta.getLineStartOffset(line);
+                int wordStart = o.getStartOffset() - lineStart;
+                int wordEnd = o.getStopOffset() - lineStart;
+                int x = ta._offsetToX(line, wordStart);
+                int w = ta._offsetToX(line, wordEnd) - x;
 
-                    gfx.setColor(occurenceColor);
-                    gfx.fillRect(x, y, w, h);
-                }
-            });
-        }
-        return true;
+                gfx.setColor(occurenceColor);
+                gfx.fillRect(x, y, w, h);
+            }
+        });
     }
 
     

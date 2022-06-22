@@ -50,6 +50,7 @@ import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
 import kelvinspatola.mode.smartcode.ui.ColorTag;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
+import kelvinspatola.mode.smartcode.ui.LineBookmarks.BookmarkListListener;
 import kelvinspatola.mode.smartcode.ui.LineMarker;
 import kelvinspatola.mode.smartcode.ui.ShowBookmarks;
 import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
@@ -74,9 +75,10 @@ import processing.mode.java.JavaEditor;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
+    // TODO: Encapsular todos estes atributos 
     protected ColorTag currentBookmarkColor = ColorTag.COLOR_1;
     protected CodeOccurrences occurrences;
-    public LineBookmarks lineBookmarks; // arranjar forma de encapsular isto
+    private LineBookmarks lineBookmarks;
     protected ShowBookmarks showBookmarks;
     protected Timer statusNoticeTimer;
     protected Timer generalTimer;
@@ -1337,6 +1339,35 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
      * LINE BOOKMARKS
      * 
      */
+    
+    public final void addBookmark(LineID lineID, ColorTag colorTag) {
+        lineBookmarks.addBookmark(lineID, colorTag);
+    }
+    
+    public final void removeBookmark(LineMarker bookmark) {
+        lineBookmarks.removeBookmark(bookmark);
+    }
+    
+    public final boolean isBookmark(int line) {
+        return lineBookmarks.isBookmark(line);
+    }
+    
+    public final boolean hasBookmarks() {
+        return lineBookmarks.hasBookmarks();
+    }
+    
+    public final boolean hasBookmarksInCurrentTab() {
+        int currentTab = sketch.getCurrentCodeIndex();
+        return lineBookmarks.getMarkers().stream().anyMatch(lm -> lm.getTabIndex() == currentTab);
+    }
+    
+    public final List<LineMarker> getBookmarks() {
+        return lineBookmarks.getMarkers();
+    }
+    
+    public final void addBookmarkListListener(BookmarkListListener ls) {
+        lineBookmarks.addBookmarkListListener(ls);
+    }
 
     public void toggleLineBookmark(int line) {
         final LineID lineID = getLineIDInCurrentTab(line);
@@ -1360,11 +1391,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             return true;
         }
         return false;
-    }
-
-    public boolean hasBookmarksInCurrentTab() {
-        final int currentTab = sketch.getCurrentCodeIndex();
-        return lineBookmarks.getMarkers().stream().anyMatch(lm -> lm.getTabIndex() == currentTab);
     }
 
     public void clearBookmarksFromTab(int tabIndex) {
@@ -1523,6 +1549,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     public void updateColumnPoints(List<? extends LineMarker> points, Class<? extends LineMarker> parent) {
         ((SmartCodeMarkerColumn) errorColumn).updatePoints(points, parent);
+        repaint();
     }
 
     protected final void pauseOccurrencesTracking(int millis) {
@@ -1532,13 +1559,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         if (getTextArea().containsListener(occurrences, CaretListener.class)) {
             occurrences.stopTracking();
-//            System.out.println("stop AST tracking");
         }
 
         timedAction(() -> {
             occurrences.startTracking();
             occurrences.updateAST();
-//            System.out.println("resume AST tracking: " + ++resumeCount);
         }, millis);
     }
 

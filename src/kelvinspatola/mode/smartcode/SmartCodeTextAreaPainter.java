@@ -24,8 +24,8 @@ import processing.app.ui.Editor;
 import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
-    protected List<LinePainter> painters = new ArrayList<>();
     static private int presetFontSize = Preferences.getInteger("editor.font.size");
+    private List<LinePainter> painters = new ArrayList<>();
     protected Color bookmarkIconColor;
 
     public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
@@ -52,11 +52,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             @Override
             public void paintHighlight(Graphics gfx, int line, int y) {
                 for (LinePainter painter : painters) {
-                    if (painter.canPaint(gfx, line, y + getLineDisplacement(), fontMetrics.getHeight(), textarea)) {
-                        //
-                    } else {
-                        repaint();
-                    }
+                    painter.paintLine(gfx, line, y + getLineDisplacement(), fontMetrics.getHeight(), textarea);
                 }
             }
         };
@@ -74,12 +70,20 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    public SmartCodeEditor getSmartCodeEditor() {
-        return (SmartCodeEditor) getEditor();
-    }
-
     public void addLinePainter(LinePainter painter) {
         painters.add(painter);
+    }
+    
+    public void removeLinePainter(LinePainter painter) {
+        painters.remove(painter);
+    }
+    
+    public List<LinePainter> getLinePainters() {
+        return painters;
+    }
+    
+    public SmartCodeEditor getSmartCodeEditor() {
+        return (SmartCodeEditor) getEditor();
     }
 
     @Override
@@ -104,7 +108,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 text = null;
             }
 
-        } else if (getSmartCodeEditor().lineBookmarks.isBookmark(line)) {
+        } else if (getSmartCodeEditor().isBookmark(line)) {
             text = PIN_MARKER;
         }
 
@@ -143,7 +147,8 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    static private void drawBookmark(Graphics g, float x, float y, float w, float h) {
+    @SuppressWarnings("static-method")
+    protected void drawBookmark(Graphics g, float x, float y, float w, float h) {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         GeneralPath path = new GeneralPath();
@@ -192,8 +197,8 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
      * file.
      * <p>
      * Internally, this method actually writes the value in the preferences file,
-     * calls {@link #updateTheme()} in order to update the editor's rendering,
-     * and finally rewrites the original value back to the preferences file without
+     * calls {@link #updateTheme()} in order to update the editor's rendering, and
+     * finally rewrites the original value back to the preferences file without
      * updating the editor.
      * 
      * @param size the font size. The minimum value that can be assigned is 8.
@@ -215,8 +220,8 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
     /**
      * Used whenever the user defines a new font size in the preferences window. It
-     * should be called inside {@link SmartCodeEditor#applyPreferences()} so it can be
-     * updated on every new change.
+     * should be called inside {@link SmartCodeEditor#applyPreferences()} so it can
+     * be updated on every new change.
      */
     static public void updateDefaultFontSize() {
         presetFontSize = Preferences.getInteger("editor.font.size");

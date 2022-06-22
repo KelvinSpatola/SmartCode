@@ -116,11 +116,7 @@ public class LineBookmarks implements LinePainter {
      *         bookmarked. Null otherwise.
      */
     public Bookmark getBookmark(LineID lineID) {
-        return markers.stream()
-                .map(Bookmark.class::cast)
-                .filter(lm -> lm.isOnLine(lineID))
-                .findAny()
-                .orElse(null);
+        return markers.stream().map(Bookmark.class::cast).filter(lm -> lm.isOnLine(lineID)).findAny().orElse(null);
     }
 
     
@@ -158,6 +154,7 @@ public class LineBookmarks implements LinePainter {
         }
     }
     
+    
     public void stopBookmarkTracking() {
         markers.forEach(bm -> ((Bookmark) bm).stopTracking());
     }
@@ -166,70 +163,65 @@ public class LineBookmarks implements LinePainter {
     public void startBookmarkTracking() {
         markers.forEach(bm -> ((Bookmark) bm).startTracking());
     }
-
     
     @Override
-    public boolean canPaint(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
-        if (!SmartCodeTheme.BOOKMARKS_HIGHLIGHT || markers.isEmpty() || editor.isDebuggerEnabled())
-            return false;
+    public void paintLine(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
+        if (markers.isEmpty() || !isBookmark(line) || editor.isDebuggerEnabled() || !SmartCodeTheme.BOOKMARKS_HIGHLIGHT)
+            return;
 
-        if (isBookmark(line)) {
-            Color color = getBookmark(editor.getLineIDInCurrentTab(line)).getColorTag().getColor();
-            gfx.setColor(color);
-            gfx.fillRect(0, y, editor.getWidth(), h);
+        Color color = getBookmark(editor.getLineIDInCurrentTab(line)).getColorTag().getColor();
+        gfx.setColor(color);
+        gfx.fillRect(0, y, editor.getWidth(), h);
 
-            /*
-             * In case this bookmarked line is part of a text selection or is the caret
-             * line, it is necessary to paint it differently to give visual feedback to the
-             * user. All the painting done to the text area by the SmartCode code is done
-             * using the interface provided by the Processing source code, more precisely
-             * the 'Highlight' interface inside the TextAreaPainter class. This makes all of
-             * our painting happen strictly after the line highlight and selection highlight
-             * paintings, overlapping and omitting them. To avoid that, we paint it
-             * differently in order to give that feedback.
-             */
+        /*
+         * In case this bookmarked line is part of a text selection or is the caret
+         * line, it is necessary to paint it differently to give visual feedback to the
+         * user. All the painting done to the text area by the SmartCode code is done
+         * using the interface provided by the Processing source code, more precisely
+         * the 'Highlight' interface inside the TextAreaPainter class. This makes all of
+         * our painting happen strictly after the line highlight and selection highlight
+         * paintings, overlapping and omitting them. To avoid that, we paint it
+         * differently in order to give that feedback.
+         */
 
-            int selectionStartLine = ta.getSelectionStartLine();
-            int selectionEndLine = ta.getSelectionStopLine();
+        int selectionStartLine = ta.getSelectionStartLine();
+        int selectionEndLine = ta.getSelectionStopLine();
 
-            if (line >= selectionStartLine && line <= selectionEndLine) {
-                int selectionStart = ta.getSelectionStart();
-                int selectionEnd = ta.getSelectionStop();
-                int lineStart = ta.getLineStartOffset(line);
-                int x1, x2;
+        if (line >= selectionStartLine && line <= selectionEndLine) {
+            int selectionStart = ta.getSelectionStart();
+            int selectionEnd = ta.getSelectionStop();
+            int lineStart = ta.getLineStartOffset(line);
+            int x1, x2;
 
-                if (selectionStart == selectionEnd) { // no selection
-                    x1 = 0;
-                    x2 = editor.getWidth();
+            if (selectionStart == selectionEnd) { // no selection
+                x1 = 0;
+                x2 = editor.getWidth();
 
-                } else if (selectionStartLine == selectionEndLine) { // selection inside a line
-                    x1 = ta._offsetToX(line, selectionStart - lineStart);
-                    x2 = ta._offsetToX(line, selectionEnd - lineStart);
+            } else if (selectionStartLine == selectionEndLine) { // selection inside a line
+                x1 = ta._offsetToX(line, selectionStart - lineStart);
+                x2 = ta._offsetToX(line, selectionEnd - lineStart);
 
-                } else if (line == selectionStartLine) { // block selection with caret at selection start
-                    x1 = ta._offsetToX(line, selectionStart - lineStart);
-                    x2 = editor.getWidth();
+            } else if (line == selectionStartLine) { // block selection with caret at selection start
+                x1 = ta._offsetToX(line, selectionStart - lineStart);
+                x2 = editor.getWidth();
 
-                } else if (line == selectionEndLine) { // block selection with caret at selection end
-                    x1 = ta._offsetToX(line, 0);
-                    x2 = ta._offsetToX(line, selectionEnd - lineStart);
+            } else if (line == selectionEndLine) { // block selection with caret at selection end
+                x1 = ta._offsetToX(line, 0);
+                x2 = ta._offsetToX(line, selectionEnd - lineStart);
 
-                } else { // lines selected in the middle
-                    x1 = ta._offsetToX(line, 0);
-                    x2 = editor.getWidth();
-                }
-
-                final int dimming = 25;
-                int rgb = color.getRGB();
-                int r = Math.max(0, (rgb >> 16 & 0xFF) - dimming);
-                int g = Math.max(0, (rgb >> 8 & 0xFF) - dimming);
-                int b = Math.max(0, (rgb & 0xFF) - dimming);
-                gfx.setColor(new Color(r, g, b));
-                gfx.fillRect(Math.min(x1, x2), y, x1 > x2 ? (x1 - x2) : (x2 - x1), h);
+            } else { // lines selected in the middle
+                x1 = ta._offsetToX(line, 0);
+                x2 = editor.getWidth();
             }
-            return true;
+
+            final int dimming = 25;
+            int rgb = color.getRGB();
+            int r = Math.max(0, (rgb >> 16 & 0xFF) - dimming);
+            int g = Math.max(0, (rgb >> 8 & 0xFF) - dimming);
+            int b = Math.max(0, (rgb & 0xFF) - dimming);
+            gfx.setColor(new Color(r, g, b));
+            gfx.fillRect(Math.min(x1, x2), y, x1 > x2 ? (x1 - x2) : (x2 - x1), h);
         }
-        return false;
     }
 
     
@@ -347,8 +339,7 @@ public class LineBookmarks implements LinePainter {
         public String getText() {
             String colorHex = Integer.toHexString(colorTag.getColor().getRGB()).substring(2);
             String lineText = editor.getTextArea().getLineText(getTabIndex(), getLine()).trim();
-            String colorIndicator = "<font color=" + colorHex + "> &#x25A0; </font>"; // &#x25A0; -> HTML code for the
-                                                                                      // square
+            String colorIndicator = "<font color=" + colorHex + "> &#x25A0; </font>"; // &#x25A0; -> HTML code for the square
             String lineNumberIndicator = "<font color=#bbbbbb>" + (getLine() + 1) + ": </font>";
             String lineTextIndicator = "<font color=#000000>" + lineText + "</font>";
             return "<html>" + colorIndicator + lineNumberIndicator + lineTextIndicator + "</html>";

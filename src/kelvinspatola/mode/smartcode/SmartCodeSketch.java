@@ -1,13 +1,13 @@
 package kelvinspatola.mode.smartcode;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import kelvinspatola.mode.smartcode.ui.ColorTag;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
-
-import java.util.HashMap;
-
+import kelvinspatola.mode.smartcode.ui.LineMarker;
 import processing.app.Mode;
 import processing.app.Sketch;
 import processing.app.SketchCode;
@@ -56,7 +56,7 @@ public class SmartCodeSketch extends Sketch {
 
     @Override
     public boolean saveAs() throws IOException {
-        if (!editor.lineBookmarks.hasBookmarks()) {
+        if (!editor.hasBookmarks()) {
             return super.saveAs();
         }
 
@@ -78,7 +78,7 @@ public class SmartCodeSketch extends Sketch {
 
     @Override
     public boolean save() throws IOException {
-        if (!editor.lineBookmarks.hasBookmarks()) {
+        if (!editor.hasBookmarks()) {
             return super.save();
         }
 
@@ -109,13 +109,13 @@ public class SmartCodeSketch extends Sketch {
     protected Map<Integer, ColorTag> getBookmarksInfoAndRemoveThem(String tabFileName) {
         Map<Integer, ColorTag> result = new HashMap<>();
 
-        for (int i = editor.lineBookmarks.markerCount() - 1; i >= 0; i--) {
-            Bookmark bm = (Bookmark) editor.lineBookmarks.getMarkers().get(i);
+        for (int i = editor.getBookmarks().size() - 1; i >= 0; i--) {
+            Bookmark bm = (Bookmark) editor.getBookmarks().get(i);
 
             if (bm.getLineID().fileName().equals(tabFileName)) {
                 ColorTag tag = bm.getColorTag();
                 result.put(bm.getLine(), tag);
-                editor.lineBookmarks.removeBookmark(bm);
+                editor.removeBookmark(bm);
             }
         }
         return result;
@@ -127,7 +127,6 @@ public class SmartCodeSketch extends Sketch {
      * @param lineNumbers a list with the line numbers of bookmarks to be added
      */
     protected void generateBookmarksAt(String tabFileName, Map<Integer, ColorTag> references) {
-        for (int line : references.keySet())
-            editor.lineBookmarks.addBookmark(new LineID(tabFileName, line), references.get(line));
+        references.keySet().stream().forEach(l -> editor.addBookmark(new LineID(tabFileName, l), references.get(l)));
     }
 }
