@@ -88,7 +88,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected int tabSize;
     protected String tabSpaces;
 
-    CodeContext context;
+//    CodeContext context;
 
     // CONSTRUCTOR
     public SmartCodeEditor(Base base, String path, EditorState state, Mode mode) throws EditorException {
@@ -500,7 +500,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         return false;
     }
 
-    public void handleEnter() {
+    private void handleEnter() {
         pauseOccurrencesTracking(300);
 
         int caret = getCaretOffset();
@@ -660,7 +660,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         stopCompoundEdit();
     }
 
-    private void insertNewLine(int offset) {
+    private void insertNewLine(int offset) {        
         int indent = 0;
         startCompoundEdit();
 
@@ -889,7 +889,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             getToolkit().beep();
             return;
         }
-                
+//        pauseOccurrencesTracking(300);
+        
         if (lineBookmarks.hasBookmarks()) {
             lineBookmarks.removeBookmark(getCurrentLineID());
         } 
@@ -1474,8 +1475,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
     }
 
-    int sketchChangedCount = 0;
-
     @Override
     public void sketchChanged() {
         super.sketchChanged();
@@ -1483,14 +1482,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         if (showBookmarks != null) {
             showBookmarks.updateTree();
         }
-        // getSketch().setModified(true);
-//        System.out.println("sketch changed " + ++sketchChangedCount);
 
         if (occurrences != null) {
             occurrences.updateAST();
         }
-
-        sketchChangedCount++;
     }
 
     @Override

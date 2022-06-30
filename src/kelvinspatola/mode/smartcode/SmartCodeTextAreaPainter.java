@@ -25,7 +25,7 @@ import processing.mode.java.JavaTextAreaPainter;
 
 public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     static private int presetFontSize = Preferences.getInteger("editor.font.size");
-    private List<LinePainter> painters = new ArrayList<>();
+    private List<LinePainter> linePainters = new ArrayList<>();
     protected Color bookmarkIconColor;
 
     public SmartCodeTextAreaPainter(SmartCodeTextArea textarea, TextAreaDefaults defaults) {
@@ -51,7 +51,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
 
             @Override
             public void paintHighlight(Graphics gfx, int line, int y) {
-                for (LinePainter painter : painters) {
+                for (LinePainter painter : linePainters) {
                     painter.paintLine(gfx, line, y + getLineDisplacement(), fontMetrics.getHeight(), textarea);
                 }
             }
@@ -63,23 +63,26 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         super.updateTheme();
         bookmarkIconColor = SmartCodeTheme.getColor("bookmarks.icon.color");
 
-        if (painters != null) {
-            for (LinePainter painter : painters) {
-                painter.updateTheme();
-            }
+        if (linePainters != null) {
+            linePainters.stream().forEach(LinePainter::updateTheme);
         }
+//        if (linePainters != null) {
+//            for (LinePainter painter : linePainters) {
+//                painter.updateTheme();
+//            }
+//        }
     }
 
     public void addLinePainter(LinePainter painter) {
-        painters.add(painter);
+        linePainters.add(painter);
     }
     
     public void removeLinePainter(LinePainter painter) {
-        painters.remove(painter);
+        linePainters.remove(painter);
     }
     
     public List<LinePainter> getLinePainters() {
-        return painters;
+        return linePainters;
     }
     
     public SmartCodeEditor getSmartCodeEditor() {
@@ -147,8 +150,8 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    @SuppressWarnings("static-method")
-    protected void drawBookmark(Graphics g, float x, float y, float w, float h) {
+    
+    static protected void drawBookmark(Graphics g, float x, float y, float w, float h) {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         GeneralPath path = new GeneralPath();
