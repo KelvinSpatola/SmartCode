@@ -324,7 +324,7 @@ public class SmartCodePreferencesFrame {
          * 
          */
         
-        JPanel tabBookmarks = new JPanel();
+       /* JPanel tabBookmarks = new JPanel();
         tabbedPane.addTab("Bookmarks", null, tabBookmarks, null);
         
         bookmarkHighlightingBox = new JCheckBox("Highlight bookmarked lines");
@@ -476,7 +476,7 @@ public class SmartCodePreferencesFrame {
         gl_tabBookmarks.setAutoCreateContainerGaps(true);
         gl_tabBookmarks.setAutoCreateGaps(true);
         tabBookmarks.setLayout(gl_tabBookmarks);
-        mainPane.add(tabbedPane);
+        mainPane.add(tabbedPane); */
         
         
         /*
@@ -527,9 +527,9 @@ public class SmartCodePreferencesFrame {
                         .addComponent(occurrencesColorPicker, GroupLayout.PREFERRED_SIZE, 20, GroupLayout.PREFERRED_SIZE))
                     .addContainerGap(316, Short.MAX_VALUE))
         );
-        tabOccurrences.setLayout(gl_tabOccurrences);
+        tabOccurrences.setLayout(gl_tabOccurrences); 
         
-        JPanel tabMarkers = new JPanel();
+      /*  JPanel tabMarkers = new JPanel();
         tabbedPane.addTab("Markers", null, tabMarkers,
                 "<html>"
                 + "Side column to the right of the editor that indicates the relative location of<br>"
@@ -554,7 +554,7 @@ public class SmartCodePreferencesFrame {
                     .addComponent(errorLabel)
                     .addContainerGap(337, Short.MAX_VALUE))
         );
-        tabMarkers.setLayout(gl_tabMarkers);
+        tabMarkers.setLayout(gl_tabMarkers); 
         
         /*
          * FOOTER BUTTONS PANEL
