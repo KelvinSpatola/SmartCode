@@ -1,16 +1,6 @@
 package kelvinspatola.mode.smartcode;
 
-import static kelvinspatola.mode.smartcode.Constants.BLOCK_CLOSING;
-import static kelvinspatola.mode.smartcode.Constants.BLOCK_OPENING;
-import static kelvinspatola.mode.smartcode.Constants.CLOSE_BRACE;
-import static kelvinspatola.mode.smartcode.Constants.CLOSE_COMMENT;
-import static kelvinspatola.mode.smartcode.Constants.COMMENT_TEXT;
-import static kelvinspatola.mode.smartcode.Constants.INDENT;
-import static kelvinspatola.mode.smartcode.Constants.LF;
-import static kelvinspatola.mode.smartcode.Constants.OPEN_BRACE;
-import static kelvinspatola.mode.smartcode.Constants.OPEN_COMMENT;
-import static kelvinspatola.mode.smartcode.Constants.PIN_MARKER;
-import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
+import static kelvinspatola.mode.smartcode.Constants.*;
 import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.OCCURRENCES_HIGHLIGHT;
 
 import java.awt.BorderLayout;
@@ -31,6 +21,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import javax.swing.JComponent;
 import javax.swing.JMenu;
@@ -39,6 +30,7 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
 import javax.swing.event.CaretListener;
 import javax.swing.event.MenuEvent;
@@ -46,16 +38,9 @@ import javax.swing.event.MenuListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
-import kelvinspatola.mode.smartcode.ui.ColorTag;
-import kelvinspatola.mode.smartcode.ui.LineBookmarks;
+import kelvinspatola.mode.smartcode.ui.*;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.BookmarkListListener;
-import kelvinspatola.mode.smartcode.ui.LineMarker;
-import kelvinspatola.mode.smartcode.ui.ShowBookmarks;
-import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
-import kelvinspatola.mode.smartcode.ui.SmartCodePreferencesFrame;
-import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Base;
 import processing.app.Language;
 import processing.app.Messages;
@@ -75,15 +60,12 @@ import processing.mode.java.JavaEditor;
 import processing.mode.java.debug.LineID;
 
 public class SmartCodeEditor extends JavaEditor implements KeyListener {
-    // TODO: Encapsular todos estes atributos 
-    protected ColorTag currentBookmarkColor = ColorTag.COLOR_1;
-    protected CodeOccurrences occurrences;
+	static private SmartCodePreferencesFrame preferencesFrame;
+	private ColorTag currentBookmarkColor = ColorTag.COLOR_1;
+    private CodeOccurrences occurrences;
     private LineBookmarks lineBookmarks;
-    protected ShowBookmarks showBookmarks;
-    protected Timer statusNoticeTimer;
-    protected Timer generalTimer;
-
-    static protected SmartCodePreferencesFrame preferencesFrame;
+    private ShowBookmarks showBookmarks;
+    private Timer generalTimer;
 
     protected int tabSize;
     protected String tabSpaces;
@@ -125,7 +107,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 //        context = new CodeContext(this, preprocService);
 //        textarea.addCaretListener(context);
 
-        timedAction(this::printHelloMessage, 500);
+        timedAction(this::printHelloMessage, 1000);
     }
 
     private void printHelloMessage() {
@@ -234,7 +216,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 createItem(menu, "Format selected text", "C+T", this::handleAutoFormat),
                 createItem(menu, "To upper case", "CS+U", () -> changeCase(true)),
                 createItem(menu, "To lower case", "CS+L", () -> changeCase(false)) 
-                };
+        };
         createItem(menu, "Expand Selection", "CA+RIGHT", this::expandSelection);
 
         menu.addSeparator(); // ---------------------------------------------
@@ -248,7 +230,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
             if (choice == JOptionPane.YES_OPTION) {
                 clearBookmarksFromTab(sketch.getCurrentCodeIndex());
-                statusNotice("All bookmarks on the " + getCurrentTab().getPrettyName() + " tab have been deleted");
+                statusNotice("Deleted all bookmarks in this tab");
             }
         });
 
@@ -269,9 +251,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 clearBookmarksItem.setEnabled(hasBookmarksInCurrentTab());
 
                 // Update state on selection/de-selection
-                for (JMenuItem item : updatableItems) {
-                    item.setEnabled(isSelectionActive());
-                }
+                Stream.of(updatableItems).forEach(item -> item.setEnabled(isSelectionActive()));
             }
         });
 
@@ -295,18 +275,32 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         JPopupMenu popup = textarea.getRightClickPopup();
 
         popup.addSeparator(); // ---------------------------------------------
-        JMenuItem[] selectableItems = { createItem(popup, "Format selected text", null, this::handleAutoFormat),
+        JMenuItem[] selectableItems = { 
+        		createItem(popup, "Format selected text", null, this::handleAutoFormat),
                 createItem(popup, "Toggle block comment", null, this::toggleBlockComment),
                 createItem(popup, "To upper case", null, () -> changeCase(true)),
-                createItem(popup, "To lower case", null, () -> changeCase(false)) };
+                createItem(popup, "To lower case", null, () -> changeCase(false)) 
+        };
+
+        popup.addSeparator(); // ---------------------------------------------
+        JMenuItem clearBookmarksItem = createItem(popup, "Clear bookmarks in current tab", null, () -> {
+            Object[] options = { Language.text("prompt.ok"), Language.text("prompt.cancel") };
+            int choice = JOptionPane.showOptionDialog(this,
+                    "Are you sure you want to clear all bookmarks from this tab?", "Bookmarks",
+                    JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+
+            if (choice == JOptionPane.YES_OPTION) {
+                clearBookmarksFromTab(sketch.getCurrentCodeIndex());
+                statusNotice("Deleted all bookmarks in this tab");
+            }
+        });
 
         // Update state on selection/de-selection
         popup.addPopupMenuListener(new MenuAdapter() {
             @Override
             public void popupMenuWillBecomeVisible(PopupMenuEvent e) {
-                for (JMenuItem item : selectableItems) {
-                    item.setEnabled(isSelectionActive());
-                }
+            	Stream.of(selectableItems).forEach(item -> item.setEnabled(isSelectionActive()));
+            	clearBookmarksItem.setEnabled(hasBookmarksInCurrentTab());
             }
         });
     }
@@ -777,8 +771,10 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             if (brace != -1) {
                 indent = getTextArea().getLineIndentation(brace) + tabSize;
             }
-
-            formattedText = SmartCodeTextArea.indentText(formattedText, indent);
+            
+			// Gotta add a line feed after indenting the text because indentText() strips
+			// any trailing whitespace, and that's unwanted here!
+			formattedText = SmartCodeTextArea.indentText(formattedText, indent) + LF;
 
             if (formattedText.equals(selectedText) && isSourceIntact) {
                 statusNotice(Language.text("editor.status.autoformat.no_changes"));
@@ -928,7 +924,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         setSelectedText(addSpaces(indent), true);
         sketch.setModified(true);
     }
-
     
     
     public void toggleBlockComment() {
