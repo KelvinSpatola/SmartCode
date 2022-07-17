@@ -192,7 +192,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         super.updateTheme();
     }
 
-    // TODO: lembrete de que é preciso trabalhar aqui
+    // TODO: lembrete de que ï¿½ preciso trabalhar aqui
 //    @Override
 //    public JMenu buildFileMenu() {
 //        // JAVA MODE ITEMS
@@ -248,6 +248,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
             if (choice == JOptionPane.YES_OPTION) {
                 clearBookmarksFromTab(sketch.getCurrentCodeIndex());
+                statusNotice("All bookmarks on the " + getCurrentTab().getPrettyName() + " tab have been deleted");
             }
         });
 
@@ -1396,7 +1397,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
     public void clearBookmarksFromTab(int tabIndex) {
         lineBookmarks.getMarkers().stream().filter(lm -> lm.getTabIndex() == tabIndex)
-                .sorted(Collections.reverseOrder()).forEach(lineBookmarks::removeBookmark);
+                .sorted(Collections.reverseOrder()).forEach(this::removeBookmark);
 
         sketch.setModified(true);
     }
@@ -1473,6 +1474,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         if (occurrences != null) {
             occurrences.updateAST();
         }
+        statusEmpty();
     }
 
     @Override
@@ -1565,7 +1567,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     public void timedStatusNotice(String msg, int millis) {
         statusNotice(msg);
         timedAction(this::statusEmpty, millis);
-
     }
 
     public void timedAction(Runnable task, int millis) {
