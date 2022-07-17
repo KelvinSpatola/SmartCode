@@ -495,15 +495,36 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         return false;
     }
 
-    private void handleEnter() {
-        pauseOccurrencesTracking(300);
+    private void handleEnter() {   	
+        // erase any selection content
+        if (isSelectionActive()) {
+            if (lineBookmarks.hasBookmarks()) {
+                int startLine = textarea.getSelectionStartLine();
+                int endLine = textarea.getSelectionStopLine();
 
+                if (startLine != endLine) {
+                    if (getSelectionStart() > getLineStartOffset(startLine))
+                        startLine++;
+
+                    if (getLineStartOffset(endLine) == getSelectionStop())
+                        endLine--;
+
+					for (int line = startLine; line <= endLine; line++) {
+						lineBookmarks.removeBookmark(getLineIDInCurrentTab(line));
+					}
+				}
+			}
+			setSelectedText(LF, true);
+			return;
+		}
+
+        pauseOccurrencesTracking(300);
+        
         int caret = getCaretOffset();
 
-        if (!isSelectionActive()) {
-            int caretLine = textarea.getCaretLine();
-            int positionInLine = caret - getLineStartOffset(caretLine);
-            String lineText = getLineText(caretLine);            
+        int caretLine = textarea.getCaretLine();
+        int positionInLine = caret - getLineStartOffset(caretLine);
+        String lineText = getLineText(caretLine);            
 //
 //            long time = System.nanoTime();
 //            
@@ -518,77 +539,73 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 //                }
 //            }
 
-            if (STRING_TEXT.matcher(lineText).matches()) {
-                int leftQuotes = 0, rightQuotes = 0;
+        if (STRING_TEXT.matcher(lineText).matches()) {
+            int leftQuotes = 0, rightQuotes = 0;
 
-                for (int i = positionInLine - 1; i >= 0; i--) {
-                    if (lineText.charAt(i) == '"') {
-                        leftQuotes++;
+            for (int i = positionInLine - 1; i >= 0; i--) {
+                if (lineText.charAt(i) == '"') {
+                    leftQuotes++;
+                }
+            }
+            for (int i = positionInLine; i < lineText.length(); i++) {
+                if (lineText.charAt(i) == '"') {
+                    rightQuotes++;
+                }
+            }
+
+            boolean isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
+
+            if (isInsideQuotes) {
+                splitString(caretLine);
+                return;
+            }
+        } 
+        
+        else if (COMMENT_TEXT.matcher(lineText).matches()) {
+            if (SmartCodePreferences.AUTOCLOSE_BLOCK_COMMENTS) {
+                if (!lineText.contains(OPEN_COMMENT)) {
+                    int line = caretLine - 1;
+
+                    while (line >= 0) {
+                        if (!COMMENT_TEXT.matcher(getLineText(line)).matches())
+                            break;
+                        line--;
+                    }
+                    if (!getLineText(line + 1).contains(OPEN_COMMENT)) {
+                        insertNewLine(caret);
+                        return;
                     }
                 }
-                for (int i = positionInLine; i < lineText.length(); i++) {
-                    if (lineText.charAt(i) == '"') {
-                        rightQuotes++;
-                    }
-                }
+                int commentStart = lineText.indexOf(OPEN_COMMENT);
+                int commentStop = (lineText.contains(CLOSE_COMMENT) ? lineText.indexOf(CLOSE_COMMENT)
+                        : lineText.length()) + 2;
 
-                boolean isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
-
-                if (isInsideQuotes) {
-                    splitString(caretLine);
-//                    System.out.println("time: " + (System.nanoTime() - time));
+                if (positionInLine > commentStart && positionInLine < commentStop) {
+                    splitComment(caretLine);
                     return;
                 }
             }
+        }
 
-            if (COMMENT_TEXT.matcher(lineText).matches()) {
-                if (SmartCodePreferences.AUTOCLOSE_BLOCK_COMMENTS) {
-                    if (!lineText.contains(OPEN_COMMENT)) {
-                        int line = caretLine - 1;
+        else if (BLOCK_OPENING.matcher(lineText).matches()) {
+            if (SmartCodePreferences.AUTOCLOSE_BRACKETS) { // TODO: make this condition a pref of its own
 
-                        while (line >= 0) {
-                            if (!COMMENT_TEXT.matcher(getLineText(line)).matches())
-                                break;
-                            line--;
-                        }
-                        if (!getLineText(line + 1).contains(OPEN_COMMENT)) {
-                            insertNewLine(caret);
-                            return;
-                        }
-                    }
-                    int commentStart = lineText.indexOf(OPEN_COMMENT);
-                    int commentStop = (lineText.contains(CLOSE_COMMENT) ? lineText.indexOf(CLOSE_COMMENT)
-                            : lineText.length()) + 2;
+                boolean bracketsAreBalanced = SmartCodeTextArea.checkBracketsBalance(getText(), "{", "}");
+                boolean hasClosingBrace = BLOCK_CLOSING.matcher(lineText).matches();
+                int openBrace = lineText.indexOf(OPEN_BRACE);
+                int closeBrace = lineText.indexOf(CLOSE_BRACE);
 
-                    if (positionInLine > commentStart && positionInLine < commentStop) {
-                        splitComment(caretLine);
-                        return;
-                    }
-                }
-            }
+                if ((!bracketsAreBalanced && positionInLine > openBrace) || (bracketsAreBalanced && hasClosingBrace
+                        && positionInLine > openBrace && positionInLine <= closeBrace)) {
 
-            if (BLOCK_OPENING.matcher(lineText).matches()) {
-                if (SmartCodePreferences.AUTOCLOSE_BRACKETS) { // TODO: make this condition a pref of its own
-
-                    boolean bracketsAreBalanced = SmartCodeTextArea.checkBracketsBalance(getText(), "{", "}");
-                    boolean hasClosingBrace = BLOCK_CLOSING.matcher(lineText).matches();
-                    int openBrace = lineText.indexOf(OPEN_BRACE);
-                    int closeBrace = lineText.indexOf(CLOSE_BRACE);
-
-                    if ((!bracketsAreBalanced && positionInLine > openBrace) || (bracketsAreBalanced && hasClosingBrace
-                            && positionInLine > openBrace && positionInLine <= closeBrace)) {
-
-                        createBlockScope(caret);
-                        return;
-                    }
+                    createBlockScope(caret);
+                    return;
                 }
             }
         }
-//        long time = System.nanoTime();
+        
         // if none of the above, then insert a new line
         insertNewLine(caret);
-        errorColumn.repaint();
-//        System.out.println("time: " + (System.nanoTime() - time));
     }
 
     private void splitString(int caretLine) {
@@ -600,9 +617,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 indent += tabSize;
         }
 
-        stopCompoundEdit();
-        insertText("\"\n" + addSpaces(indent) + "+ \"");
-        stopCompoundEdit();
+        setSelectedText("\"\n" + addSpaces(indent) + "+ \"", true);
+        errorColumn.repaint();
     }
 
     private void splitComment(int caretLine) {
@@ -612,7 +628,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
 
         startCompoundEdit();
-        insertText(LF + addSpaces(indent - (indent % tabSize)) + " * ");
+        setSelectedText(LF + addSpaces(indent - (indent % tabSize)) + " * ", false);
 
         int caretPos = getCaretOffset();
         String nextText = getText().substring(caretPos);
@@ -624,10 +640,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
 
         if (commentIsOpen) {
             textarea.setCaretPosition(getLineStopOffset(++caretLine) - 1);
-            insertText(LF + addSpaces(indent - (indent % tabSize)) + " */");
+            setSelectedText(LF + addSpaces(indent - (indent % tabSize)) + " */", false);
             textarea.setCaretPosition(caretPos);
         }
         stopCompoundEdit();
+        errorColumn.repaint();
     }
 
     private void createBlockScope(int offset) {
@@ -647,41 +664,17 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             cutText = cutText.replace(CLOSE_BRACE, '\0').trim();
         }
 
-        setSelectedText(LF + addSpaces(indent) + cutText);
+        setSelectedText(LF + addSpaces(indent) + cutText, false);
 
         int newOffset = getCaretOffset();
-        insertText(LF + addSpaces(indent - tabSize) + CLOSE_BRACE);
+        setSelectedText(LF + addSpaces(indent - tabSize) + CLOSE_BRACE, false);
         setSelection(newOffset, newOffset);
         stopCompoundEdit();
+        errorColumn.repaint();
     }
 
     private void insertNewLine(int offset) {        
         int indent = 0;
-        startCompoundEdit();
-
-        // erase any selection content
-        if (isSelectionActive()) {
-            if (lineBookmarks.hasBookmarks()) {
-                int startLine = textarea.getSelectionStartLine();
-                int endLine = textarea.getSelectionStopLine();
-
-                if (startLine != endLine) {
-                    if (getSelectionStart() > getLineStartOffset(startLine))
-                        startLine++;
-
-                    if (getLineStartOffset(endLine) == getSelectionStop())
-                        endLine--;
-
-                    for (int line = startLine; line <= endLine; line++) {
-                        lineBookmarks.removeBookmark(getLineIDInCurrentTab(line));
-                    }
-                }
-            }
-            setSelectedText("");
-            setSelectedText(LF);
-            stopCompoundEdit();
-            return;
-        }
 
         if (INDENT) {
             int line = textarea.getLineOfOffset(offset);
@@ -702,11 +695,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             setSelection(offset, getLineStopOffset(line) - 1);
         }
         String cutText = isSelectionActive() ? getSelectedText().trim() : "";
-        setSelectedText(LF + addSpaces(indent) + cutText);
+        setSelectedText(LF + addSpaces(indent) + cutText, true);
 
         int newOffset = offset + indent + 1;
         setSelection(newOffset, newOffset);
-        stopCompoundEdit();
+        errorColumn.repaint();
     }
 
     @Override
