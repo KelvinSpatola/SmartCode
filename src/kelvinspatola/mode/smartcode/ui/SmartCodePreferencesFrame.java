@@ -340,29 +340,39 @@ public class SmartCodePreferencesFrame {
             colorPicker_4.setEnabled(isHighlightEnabled);
             colorField_5.setEnabled(isHighlightEnabled);
             colorPicker_5.setEnabled(isHighlightEnabled);
-        });
+        }); 
         
         JLabel colorLabel_1 = new JLabel("Color 1:  #");
+//        colorPicker_1 = (ColorPicker) new JTextField();
+//        colorField_1 = new JTextField();
         colorPicker_1 = new ColorPicker();
         colorField_1 = createColorTextField(colorPicker_1);
         colorPicker_1.addTextField(colorField_1);
         
         JLabel colorLabel_2 = new JLabel("Color 2:  #");
+//        colorPicker_2 = (ColorPicker) new JTextField();
+//        colorField_2 = new JTextField();
         colorPicker_2 = new ColorPicker();
         colorField_2 = createColorTextField(colorPicker_2);
         colorPicker_2.addTextField(colorField_2);
         
         JLabel colorLabel_3 = new JLabel("Color 3:  #");
+//        colorPicker_3 = (ColorPicker) new JTextField();
+//        colorField_3 = new JTextField();
         colorPicker_3 = new ColorPicker();
         colorField_3 = createColorTextField(colorPicker_3);    
         colorPicker_3.addTextField(colorField_3);
 
         JLabel colorLabel_4 = new JLabel("Color 4:  #");
+//        colorPicker_4 = (ColorPicker) new JTextField();
+//        colorField_4 = new JTextField();
         colorPicker_4 = new ColorPicker();
         colorField_4 = createColorTextField(colorPicker_4);    
         colorPicker_4.addTextField(colorField_4);
 
         JLabel colorLabel_5 = new JLabel("Color 5:  #");
+//        colorPicker_5 = (ColorPicker) new JTextField();
+//        colorField_5 = new JTextField();
         colorPicker_5 = new ColorPicker();
         colorField_5 = createColorTextField(colorPicker_5);    
         colorPicker_5.addTextField(colorField_5);
@@ -370,6 +380,8 @@ public class SmartCodePreferencesFrame {
         JSeparator separator = new JSeparator(); // ---------------------------------------------------
         
         JLabel iconColorLabel = new JLabel("Icon color:  #");
+//        iconColorPicker = (ColorPicker) new JTextField();
+//        iconColorField = new JTextField();
         iconColorPicker = new ColorPicker();
         iconColorField = createColorTextField(iconColorPicker);
         iconColorPicker.addTextField(iconColorField);
@@ -496,6 +508,8 @@ public class SmartCodePreferencesFrame {
         occurrencesHighlightingBox.setHorizontalAlignment(SwingConstants.LEFT);
         
         JLabel occurrencesColorLabel = new JLabel("Occurrences highlight color  #");
+//        occurrencesColorPicker = (ColorPicker) new JTextField();
+//        occurrencesField = new JTextField();
         occurrencesColorPicker = new ColorPicker();
         occurrencesField = createColorTextField(occurrencesColorPicker);
         occurrencesColorPicker.addTextField(occurrencesField);
@@ -529,7 +543,7 @@ public class SmartCodePreferencesFrame {
         );
         tabOccurrences.setLayout(gl_tabOccurrences); 
         
-      /*  JPanel tabMarkers = new JPanel();
+        JPanel tabMarkers = new JPanel();
         tabbedPane.addTab("Markers", null, tabMarkers,
                 "<html>"
                 + "Side column to the right of the editor that indicates the relative location of<br>"
@@ -587,9 +601,7 @@ public class SmartCodePreferencesFrame {
             }
         });
         
-        ActionListener disposer = actionEvent -> disposeFrame();
-
-        Toolkit.registerWindowCloseKeys(frame.getRootPane(), disposer);
+        Toolkit.registerWindowCloseKeys(frame.getRootPane(), a -> disposeFrame());
         Toolkit.setIcon(frame);
         frame.pack();
 

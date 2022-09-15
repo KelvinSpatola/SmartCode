@@ -201,9 +201,9 @@ ${line}
         <replaceregexp file="${file}" match="@@prettyVersion@@" replace="${project.release}" flags="g" />
 
         <!-- Determine the current epoch with JavaScript -->
-        <script language="javascript"><![CDATA[
+    	<!-- <script language="javascript"><![CDATA[
             project.setProperty("epoch.now", Date.now());
-        ]]></script>
+        ]]></script> -->
         <replaceregexp file="${file}" match="@@lastUpdated@@" replace="${epoch.now}" flags="g" />
         <replaceregexp file="${file}" match="@@minRevision@@" replace="${project.minRevision}" flags="g" />
         <replaceregexp file="${file}" match="@@maxRevision@@" replace="${project.maxRevision}" flags="g" />   
