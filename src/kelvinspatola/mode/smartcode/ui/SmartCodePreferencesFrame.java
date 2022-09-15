@@ -324,7 +324,7 @@ public class SmartCodePreferencesFrame {
          * 
          */
         
-       /* JPanel tabBookmarks = new JPanel();
+        JPanel tabBookmarks = new JPanel();
         tabbedPane.addTab("Bookmarks", null, tabBookmarks, null);
         
         bookmarkHighlightingBox = new JCheckBox("Highlight bookmarked lines");
@@ -476,7 +476,7 @@ public class SmartCodePreferencesFrame {
         gl_tabBookmarks.setAutoCreateContainerGaps(true);
         gl_tabBookmarks.setAutoCreateGaps(true);
         tabBookmarks.setLayout(gl_tabBookmarks);
-        mainPane.add(tabbedPane); */
+        mainPane.add(tabbedPane); 
         
         
         /*
