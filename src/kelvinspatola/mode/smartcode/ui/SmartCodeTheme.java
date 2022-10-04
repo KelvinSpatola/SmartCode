@@ -41,7 +41,8 @@ public class SmartCodeTheme {
 
     static protected final Map<String, String> defaultPrefs = new HashMap<>();
     static {
-        defaultPrefs.put(attributes[0], "footer.icon.selected.color"); // bookmarks.icon.color
+//        defaultPrefs.put(attributes[0], "footer.icon.selected.color"); // bookmarks.icon.color
+        defaultPrefs.put(attributes[0], "#000000"); // bookmarks.icon.color
         defaultPrefs.put(attributes[1], "true"); // bookmarks.linehighlight
         defaultPrefs.put(attributes[2], "#9B5DE5"); // bookmarks.linehighlight.color.1
         defaultPrefs.put(attributes[3], "#F15BB5"); // bookmarks.linehighlight.color.2
@@ -53,8 +54,10 @@ public class SmartCodeTheme {
         defaultPrefs.put(attributes[9], "occurrences.highlight.color"); // column.occurrence.color
         defaultPrefs.put(attributes[10], "#FFFF00"); // column.warning.color
         defaultPrefs.put(attributes[11], "true"); // occurrences.highlight
-        defaultPrefs.put(attributes[12], "header.tab.selected.color"); // occurrences.highlight.color
-        defaultPrefs.put(attributes[13], "editor.eolmarkers.color"); // templates.highlight.color
+        defaultPrefs.put(attributes[12], "#000000"); // occurrences.highlight.color
+//        defaultPrefs.put(attributes[12], "header.tab.selected.color"); // occurrences.highlight.color
+        defaultPrefs.put(attributes[13], "#000000"); // templates.highlight.color
+//        defaultPrefs.put(attributes[13], "editor.eol_markers.color"); // templates.highlight.color
     }
 
     static public void init() {

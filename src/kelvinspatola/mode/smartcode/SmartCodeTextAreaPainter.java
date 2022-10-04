@@ -94,7 +94,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         int y = textArea.lineToY(line) + getLineDisplacement();
 
         if (line == textArea.getSelectionStopLine()) {
-            gfx.setColor(gutterLineHighlightColor);
+            gfx.setColor(gutterHighlightColor);
             gfx.fillRect(0, y, Editor.LEFT_GUTTER, fontMetrics.getHeight());
         } else {
             Rectangle clip = gfx.getClipBounds();
@@ -115,7 +115,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
             text = PIN_MARKER;
         }
 
-        gfx.setColor(line < textArea.getLineCount() ? gutterTextColor : gutterPastColor);
+        gfx.setColor(line < textArea.getLineCount() ? gutterTextActiveColor : gutterTextInactiveColor);
 
         int textRight = Editor.LEFT_GUTTER - Editor.GUTTER_MARGIN;
         int textBaseline = textArea.lineToY(line) + fontMetrics.getHeight();
