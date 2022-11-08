@@ -1,45 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-<<<<<<< HEAD
+	<classpathentry kind="lib" path="C:/Users/User01/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/app/pde.jar"/>
+	<classpathentry kind="lib" path="C:/Users/User01/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/java/mode/JavaMode.jar"/>
+	<classpathentry kind="lib" path="C:/Users/User01/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/core/library/core.jar"/>
+	<classpathentry kind="lib" path="lib/org.eclipse.jdt.core.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-11">
 		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/kelvi/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/app/pde.jar" sourcepath="C:/Users/kelvi/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/app/src">
-=======
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-11"/>
-	<classpathentry kind="lib" path="C:/Users/User01/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-master/app/pde.jar">
->>>>>>> ceb5b9aa0b47d3fc94213eb21b40edc8e56926f0
-		<attributes>
-			<attribute name="javadoc_location" value="https://processing.github.io/processing-javadocs/everything/"/>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-<<<<<<< HEAD
-	<classpathentry kind="lib" path="C:/Users/kelvi/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/core/library/core.jar">
-=======
-	<classpathentry kind="lib" path="C:/Users/User01/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-master/core/library/core.jar">
->>>>>>> ceb5b9aa0b47d3fc94213eb21b40edc8e56926f0
-		<attributes>
-			<attribute name="javadoc_location" value="https://processing.github.io/processing-javadocs/core/"/>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-<<<<<<< HEAD
-	<classpathentry kind="lib" path="C:/Users/kelvi/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/java/mode/JavaMode.jar" sourcepath="C:/Users/kelvi/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-main/java/src">
-=======
-	<classpathentry kind="lib" path="C:/Users/User01/OneDrive/Coding/Eclipse-Workspace/Processing_builds/processing4-master/java/mode/JavaMode.jar">
->>>>>>> ceb5b9aa0b47d3fc94213eb21b40edc8e56926f0
-		<attributes>
-			<attribute name="module" value="true"/>
-		</attributes>
-	</classpathentry>
-	<classpathentry kind="lib" path="C:/Users/User01/eclipse-workspace/SmartCode/lib/org.eclipse.jdt.core.jar">
-		<attributes>
-			<attribute name="javadoc_location" value="https://www.ibm.com/docs/api/v1/content/SS5JSH_9.5.0/org.eclipse.jdt.doc.isv/reference/api/org/eclipse/jdt/core/dom/package-summary.html"/>
-			<attribute name="module" value="true"/>
+			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
