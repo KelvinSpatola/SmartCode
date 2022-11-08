@@ -1,6 +1,8 @@
 package kelvinspatola.mode.smartcode;
 
 import java.awt.event.KeyEvent;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,20 +31,40 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         addKeyBinding("C+PLUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() + 1));
         addKeyBinding("C+MINUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() - 1));
         addKeyBinding("CS+COMMA", e -> editor.handlePrefs());
+        addKeyBinding("CS+COMMA", e -> rename());
 
         // for testing purposes
         addKeyBinding("C+B", e -> {
 //            System.out.println(Platform.getContentFile("modes/java/keywords.txt"));
 //            System.out.println(editor.getMode().getReferenceFolder());
-            testing();
+            testing(editor);
         });
 
         listeners = new ArrayList<>();
     }
-
-    void testing() {
+    
+    void testing(SmartCodeEditor editor) {
         int line = editor.getTextArea().getCaretLine();
         System.out.println("depth: " + getSmartCodeEditor().getTextArea().getBlockDepth(line));
+    }
+    
+    private Method renameMethod;
+    private Object renameClass;
+    
+    private void rename() {
+    	try {
+    		if (renameMethod == null) {
+    			Field renameField = editor.getClass().getSuperclass().getDeclaredField("rename");
+    			renameField.setAccessible(true);
+    			renameClass = renameField.get(editor);
+    			renameMethod = renameField.get(editor).getClass().getDeclaredMethod("handleRename");
+    			renameMethod.setAccessible(true);    			
+    		}
+			renameMethod.invoke(renameClass);
+			
+		} catch (final ReflectiveOperationException e) {
+			System.err.println(e);
+        }
     }
 
     protected SmartCodeEditor getSmartCodeEditor() {
