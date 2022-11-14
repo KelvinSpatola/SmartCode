@@ -31,7 +31,7 @@ public class SmartCodeInputHandler extends PdeInputHandler {
         addKeyBinding("C+PLUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() + 1));
         addKeyBinding("C+MINUS", e -> editor.getSmartCodePainter().setFontSize(editor.getSmartCodePainter().getFontSize() - 1));
         addKeyBinding("CS+COMMA", e -> editor.handlePrefs());
-        addKeyBinding("CS+COMMA", e -> rename());
+        addKeyBinding("CA+R", e -> rename());
 
         // for testing purposes
         addKeyBinding("C+B", e -> {
