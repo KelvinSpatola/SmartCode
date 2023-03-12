@@ -1,6 +1,10 @@
 package kelvinspatola.mode.smartcode;
 
-import static kelvinspatola.mode.smartcode.Constants.*;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_CLOSING;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_OPENING;
+import static kelvinspatola.mode.smartcode.Constants.INDENT;
+import static kelvinspatola.mode.smartcode.Constants.LF;
+import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 
 import java.awt.Cursor;
 import java.awt.FontMetrics;
@@ -128,7 +132,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                         isGutterPressed = true;
                         break;
                     }
-                }
+				}
                 lastTime = thisTime;
             }
         }
@@ -149,7 +153,45 @@ public class SmartCodeTextArea extends JavaTextArea {
                 isGutterPressed = false;
             }
         }
-    };
+        
+    }
+
+    @Override
+    protected void setNewSelectionWord(int line, int offset) {
+        String lineText = editor.getLineText(line);
+        int leftQuotes = 0, rightQuotes = 0;
+
+        if (STRING_TEXT.matcher(lineText).matches()) {
+            for (int i = offset - 1; i >= 0; i--) {
+                if (lineText.charAt(i) == '"') {
+                    leftQuotes++;
+                }
+            }
+
+            for (int i = offset; i < lineText.length(); i++) {
+                if (lineText.charAt(i) == '"') {
+                    rightQuotes++;
+                }
+            }
+        }
+        
+        boolean isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
+        boolean isCaretInQuote = lineText.charAt(offset) == '"' || lineText.charAt(offset - 1) == '"';
+
+        if (isInsideQuotes && isCaretInQuote) {
+            String leftSide = lineText.substring(0, offset);
+            String rightSide = lineText.substring(offset);
+            
+            int q1 = leftSide.length() - leftSide.lastIndexOf('"') - 1;
+            int q2 = rightSide.indexOf('"');
+            
+            newSelectionStart = getCaretPosition() - q1;
+            newSelectionEnd = newSelectionStart + q1 + q2;
+            
+        } else {
+            super.setNewSelectionWord(line, offset);
+        }
+    }
 
     public void setGutterRightClickPopup(JPopupMenu popupMenu) {
         gutterRightClickPopup = popupMenu;
