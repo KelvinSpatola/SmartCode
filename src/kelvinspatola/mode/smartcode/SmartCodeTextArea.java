@@ -26,6 +26,7 @@ import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
+import processing.app.Messages;
 import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.SketchCode;
@@ -36,7 +37,7 @@ import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
     private MouseListener textAreaMouseListener;
-    private MouseMotionListener pdeDragHandlerListener;
+    private MouseMotionListener textAreaDragListener;
     protected JPopupMenu gutterRightClickPopup;
     protected SnippetManager snippetManager;
 
@@ -44,6 +45,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     protected static String tabSpaces;
     
     private final Brackets bracketHelper = new Brackets();
+    private boolean isDraggingText;
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -64,24 +66,23 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         setInputHandler(inputHandler);
 
-        // Remove PdeTextArea's gutterCursorMouseAdapter listener so we
+        // Remove PdeTextArea's default gutterCursorMouseAdapter listener so we
         // can add our own listener
         painter.removeMouseMotionListener(gutterCursorMouseAdapter);
-
-        // Remove JEditTextArea's MouseHandler listener so we
-        // can add our own listener
-        painter.removeMouseListener(painter.getMouseListeners()[2]);
-        
-        textAreaMouseListener = new TextAreaMouseListener();
-
-        // let's capture the default DragHandler listener
-        pdeDragHandlerListener = painter.getMouseMotionListeners()[1];
-        painter.removeMouseMotionListener(pdeDragHandlerListener);
-
         // Handle mouse clicks to toggle line bookmarks
         MouseAdapter gutterBookmarkToggling = new GutterAreaMouseHandler();
         painter.addMouseListener(gutterBookmarkToggling);
         painter.addMouseMotionListener(gutterBookmarkToggling);
+
+        // Remove JEditTextArea's default MouseHandler listener so we
+        // can add our own listener
+        painter.removeMouseListener(painter.getMouseListeners()[2]);
+        textAreaMouseListener = new TextAreaMouseListener();
+
+        // Remove JEditTextArea's default DragHandler listener so we
+        // can add our own listener
+        painter.removeMouseMotionListener(painter.getMouseMotionListeners()[1]);
+        textAreaDragListener = new TextAreaDragHandler();
 
         addMouseWheelListener(e -> {
             if (e.isControlDown()) {
@@ -102,14 +103,14 @@ public class SmartCodeTextArea extends JavaTextArea {
             if (e.getX() < Editor.LEFT_GUTTER) {
                 if (lastX >= Editor.LEFT_GUTTER) {
                     painter.removeMouseListener(textAreaMouseListener);
-                    painter.removeMouseMotionListener(pdeDragHandlerListener);
+                    painter.removeMouseMotionListener(textAreaDragListener);
                     painter.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                 }
 
             } else { // check if the cursor is OUTSIDE the left gutter area (inside the text area)
                 if (lastX < Editor.LEFT_GUTTER) {
                     painter.addMouseListener(textAreaMouseListener);
-                    painter.addMouseMotionListener(pdeDragHandlerListener);
+                    painter.addMouseMotionListener(textAreaDragListener);
                     painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
                     isGutterPressed = false;
                 }
@@ -163,7 +164,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     }
 
     class TextAreaMouseListener extends MouseAdapter {
-
+        @Override
         public void mousePressed(MouseEvent event) {
             if (!hasFocus()) {
                 if (!requestFocusInWindow()) {
@@ -194,7 +195,12 @@ public class SmartCodeTextArea extends JavaTextArea {
             switch (event.getClickCount()) {
 
             case 1:
-                doSingleClick(event, line, offset, dot);
+                if (isCaretInsideSelection(dot)) {
+                    isDraggingText = true;
+                    painter.setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
+                } else {
+                    doSingleClick(event, line, offset, dot);
+                }
                 break;
 
             case 2:
@@ -210,6 +216,34 @@ public class SmartCodeTextArea extends JavaTextArea {
                 doTripleClick(event, line, offset, dot);
                 break;
             }
+        }
+        
+        @Override
+        public void mouseReleased(MouseEvent e) {
+            if (isDraggingText) {
+                int caret = xyToOffset(e.getX(), e.getY());
+
+                if (!isCaretInsideSelection(caret)) {
+                    document.beginCompoundEdit();
+                    String selectedText = getSelectedText();
+                    int oldSelectionStart = selectionStart;
+                    int selectionLength = selectedText.length();
+                    
+                    setSelectedText("");
+                    
+                    if (caret > oldSelectionStart) {
+                        setCaretPosition(caret - selectionLength);                        
+                    } else {
+                        setCaretPosition(caret);                                                
+                    }
+
+                    setSelectedText(selectedText);
+                    document.endCompoundEdit();
+                }
+                setCaretPosition(caret);
+                painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
+            }
+            isDraggingText = false;
         }
 
         private void doSingleClick(MouseEvent e, int line, int offset, int dot) {
@@ -268,6 +302,54 @@ public class SmartCodeTextArea extends JavaTextArea {
             select(lineStart, lineEnd);
             selectionAncorStart = selectionStart;
             selectionAncorEnd = selectionEnd;
+        }
+    }
+    
+    class TextAreaDragHandler implements MouseMotionListener {
+        @Override
+        public void mouseDragged(MouseEvent evt) {
+            if (popup != null && popup.isVisible())
+                return;
+
+            if (isDraggingText) {
+                draggSelectedText(evt);
+            } else {
+                selectText(evt);
+            }
+
+        }
+        
+        @Override
+        public void mouseMoved(MouseEvent evt) {
+        }
+
+        private void draggSelectedText(MouseEvent evt) {
+            System.out.println("dragging selected text");
+        }
+
+        private void selectText(MouseEvent evt) {
+            if (!selectWord && !selectLine) {
+                try {
+                    select(getMarkPosition(), xyToOffset(evt.getX(), evt.getY()));
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    Messages.err("xToOffset problem", e);
+                }
+            } else {
+                int line = yToLine(evt.getY());
+                if (selectWord) {
+                    setNewSelectionWord(line, xToOffset(line, evt.getX()));
+                } else {
+                    newSelectionStart = getLineStartOffset(line);
+                    newSelectionEnd = getLineSelectionStopOffset(line);
+                }
+                if (newSelectionStart < selectionAncorStart) {
+                    select(newSelectionStart, selectionAncorEnd);
+                } else if (newSelectionEnd > selectionAncorEnd) {
+                    select(selectionAncorStart, newSelectionEnd);
+                } else {
+                    select(newSelectionStart, newSelectionEnd);
+                }
+            }
         }
     }
 
@@ -612,6 +694,15 @@ public class SmartCodeTextArea extends JavaTextArea {
             }
         }
         return false;
+    }
+    
+    public boolean isCaretInsideSelection() {
+        return isCaretInsideSelection(getCaretPosition());
+    }
+    
+    public boolean isCaretInsideSelection(int caretPos) {
+        if (!isSelectionActive()) return false;
+        return caretPos >= selectionStart && caretPos <= selectionEnd;
     }
 
     static private String addSpaces(int length) {

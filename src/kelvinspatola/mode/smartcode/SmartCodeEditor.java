@@ -30,7 +30,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
 import javax.swing.event.CaretListener;
 import javax.swing.event.MenuEvent;
