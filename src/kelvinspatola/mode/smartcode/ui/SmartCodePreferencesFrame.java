@@ -123,7 +123,6 @@ public class SmartCodePreferencesFrame {
 
         
         mainPane = new JPanel();
-        mainPane.setPreferredSize(new Dimension(400, 400));
         mainPane.setBorder(null);
         frame.setContentPane(mainPane);
                 
@@ -131,15 +130,62 @@ public class SmartCodePreferencesFrame {
         
         tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
         
+        tabGeneral();
+
+//        tabBookmarks();
         
+//        tabOccurrences();
         
+//        tabMarkers();
+        
+        mainPane.add(tabbedPane); 
+       
         /*
-         * GENERAL TAB
+         * FOOTER BUTTONS PANEL
          * 
          */
-
-        /* FORMATTING */
         
+        final int buttonWidth = 80; // Toolkit.getButtonWidth();
+
+        JPanel mainButtonsPane = new JPanel();
+        mainPane.add(mainButtonsPane);
+        
+        applyBtn = new JButton("Apply");
+        applyBtn.setPreferredSize(new Dimension(buttonWidth, 23));
+        applyBtn.addActionListener(e -> {
+            applyPrefs();
+            disposeFrame();
+        });
+        mainButtonsPane.add(applyBtn);
+        
+        cancelBtn = new JButton("Cancel");
+        cancelBtn.setPreferredSize(new Dimension(buttonWidth, 23));
+        cancelBtn.addActionListener(e -> disposeFrame());
+        mainButtonsPane.add(cancelBtn);
+        
+        // closing the window is same as hitting cancel button
+        frame.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                disposeFrame();
+            }
+        });
+        
+        Toolkit.registerWindowCloseKeys(frame.getRootPane(), a -> disposeFrame());
+        Toolkit.setIcon(frame);
+        frame.pack();
+
+        // handle window closing commands for ctrl/cmd-W or hitting ESC.
+        mainPane.addKeyListener(new KeyAdapter() {
+            public void keyPressed(KeyEvent e) {
+                KeyStroke wc = Toolkit.WINDOW_CLOSE_KEYSTROKE;
+                if ((e.getKeyCode() == KeyEvent.VK_ESCAPE) || (KeyStroke.getKeyStrokeForEvent(e).equals(wc))) {
+                    disposeFrame();
+                }
+            }
+        });
+    }
+    
+    private void tabGeneral() {        
         tabGeneral = new JPanel();
         tabbedPane.addTab("General", null, tabGeneral, null);
         
@@ -150,6 +196,7 @@ public class SmartCodePreferencesFrame {
             }
         });
         
+        /* FORMATTING */
         JLabel formattingLabel = new JLabel("formatting");
         formattingLabel.setFont(new Font("Tahoma", Font.BOLD, 11));
         
@@ -317,13 +364,9 @@ public class SmartCodePreferencesFrame {
         gl_tabGeneral.setAutoCreateGaps(true);
         gl_tabGeneral.setAutoCreateContainerGaps(true);
         tabGeneral.setLayout(gl_tabGeneral);
-        
-        
-        /*
-         * BOOKMARKS TAB
-         * 
-         */
-        
+    }
+
+    private void tabBookmarks() {
         JPanel tabBookmarks = new JPanel();
         tabbedPane.addTab("Bookmarks", null, tabBookmarks, null);
         
@@ -343,48 +386,48 @@ public class SmartCodePreferencesFrame {
         }); 
         
         JLabel colorLabel_1 = new JLabel("Color 1:  #");
-//        colorPicker_1 = (ColorPicker) new JTextField();
-//        colorField_1 = new JTextField();
-        colorPicker_1 = new ColorPicker();
-        colorField_1 = createColorTextField(colorPicker_1);
-        colorPicker_1.addTextField(colorField_1);
+        colorPicker_1 = (ColorPicker) new JTextField();
+        colorField_1 = new JTextField();
+//        colorPicker_1 = new ColorPicker();
+//        colorField_1 = createColorTextField(colorPicker_1);
+//        colorPicker_1.addTextField(colorField_1);
         
         JLabel colorLabel_2 = new JLabel("Color 2:  #");
-//        colorPicker_2 = (ColorPicker) new JTextField();
-//        colorField_2 = new JTextField();
-        colorPicker_2 = new ColorPicker();
-        colorField_2 = createColorTextField(colorPicker_2);
-        colorPicker_2.addTextField(colorField_2);
+        colorPicker_2 = (ColorPicker) new JTextField();
+        colorField_2 = new JTextField();
+//        colorPicker_2 = new ColorPicker();
+//        colorField_2 = createColorTextField(colorPicker_2);
+//        colorPicker_2.addTextField(colorField_2);
         
         JLabel colorLabel_3 = new JLabel("Color 3:  #");
-//        colorPicker_3 = (ColorPicker) new JTextField();
-//        colorField_3 = new JTextField();
-        colorPicker_3 = new ColorPicker();
-        colorField_3 = createColorTextField(colorPicker_3);    
-        colorPicker_3.addTextField(colorField_3);
+        colorPicker_3 = (ColorPicker) new JTextField();
+        colorField_3 = new JTextField();
+//        colorPicker_3 = new ColorPicker();
+//        colorField_3 = createColorTextField(colorPicker_3);    
+//        colorPicker_3.addTextField(colorField_3);
 
         JLabel colorLabel_4 = new JLabel("Color 4:  #");
-//        colorPicker_4 = (ColorPicker) new JTextField();
-//        colorField_4 = new JTextField();
-        colorPicker_4 = new ColorPicker();
-        colorField_4 = createColorTextField(colorPicker_4);    
-        colorPicker_4.addTextField(colorField_4);
+        colorPicker_4 = (ColorPicker) new JTextField();
+        colorField_4 = new JTextField();
+//        colorPicker_4 = new ColorPicker();
+//        colorField_4 = createColorTextField(colorPicker_4);    
+//        colorPicker_4.addTextField(colorField_4);
 
         JLabel colorLabel_5 = new JLabel("Color 5:  #");
-//        colorPicker_5 = (ColorPicker) new JTextField();
-//        colorField_5 = new JTextField();
-        colorPicker_5 = new ColorPicker();
-        colorField_5 = createColorTextField(colorPicker_5);    
-        colorPicker_5.addTextField(colorField_5);
+        colorPicker_5 = (ColorPicker) new JTextField();
+        colorField_5 = new JTextField();
+//        colorPicker_5 = new ColorPicker();
+//        colorField_5 = createColorTextField(colorPicker_5);    
+//        colorPicker_5.addTextField(colorField_5);
 
         JSeparator separator = new JSeparator(); // ---------------------------------------------------
         
         JLabel iconColorLabel = new JLabel("Icon color:  #");
-//        iconColorPicker = (ColorPicker) new JTextField();
-//        iconColorField = new JTextField();
-        iconColorPicker = new ColorPicker();
-        iconColorField = createColorTextField(iconColorPicker);
-        iconColorPicker.addTextField(iconColorField);
+        iconColorPicker = (ColorPicker) new JTextField();
+        iconColorField = new JTextField();
+//        iconColorPicker = new ColorPicker();
+//        iconColorField = createColorTextField(iconColorPicker);
+//        iconColorPicker.addTextField(iconColorField);
 
         
         GroupLayout gl_tabBookmarks = new GroupLayout(tabBookmarks);
@@ -488,15 +531,10 @@ public class SmartCodePreferencesFrame {
         gl_tabBookmarks.setAutoCreateContainerGaps(true);
         gl_tabBookmarks.setAutoCreateGaps(true);
         tabBookmarks.setLayout(gl_tabBookmarks);
-        mainPane.add(tabbedPane); 
-        
-        
-        /*
-         * OCCURRENCES TAB
-         * 
-         */
-        
-        tabOccurrences = new JPanel();
+    }
+    
+    private void tabOccurrences() {
+    	tabOccurrences = new JPanel();
         tabbedPane.addTab("Occurrences", null, tabOccurrences, null);
         
         occurrencesHighlightingBox = new JCheckBox("Highlight occurrences");
@@ -508,11 +546,11 @@ public class SmartCodePreferencesFrame {
         occurrencesHighlightingBox.setHorizontalAlignment(SwingConstants.LEFT);
         
         JLabel occurrencesColorLabel = new JLabel("Occurrences highlight color  #");
-//        occurrencesColorPicker = (ColorPicker) new JTextField();
-//        occurrencesField = new JTextField();
-        occurrencesColorPicker = new ColorPicker();
-        occurrencesField = createColorTextField(occurrencesColorPicker);
-        occurrencesColorPicker.addTextField(occurrencesField);
+        occurrencesColorPicker = (ColorPicker) new JTextField();
+        occurrencesField = new JTextField();
+//        occurrencesColorPicker = new ColorPicker();
+//        occurrencesField = createColorTextField(occurrencesColorPicker);
+//        occurrencesColorPicker.addTextField(occurrencesField);
         
         GroupLayout gl_tabOccurrences = new GroupLayout(tabOccurrences);
         gl_tabOccurrences.setHorizontalGroup(
@@ -542,80 +580,37 @@ public class SmartCodePreferencesFrame {
                     .addContainerGap(316, Short.MAX_VALUE))
         );
         tabOccurrences.setLayout(gl_tabOccurrences); 
-        
-        JPanel tabMarkers = new JPanel();
-        tabbedPane.addTab("Markers", null, tabMarkers,
-                "<html>"
-                + "Side column to the right of the editor that indicates the relative location of<br>"
-                + "errors and alerts identified by real-time code inspection in the current file,<br>"
-                + "and helps navigate between them. In addition, the column displays special<br>"
-                + "marks of other features, such as bookmarks and highlighted occurrences."
-                + "</html>");
-        
-        JLabel errorLabel = new JLabel("Error marker:");
-        GroupLayout gl_tabMarkers = new GroupLayout(tabMarkers);
-        gl_tabMarkers.setHorizontalGroup(
-            gl_tabMarkers.createParallelGroup(Alignment.LEADING)
-                .addGroup(gl_tabMarkers.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(errorLabel)
-                    .addContainerGap(244, Short.MAX_VALUE))
-        );
-        gl_tabMarkers.setVerticalGroup(
-            gl_tabMarkers.createParallelGroup(Alignment.LEADING)
-                .addGroup(gl_tabMarkers.createSequentialGroup()
-                    .addContainerGap()
-                    .addComponent(errorLabel)
-                    .addContainerGap(337, Short.MAX_VALUE))
-        );
-        tabMarkers.setLayout(gl_tabMarkers); 
-        
-        /*
-         * FOOTER BUTTONS PANEL
-         * 
-         */
-        
-        
-        final int buttonWidth = 80; // Toolkit.getButtonWidth();
-
-        JPanel mainButtonsPane = new JPanel();
-        mainPane.add(mainButtonsPane);
-        
-        applyBtn = new JButton("Apply");
-        applyBtn.setPreferredSize(new Dimension(buttonWidth, 23));
-        applyBtn.addActionListener(e -> {
-            applyPrefs();
-            disposeFrame();
-        });
-        mainButtonsPane.add(applyBtn);
-        
-        cancelBtn = new JButton("Cancel");
-        cancelBtn.setPreferredSize(new Dimension(buttonWidth, 23));
-        cancelBtn.addActionListener(e -> disposeFrame());
-        mainButtonsPane.add(cancelBtn);
-        
-        // closing the window is same as hitting cancel button
-        frame.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                disposeFrame();
-            }
-        });
-        
-        Toolkit.registerWindowCloseKeys(frame.getRootPane(), a -> disposeFrame());
-        Toolkit.setIcon(frame);
-        frame.pack();
-
-        // handle window closing commands for ctrl/cmd-W or hitting ESC.
-        mainPane.addKeyListener(new KeyAdapter() {
-            public void keyPressed(KeyEvent e) {
-                KeyStroke wc = Toolkit.WINDOW_CLOSE_KEYSTROKE;
-                if ((e.getKeyCode() == KeyEvent.VK_ESCAPE) || (KeyStroke.getKeyStrokeForEvent(e).equals(wc))) {
-                    disposeFrame();
-                }
-            }
-        });
     }
-
+    
+    private void tabMarkers() {
+    	 JPanel tabMarkers = new JPanel();
+         tabbedPane.addTab("Markers", null, tabMarkers,
+                 "<html>"
+                 + "Side column to the right of the editor that indicates the relative location of<br>"
+                 + "errors and alerts identified by real-time code inspection in the current file,<br>"
+                 + "and helps navigate between them. In addition, the column displays special<br>"
+                 + "marks of other features, such as bookmarks and highlighted occurrences."
+                 + "</html>");
+         
+         JLabel errorLabel = new JLabel("Error marker:");
+         GroupLayout gl_tabMarkers = new GroupLayout(tabMarkers);
+         gl_tabMarkers.setHorizontalGroup(
+             gl_tabMarkers.createParallelGroup(Alignment.LEADING)
+                 .addGroup(gl_tabMarkers.createSequentialGroup()
+                     .addContainerGap()
+                     .addComponent(errorLabel)
+                     .addContainerGap(244, Short.MAX_VALUE))
+         );
+         gl_tabMarkers.setVerticalGroup(
+             gl_tabMarkers.createParallelGroup(Alignment.LEADING)
+                 .addGroup(gl_tabMarkers.createSequentialGroup()
+                     .addContainerGap()
+                     .addComponent(errorLabel)
+                     .addContainerGap(337, Short.MAX_VALUE))
+         );
+         tabMarkers.setLayout(gl_tabMarkers); 
+    }
+    
     protected void disposeFrame() {
         frame.dispose();
     }
@@ -655,34 +650,34 @@ public class SmartCodePreferencesFrame {
         
         // *** BOOKMARKS *** //      
         
-        bookmarkHighlightingBox.setSelected(BOOKMARKS_HIGHLIGHT);
-        
-        colorPicker_1.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"));
-        colorField_1.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.1"));
-        
-        colorPicker_2.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"));
-        colorField_2.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.2"));
-        
-        colorPicker_3.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"));
-        colorField_3.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.3"));
-        
-        colorPicker_4.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"));
-        colorField_4.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.4"));
-        
-        colorPicker_5.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"));
-        colorField_5.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.5"));
-        
-        /* icon */
-        iconColorPicker.setBackground(SmartCodeTheme.getColor("bookmarks.icon.color"));
-        iconColorField.setText(SmartCodeTheme.get("bookmarks.icon.color"));
-        
-        
-        // *** OCCURRENCES *** //
-        
-        occurrencesHighlightingBox.setSelected(OCCURRENCES_HIGHLIGHT);
-        occurrencesColorPicker.setBackground(SmartCodeTheme.getColor("occurrences.highlight.color"));
-        occurrencesField.setText(SmartCodeTheme.get("occurrences.highlight.color"));
-        
+//        bookmarkHighlightingBox.setSelected(BOOKMARKS_HIGHLIGHT);
+//        
+//        colorPicker_1.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.1"));
+//        colorField_1.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.1"));
+//        
+//        colorPicker_2.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.2"));
+//        colorField_2.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.2"));
+//        
+//        colorPicker_3.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.3"));
+//        colorField_3.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.3"));
+//        
+//        colorPicker_4.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.4"));
+//        colorField_4.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.4"));
+//        
+//        colorPicker_5.setBackground(SmartCodeTheme.getColor("bookmarks.linehighlight.color.5"));
+//        colorField_5.setText(SmartCodeTheme.get("bookmarks.linehighlight.color.5"));
+//        
+//        /* icon */
+//        iconColorPicker.setBackground(SmartCodeTheme.getColor("bookmarks.icon.color"));
+//        iconColorField.setText(SmartCodeTheme.get("bookmarks.icon.color"));
+//        
+//        
+//        // *** OCCURRENCES *** //
+//        
+//        occurrencesHighlightingBox.setSelected(OCCURRENCES_HIGHLIGHT);
+//        occurrencesColorPicker.setBackground(SmartCodeTheme.getColor("occurrences.highlight.color"));
+//        occurrencesField.setText(SmartCodeTheme.get("occurrences.highlight.color"));
+//        
         
         
         frame.getRootPane().setDefaultButton(applyBtn);
@@ -717,21 +712,21 @@ public class SmartCodePreferencesFrame {
         
         // *** BOOKMARKS *** //        
         
-        SmartCodeTheme.setBoolean("bookmarks.linehighlight", bookmarkHighlightingBox.isSelected());
-        
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.1", colorPicker_1.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.2", colorPicker_2.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.3", colorPicker_3.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.4", colorPicker_4.getBackground());
-        SmartCodeTheme.setColor("bookmarks.linehighlight.color.5", colorPicker_5.getBackground());
-        /* icon */
-        SmartCodeTheme.setColor("bookmarks.icon.color", iconColorPicker.getBackground());
-
-        
-        // *** OCCURRENCES *** //        
-        SmartCodeTheme.setBoolean("occurrences.highlight", occurrencesHighlightingBox.isSelected());
-        SmartCodeTheme.setColor("occurrences.highlight.color", occurrencesColorPicker.getBackground());
-        
+//        SmartCodeTheme.setBoolean("bookmarks.linehighlight", bookmarkHighlightingBox.isSelected());
+//        
+//        SmartCodeTheme.setColor("bookmarks.linehighlight.color.1", colorPicker_1.getBackground());
+//        SmartCodeTheme.setColor("bookmarks.linehighlight.color.2", colorPicker_2.getBackground());
+//        SmartCodeTheme.setColor("bookmarks.linehighlight.color.3", colorPicker_3.getBackground());
+//        SmartCodeTheme.setColor("bookmarks.linehighlight.color.4", colorPicker_4.getBackground());
+//        SmartCodeTheme.setColor("bookmarks.linehighlight.color.5", colorPicker_5.getBackground());
+//        /* icon */
+//        SmartCodeTheme.setColor("bookmarks.icon.color", iconColorPicker.getBackground());
+//
+//        
+//        // *** OCCURRENCES *** //        
+//        SmartCodeTheme.setBoolean("occurrences.highlight", occurrencesHighlightingBox.isSelected());
+//        SmartCodeTheme.setColor("occurrences.highlight.color", occurrencesColorPicker.getBackground());
+//        
         
         
         SmartCodeTheme.save();

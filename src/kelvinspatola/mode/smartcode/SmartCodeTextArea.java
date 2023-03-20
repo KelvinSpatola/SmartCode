@@ -1,6 +1,10 @@
 package kelvinspatola.mode.smartcode;
 
-import static kelvinspatola.mode.smartcode.Constants.*;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_CLOSING;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_OPENING;
+import static kelvinspatola.mode.smartcode.Constants.INDENT;
+import static kelvinspatola.mode.smartcode.Constants.LF;
+import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 
 import java.awt.Cursor;
 import java.awt.FontMetrics;
@@ -22,20 +26,24 @@ import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
+import processing.app.Platform;
 import processing.app.Preferences;
 import processing.app.SketchCode;
+import processing.app.syntax.Brackets;
 import processing.app.syntax.TextAreaDefaults;
 import processing.app.ui.Editor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
-    private MouseListener pdeMouseHandlerListener;
+    private MouseListener textAreaMouseListener;
     private MouseMotionListener pdeDragHandlerListener;
     protected JPopupMenu gutterRightClickPopup;
     protected SnippetManager snippetManager;
 
     protected static int tabSize;
     protected static String tabSpaces;
+    
+    private final Brackets bracketHelper = new Brackets();
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -60,16 +68,18 @@ public class SmartCodeTextArea extends JavaTextArea {
         // can add our own listener
         painter.removeMouseMotionListener(gutterCursorMouseAdapter);
 
-        // let's capture the default MouseHandler listener
-        pdeMouseHandlerListener = painter.getMouseListeners()[2];
-        painter.removeMouseListener(pdeMouseHandlerListener);
+        // Remove JEditTextArea's MouseHandler listener so we
+        // can add our own listener
+        painter.removeMouseListener(painter.getMouseListeners()[2]);
+        
+        textAreaMouseListener = new TextAreaMouseListener();
 
         // let's capture the default DragHandler listener
         pdeDragHandlerListener = painter.getMouseMotionListeners()[1];
         painter.removeMouseMotionListener(pdeDragHandlerListener);
 
         // Handle mouse clicks to toggle line bookmarks
-        MouseAdapter gutterBookmarkToggling = new GutterMouseHandler();
+        MouseAdapter gutterBookmarkToggling = new GutterAreaMouseHandler();
         painter.addMouseListener(gutterBookmarkToggling);
         painter.addMouseMotionListener(gutterBookmarkToggling);
 
@@ -81,7 +91,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         });
     }
 
-    class GutterMouseHandler extends MouseAdapter {
+    class GutterAreaMouseHandler extends MouseAdapter {
         int lastX; // previous horizontal position of the mouse cursor
         long lastTime; // OS X seems to be firing multiple mouse events
         boolean isGutterPressed;
@@ -91,14 +101,14 @@ public class SmartCodeTextArea extends JavaTextArea {
             // check if the cursor is INSIDE the left gutter area
             if (e.getX() < Editor.LEFT_GUTTER) {
                 if (lastX >= Editor.LEFT_GUTTER) {
-                    painter.removeMouseListener(pdeMouseHandlerListener);
+                    painter.removeMouseListener(textAreaMouseListener);
                     painter.removeMouseMotionListener(pdeDragHandlerListener);
                     painter.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
                 }
 
             } else { // check if the cursor is OUTSIDE the left gutter area (inside the text area)
                 if (lastX < Editor.LEFT_GUTTER) {
-                    painter.addMouseListener(pdeMouseHandlerListener);
+                    painter.addMouseListener(textAreaMouseListener);
                     painter.addMouseMotionListener(pdeDragHandlerListener);
                     painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
                     isGutterPressed = false;
@@ -128,7 +138,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                         isGutterPressed = true;
                         break;
                     }
-                }
+				}
                 lastTime = thisTime;
             }
         }
@@ -149,7 +159,117 @@ public class SmartCodeTextArea extends JavaTextArea {
                 isGutterPressed = false;
             }
         }
-    };
+        
+    }
+
+    class TextAreaMouseListener extends MouseAdapter {
+
+        public void mousePressed(MouseEvent event) {
+            if (!hasFocus()) {
+                if (!requestFocusInWindow()) {
+                    return;
+                }
+            }
+
+            boolean windowsRightClick = Platform.isWindows() && (event.getButton() == MouseEvent.BUTTON3);
+            if ((event.isPopupTrigger() || windowsRightClick) && (popup != null)) {
+                int offset = xyToOffset(event.getX(), event.getY());
+                int selectionStart = getSelectionStart();
+                int selectionStop = getSelectionStop();
+                if (offset < selectionStart || offset >= selectionStop) {
+                    select(offset, offset);
+                }
+
+                popup.show(painter, event.getX(), event.getY());
+                return;
+            }
+
+            int line = yToLine(event.getY());
+            int offset = xToOffset(line, event.getX());
+            int dot = getLineStartOffset(line) + offset;
+
+            selectLine = false;
+            selectWord = false;
+
+            switch (event.getClickCount()) {
+
+            case 1:
+                doSingleClick(event, line, offset, dot);
+                break;
+
+            case 2:
+                // It uses the bracket matching stuff, so it can throw a BLE
+                try {
+                    doDoubleClick(event, line, offset, dot);
+                } catch (BadLocationException bl) {
+                    bl.printStackTrace();
+                }
+                break;
+
+            case 3:
+                doTripleClick(event, line, offset, dot);
+                break;
+            }
+        }
+
+        private void doSingleClick(MouseEvent e, int line, int offset, int dot) {
+            if (e.isShiftDown()) {
+                select(getMarkPosition(), dot);
+            } else {
+                setCaretPosition(dot);
+            }
+        }
+
+        private void doDoubleClick(MouseEvent e, int line, int offset, int dot) throws BadLocationException {
+            // Ignore empty lines
+            if (getLineLength(line) != 0) {
+                String text = document.getText(0, document.getLength());
+
+                int bracket = bracketHelper.findMatchingBracket(text, Math.max(0, dot - 1));
+                if (bracket != -1) {
+                    int mark = getMarkPosition();
+                    // Hack
+                    if (bracket > mark) {
+                        bracket++;
+                        mark--;
+                    }
+                    select(mark, bracket);
+                    return;
+                }
+
+                String lineText = getLineText(line);
+                
+                if (STRING_TEXT.matcher(lineText).matches()) {
+                    char[] chars = lineText.toCharArray();
+
+                    if ((chars[offset] == '"' || chars[offset - 1] == '"') && isCursorInsideQuotes(chars, offset)) {
+                        String leftSide = lineText.substring(0, offset);
+                        String rightSide = lineText.substring(offset);
+                        int q1 = leftSide.length() - leftSide.lastIndexOf('"') - 1;
+                        int q2 = rightSide.indexOf('"');
+                        select(dot - q1, dot + q2);
+                        return;
+                    }
+                }
+
+                setNewSelectionWord(line, offset);
+
+                select(newSelectionStart, newSelectionEnd);
+                selectWord = true;
+                selectionAncorStart = selectionStart;
+                selectionAncorEnd = selectionEnd;
+            }
+        }
+
+        private void doTripleClick(MouseEvent e, int line, int offset, int dot) {
+            selectLine = true;
+            final int lineStart = getLineStartOffset(line);
+            final int lineEnd = getLineSelectionStopOffset(line);
+            select(lineStart, lineEnd);
+            selectionAncorStart = selectionStart;
+            selectionAncorEnd = selectionEnd;
+        }
+    }
 
     public void setGutterRightClickPopup(JPopupMenu popupMenu) {
         gutterRightClickPopup = popupMenu;
@@ -222,24 +342,11 @@ public class SmartCodeTextArea extends JavaTextArea {
     @Override
     public void paste() {
         if (editable) {
-            final String lineText = getLineText(getCaretLine());
+            
+            String lineText = getLineText(getCaretLine());
             boolean isInsideQuotes = false;
-
             if (STRING_TEXT.matcher(lineText).matches()) {
-                final int caret = caretPositionInsideLine();
-                int leftQuotes = 0, rightQuotes = 0;
-
-                for (int i = caret - 1; i >= 0; i--) {
-                    if (lineText.charAt(i) == '"') {
-                        leftQuotes++;
-                    }
-                }
-                for (int i = caret; i < lineText.length(); i++) {
-                    if (lineText.charAt(i) == '"') {
-                        rightQuotes++;
-                    }
-                }
-                isInsideQuotes = (leftQuotes % 2 != 0) && (rightQuotes % 2 != 0);
+                isInsideQuotes = isCursorInsideQuotes(lineText.toCharArray(), caretPositionInsideLine());
             }
 
             Clipboard clipboard = getToolkit().getSystemClipboard();
@@ -254,7 +361,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                     // The Mac OS MRJ doesn't convert \r to \n, so do it here
                     selection = selection.replace('\r', '\n');
                 }
-
+                
                 // Remove tabs and replace with spaces
                 if (selection.contains("\t")) {
                     int tabSize = Preferences.getInteger("editor.tabs.size");
@@ -282,14 +389,15 @@ public class SmartCodeTextArea extends JavaTextArea {
                             int tabSize = Preferences.getInteger("editor.tabs.size");
                             indent = getLineIndentation(getCaretLine()) + tabSize;
                         }
+                        String spaces = addSpaces(indent);
 
                         String[] lines = selection.split(LF);
-                        sb = new StringBuilder(lines[0] + "\\n\"" + LF);
+                        sb = new StringBuilder(lines[0]).append("\\n\"").append(LF);
 
                         for (int i = 1; i < lines.length - 1; i++) {
-                            sb.append(addSpaces(indent) + "+ \"" + lines[i] + "\\n\"" + LF);
+                            sb.append(spaces).append("+ \"").append(lines[i]).append("\\n\"").append(LF);
                         }
-                        sb.append(addSpaces(indent) + "+ \"" + lines[lines.length - 1]);
+                        sb.append(spaces).append("+ \"").append(lines[lines.length - 1]);
                     }
                     setSelectedText(sb.toString());
 
@@ -487,6 +595,23 @@ public class SmartCodeTextArea extends JavaTextArea {
             offset--;
         }
         return -1;
+    }
+    
+    public boolean isCursorInsideQuotes(final char[] chars, final int cursor) {
+        final int len = chars.length;
+        boolean oddLeft = false, oddRight = false;
+        
+        for (int i = 0; i < len; i++) {
+            if (chars[i] == '"') {
+                if (i < cursor) oddLeft = !oddLeft;
+                else oddRight = !oddRight;
+
+                if (oddLeft && oddRight) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     static private String addSpaces(int length) {
