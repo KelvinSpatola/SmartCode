@@ -360,6 +360,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 } else {
                     bm.setColorTag(colorTag);
                     showBookmarks.updateTree();
+                    textarea.repaint();
                 }
                 sketch.setModified(true);
                 currentBookmarkColor = colorTag;
