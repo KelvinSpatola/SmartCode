@@ -3,11 +3,8 @@ package kelvinspatola.mode.smartcode;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-
 import kelvinspatola.mode.smartcode.ui.ColorTag;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
-import kelvinspatola.mode.smartcode.ui.LineMarker;
 import processing.app.Mode;
 import processing.app.Sketch;
 import processing.app.SketchCode;

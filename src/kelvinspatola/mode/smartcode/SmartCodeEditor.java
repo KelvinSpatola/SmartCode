@@ -30,7 +30,6 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
-import javax.swing.JSeparator;
 import javax.swing.KeyStroke;
 import javax.swing.event.CaretListener;
 import javax.swing.event.MenuEvent;
@@ -361,6 +360,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 } else {
                     bm.setColorTag(colorTag);
                     showBookmarks.updateTree();
+                    textarea.repaint();
                 }
                 sketch.setModified(true);
                 currentBookmarkColor = colorTag;

@@ -1,6 +1,6 @@
 package kelvinspatola.mode.smartcode;
 
-import static kelvinspatola.mode.smartcode.Constants.*;
+import static kelvinspatola.mode.smartcode.Constants.PIN_MARKER;
 
 import java.awt.Color;
 import java.awt.Graphics;
@@ -45,7 +45,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
                 return null;
             }
 
-            @Override // don't know what the heck is this for xD
+            @Override // I don't know what the heck is this for xD
             public void init(JEditTextArea textarea, Highlight next) {
             }
 
@@ -66,27 +66,28 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         if (linePainters != null) {
             linePainters.stream().forEach(LinePainter::updateTheme);
         }
-//        if (linePainters != null) {
-//            for (LinePainter painter : linePainters) {
-//                painter.updateTheme();
-//            }
-//        }
     }
 
     public void addLinePainter(LinePainter painter) {
         linePainters.add(painter);
     }
-    
+
     public void removeLinePainter(LinePainter painter) {
         linePainters.remove(painter);
     }
-    
+
     public List<LinePainter> getLinePainters() {
         return linePainters;
     }
-    
+
     public SmartCodeEditor getSmartCodeEditor() {
         return (SmartCodeEditor) getEditor();
+    }
+
+    @Override
+    public void paint(Graphics gfx) {
+        super.paint(gfx);
+        ((SmartCodeTextArea) textArea).paintDropCaret(gfx, defaults.bracketHighlightColor);
     }
 
     @Override
@@ -150,7 +151,6 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         }
     }
 
-    
     static protected void drawBookmark(Graphics g, float x, float y, float w, float h) {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -183,6 +183,10 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         path.lineTo(x, y + h);
         path.closePath();
         g2.fill(path);
+    }
+
+    protected int getLineDisplacement() {
+        return super.getLineDisplacement();
     }
 
     /**
