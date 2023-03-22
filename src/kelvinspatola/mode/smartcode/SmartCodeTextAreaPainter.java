@@ -15,6 +15,7 @@ import java.util.List;
 import javax.swing.text.Segment;
 import javax.swing.text.Utilities;
 
+import kelvinspatola.mode.smartcode.ui.LinePainter;
 import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Preferences;
 import processing.app.syntax.JEditTextArea;
@@ -66,6 +67,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
         if (linePainters != null) {
             linePainters.stream().forEach(LinePainter::updateTheme);
         }
+        textArea.repaint();
     }
 
     public void addLinePainter(LinePainter painter) {

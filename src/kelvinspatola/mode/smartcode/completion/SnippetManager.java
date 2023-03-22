@@ -14,10 +14,10 @@ import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 
 import kelvinspatola.mode.smartcode.KeyListener;
-import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodeMode;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
+import kelvinspatola.mode.smartcode.ui.LinePainter;
 import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.core.PApplet;
 import processing.data.JSONArray;
