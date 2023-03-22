@@ -7,7 +7,6 @@ import java.awt.Graphics;
 import java.util.ArrayList;
 import java.util.List;
 
-import kelvinspatola.mode.smartcode.LinePainter;
 import kelvinspatola.mode.smartcode.SmartCodeEditor;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
 import processing.app.SketchCode;
