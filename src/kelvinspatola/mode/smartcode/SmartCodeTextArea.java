@@ -6,14 +6,20 @@ import static kelvinspatola.mode.smartcode.Constants.INDENT;
 import static kelvinspatola.mode.smartcode.Constants.LF;
 import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 
+import java.awt.AWTException;
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.HeadlessException;
+import java.awt.RenderingHints;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EventListener;
@@ -36,16 +42,34 @@ import processing.app.ui.Editor;
 import processing.mode.java.JavaTextArea;
 
 public class SmartCodeTextArea extends JavaTextArea {
-    private MouseListener textAreaMouseListener;
-    private MouseMotionListener textAreaDragListener;
+    public static Cursor DEFAULT_CURSOR = new Cursor(Cursor.DEFAULT_CURSOR);
+    public static Cursor TEXT_CURSOR = new Cursor(Cursor.TEXT_CURSOR);
+    public static Cursor MOVE_DROP_CURSOR;
+    public static Cursor COPY_DROP_CURSOR;
+    public static Cursor INVALID_CURSOR;
+    static {
+        try {
+            MOVE_DROP_CURSOR = Cursor.getSystemCustomCursor("MoveDrop.32x32");
+            COPY_DROP_CURSOR = Cursor.getSystemCustomCursor("CopyDrop.32x32");
+            INVALID_CURSOR = Cursor.getSystemCustomCursor("Invalid.32x32");
+        } catch (HeadlessException | AWTException e) {
+            e.printStackTrace();
+        }
+    }
+
+    protected TextAreaMouseHandler textAreaMouseHandler;
+    protected GutterAreaMouseHandler gutterAreaMouseHandler;
     protected JPopupMenu gutterRightClickPopup;
     protected SnippetManager snippetManager;
 
     protected static int tabSize;
     protected static String tabSpaces;
+
+    private boolean isDraggingText;
+    private boolean mouseExited;
+    private int dropCaretX, dropCaretY;
     
     private final Brackets bracketHelper = new Brackets();
-    private boolean isDraggingText;
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -69,20 +93,18 @@ public class SmartCodeTextArea extends JavaTextArea {
         // Remove PdeTextArea's default gutterCursorMouseAdapter listener so we
         // can add our own listener
         painter.removeMouseMotionListener(gutterCursorMouseAdapter);
-        // Handle mouse clicks to toggle line bookmarks
-        MouseAdapter gutterBookmarkToggling = new GutterAreaMouseHandler();
-        painter.addMouseListener(gutterBookmarkToggling);
-        painter.addMouseMotionListener(gutterBookmarkToggling);
 
-        // Remove JEditTextArea's default MouseHandler listener so we
-        // can add our own listener
+        // Handles mouse clicks to toggle line bookmarks
+        gutterAreaMouseHandler = new GutterAreaMouseHandler();
+        painter.addMouseListener(gutterAreaMouseHandler);
+        painter.addMouseMotionListener(gutterAreaMouseHandler);
+
+        // Remove JEditTextArea's default MouseHandler and DragHandler listeners so we
+        // can add our own MouseListener and MouseMotionListener
         painter.removeMouseListener(painter.getMouseListeners()[2]);
-        textAreaMouseListener = new TextAreaMouseListener();
-
-        // Remove JEditTextArea's default DragHandler listener so we
-        // can add our own listener
         painter.removeMouseMotionListener(painter.getMouseMotionListeners()[1]);
-        textAreaDragListener = new TextAreaDragHandler();
+
+        textAreaMouseHandler = new TextAreaMouseHandler();
 
         addMouseWheelListener(e -> {
             if (e.isControlDown()) {
@@ -102,16 +124,16 @@ public class SmartCodeTextArea extends JavaTextArea {
             // check if the cursor is INSIDE the left gutter area
             if (e.getX() < Editor.LEFT_GUTTER) {
                 if (lastX >= Editor.LEFT_GUTTER) {
-                    painter.removeMouseListener(textAreaMouseListener);
-                    painter.removeMouseMotionListener(textAreaDragListener);
-                    painter.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                    painter.removeMouseListener(textAreaMouseHandler);
+                    painter.removeMouseMotionListener(textAreaMouseHandler);
+                    painter.setCursor(DEFAULT_CURSOR);
                 }
 
             } else { // check if the cursor is OUTSIDE the left gutter area (inside the text area)
                 if (lastX < Editor.LEFT_GUTTER) {
-                    painter.addMouseListener(textAreaMouseListener);
-                    painter.addMouseMotionListener(textAreaDragListener);
-                    painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
+                    painter.addMouseListener(textAreaMouseHandler);
+                    painter.addMouseMotionListener(textAreaMouseHandler);
+                    painter.setCursor(TEXT_CURSOR);
                     isGutterPressed = false;
                 }
             }
@@ -139,7 +161,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                         isGutterPressed = true;
                         break;
                     }
-				}
+                }
                 lastTime = thisTime;
             }
         }
@@ -160,90 +182,173 @@ public class SmartCodeTextArea extends JavaTextArea {
                 isGutterPressed = false;
             }
         }
-        
+
     }
 
-    class TextAreaMouseListener extends MouseAdapter {
+    protected class TextAreaMouseHandler extends MouseAdapter {
+        int lastX; // previous horizontal position of the mouse cursor
+
         @Override
-        public void mousePressed(MouseEvent event) {
+        public void mousePressed(MouseEvent e) {
             if (!hasFocus()) {
                 if (!requestFocusInWindow()) {
                     return;
                 }
             }
 
-            boolean windowsRightClick = Platform.isWindows() && (event.getButton() == MouseEvent.BUTTON3);
-            if ((event.isPopupTrigger() || windowsRightClick) && (popup != null)) {
-                int offset = xyToOffset(event.getX(), event.getY());
+            boolean windowsRightClick = Platform.isWindows() && (e.getButton() == MouseEvent.BUTTON3);
+            if ((e.isPopupTrigger() || windowsRightClick) && (popup != null)) {
+                int offset = xyToOffset(e.getX(), e.getY());
                 int selectionStart = getSelectionStart();
                 int selectionStop = getSelectionStop();
                 if (offset < selectionStart || offset >= selectionStop) {
                     select(offset, offset);
                 }
 
-                popup.show(painter, event.getX(), event.getY());
+                popup.show(painter, e.getX(), e.getY());
                 return;
             }
 
-            int line = yToLine(event.getY());
-            int offset = xToOffset(line, event.getX());
+            int line = yToLine(e.getY());
+            int offset = xToOffset(line, e.getX());
             int dot = getLineStartOffset(line) + offset;
 
             selectLine = false;
             selectWord = false;
 
-            switch (event.getClickCount()) {
-
+            switch (e.getClickCount()) {
             case 1:
                 if (isCaretInsideSelection(dot)) {
                     isDraggingText = true;
-                    painter.setCursor(new Cursor(Cursor.CROSSHAIR_CURSOR));
-                } else {
-                    doSingleClick(event, line, offset, dot);
+                    updateDropCaretOffset(e.getX(), e.getY());
+                    updateDragAndDropIcon(e);
+                    break;
                 }
+                doSingleClick(e, line, offset, dot);
                 break;
-
             case 2:
-                // It uses the bracket matching stuff, so it can throw a BLE
-                try {
-                    doDoubleClick(event, line, offset, dot);
-                } catch (BadLocationException bl) {
-                    bl.printStackTrace();
-                }
+                doDoubleClick(e, line, offset, dot);
                 break;
-
             case 3:
-                doTripleClick(event, line, offset, dot);
+                doTripleClick(e, line, offset, dot);
                 break;
             }
         }
-        
+
         @Override
         public void mouseReleased(MouseEvent e) {
             if (isDraggingText) {
+                if (mouseExited) {
+                    painter.setCursor((e.getX() < Editor.LEFT_GUTTER) ? DEFAULT_CURSOR : TEXT_CURSOR);
+                    editor.setCursor(DEFAULT_CURSOR);
+                    isDraggingText = false;
+                    return;
+                }
+
                 int caret = xyToOffset(e.getX(), e.getY());
+                int start = caret;
+                int end = caret;
 
                 if (!isCaretInsideSelection(caret)) {
                     document.beginCompoundEdit();
                     String selectedText = getSelectedText();
                     int oldSelectionStart = selectionStart;
                     int selectionLength = selectedText.length();
-                    
-                    setSelectedText("");
-                    
-                    if (caret > oldSelectionStart) {
-                        setCaretPosition(caret - selectionLength);                        
-                    } else {
-                        setCaretPosition(caret);                                                
+
+                    if (e.isControlDown()) { // copy-paste operation
+                        setCaretPosition(caret);
+                        start = caret;
+                        end = start + selectionLength;
+
+                    } else { // cut-paste operation
+                        setSelectedText("");
+                        if (caret > oldSelectionStart) {
+                            setCaretPosition(caret - selectionLength);
+                            start = caret - selectionLength;
+                            end = caret;
+                        } else {
+                            setCaretPosition(caret);
+                            start = caret;
+                            end = start + selectionLength;
+                        }
                     }
 
                     setSelectedText(selectedText);
                     document.endCompoundEdit();
                 }
-                setCaretPosition(caret);
-                painter.setCursor(new Cursor(Cursor.TEXT_CURSOR));
+                select(start, end);
+                painter.setCursor(TEXT_CURSOR);
+                isDraggingText = false;
             }
-            isDraggingText = false;
+        }
+
+        @Override
+        public void mouseDragged(MouseEvent e) {
+            if (popup != null && popup.isVisible())
+                return;
+
+            int x = e.getX();
+            int y = e.getY();
+
+            if (isDraggingText) {
+                if (x < Editor.LEFT_GUTTER && lastX >= Editor.LEFT_GUTTER) {
+                    painter.setCursor(INVALID_CURSOR);
+                    mouseExited = true;
+                    painter.repaint();
+
+                } else if (x >= Editor.LEFT_GUTTER) {
+                    if (lastX < Editor.LEFT_GUTTER) {
+                        updateDragAndDropIcon(e);
+                        mouseExited = false;
+                        
+                    } else if (!mouseExited) {
+                        updateDropCaretOffset(x, y);
+                    }
+                }
+                lastX = x;
+
+            } else {
+                if (!selectWord && !selectLine) {
+                    try {
+                        select(getMarkPosition(), xyToOffset(x, y));
+                    } catch (ArrayIndexOutOfBoundsException ex) {
+                        Messages.err("xToOffset problem", ex);
+                    }
+                } else {
+                    int line = yToLine(y);
+                    if (selectWord) {
+                        setNewSelectionWord(line, xToOffset(line, x));
+                    } else {
+                        newSelectionStart = getLineStartOffset(line);
+                        newSelectionEnd = getLineSelectionStopOffset(line);
+                    }
+                    if (newSelectionStart < selectionAncorStart) {
+                        select(newSelectionStart, selectionAncorEnd);
+                    } else if (newSelectionEnd > selectionAncorEnd) {
+                        select(selectionAncorStart, newSelectionEnd);
+                    } else {
+                        select(newSelectionStart, newSelectionEnd);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+            mouseExited = true;
+            if (isDraggingText) {
+                editor.setCursor(INVALID_CURSOR);
+                painter.repaint();
+            }
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e) {
+            mouseExited = false;
+            if (isDraggingText) {
+                updateDragAndDropIcon(e);
+            }
+            editor.setCursor(DEFAULT_CURSOR);
         }
 
         private void doSingleClick(MouseEvent e, int line, int offset, int dot) {
@@ -254,10 +359,15 @@ public class SmartCodeTextArea extends JavaTextArea {
             }
         }
 
-        private void doDoubleClick(MouseEvent e, int line, int offset, int dot) throws BadLocationException {
+        private void doDoubleClick(MouseEvent e, int line, int offset, int dot) {
             // Ignore empty lines
             if (getLineLength(line) != 0) {
-                String text = document.getText(0, document.getLength());
+                String text = "";
+                try {
+                    text = document.getText(0, document.getLength());
+                } catch (BadLocationException e1) {
+                    e1.printStackTrace();
+                }
 
                 int bracket = bracketHelper.findMatchingBracket(text, Math.max(0, dot - 1));
                 if (bracket != -1) {
@@ -272,7 +382,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                 }
 
                 String lineText = getLineText(line);
-                
+
                 if (STRING_TEXT.matcher(lineText).matches()) {
                     char[] chars = lineText.toCharArray();
 
@@ -303,53 +413,39 @@ public class SmartCodeTextArea extends JavaTextArea {
             selectionAncorStart = selectionStart;
             selectionAncorEnd = selectionEnd;
         }
+    
+        private void updateDropCaretOffset(int x, int y) {
+            int line = yToLine(y);
+            int xOffset = xyToOffset(x, y) - getLineStartOffset(line);
+            dropCaretX = offsetToX(line, xOffset);
+            dropCaretY = lineToY(line) + getSmartCodePainter().getLineDisplacement();
+            painter.repaint();
+        }
+    }
+
+    private void updateDragAndDropIcon(InputEvent e) {
+        if (e.isControlDown()) {
+            painter.setCursor(COPY_DROP_CURSOR);
+        } else {
+            painter.setCursor(MOVE_DROP_CURSOR);
+        }
+    }
+
+    @Override
+    public void processKeyEvent(KeyEvent evt) {
+        if (isDraggingText && !mouseExited) {
+            updateDragAndDropIcon(evt);
+            return;
+        }
+        super.processKeyEvent(evt);
     }
     
-    class TextAreaDragHandler implements MouseMotionListener {
-        @Override
-        public void mouseDragged(MouseEvent evt) {
-            if (popup != null && popup.isVisible())
-                return;
-
-            if (isDraggingText) {
-                draggSelectedText(evt);
-            } else {
-                selectText(evt);
-            }
-
-        }
-        
-        @Override
-        public void mouseMoved(MouseEvent evt) {
-        }
-
-        private void draggSelectedText(MouseEvent evt) {
-            System.out.println("dragging selected text");
-        }
-
-        private void selectText(MouseEvent evt) {
-            if (!selectWord && !selectLine) {
-                try {
-                    select(getMarkPosition(), xyToOffset(evt.getX(), evt.getY()));
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    Messages.err("xToOffset problem", e);
-                }
-            } else {
-                int line = yToLine(evt.getY());
-                if (selectWord) {
-                    setNewSelectionWord(line, xToOffset(line, evt.getX()));
-                } else {
-                    newSelectionStart = getLineStartOffset(line);
-                    newSelectionEnd = getLineSelectionStopOffset(line);
-                }
-                if (newSelectionStart < selectionAncorStart) {
-                    select(newSelectionStart, selectionAncorEnd);
-                } else if (newSelectionEnd > selectionAncorEnd) {
-                    select(selectionAncorStart, newSelectionEnd);
-                } else {
-                    select(newSelectionStart, newSelectionEnd);
-                }
-            }
+    protected void paintDropCaret(Graphics gfx, Color color) {
+        if (isDraggingText && !mouseExited) {
+            Graphics2D g2 = (Graphics2D) gfx;
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setColor(color);
+            g2.fillRect(dropCaretX, dropCaretY, 2, painter.getFontMetrics().getHeight()); 
         }
     }
 
@@ -424,7 +520,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     @Override
     public void paste() {
         if (editable) {
-            
+
             String lineText = getLineText(getCaretLine());
             boolean isInsideQuotes = false;
             if (STRING_TEXT.matcher(lineText).matches()) {
@@ -443,7 +539,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                     // The Mac OS MRJ doesn't convert \r to \n, so do it here
                     selection = selection.replace('\r', '\n');
                 }
-                
+
                 // Remove tabs and replace with spaces
                 if (selection.contains("\t")) {
                     int tabSize = Preferences.getInteger("editor.tabs.size");
@@ -508,7 +604,7 @@ public class SmartCodeTextArea extends JavaTextArea {
         int end = getLineStartNonWhiteSpaceOffset(line);
         return end - start;
     }
-    
+
     public static String indentOutdentText(String text, int length, boolean indent) {
         return indent ? indentText(text, length) : outdentText(text, length);
     }
@@ -678,15 +774,17 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
         return -1;
     }
-    
+
     public boolean isCursorInsideQuotes(final char[] chars, final int cursor) {
         final int len = chars.length;
         boolean oddLeft = false, oddRight = false;
-        
+
         for (int i = 0; i < len; i++) {
             if (chars[i] == '"') {
-                if (i < cursor) oddLeft = !oddLeft;
-                else oddRight = !oddRight;
+                if (i < cursor)
+                    oddLeft = !oddLeft;
+                else
+                    oddRight = !oddRight;
 
                 if (oddLeft && oddRight) {
                     return true;
@@ -695,13 +793,14 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
         return false;
     }
-    
+
     public boolean isCaretInsideSelection() {
         return isCaretInsideSelection(getCaretPosition());
     }
-    
+
     public boolean isCaretInsideSelection(int caretPos) {
-        if (!isSelectionActive()) return false;
+        if (!isSelectionActive())
+            return false;
         return caretPos >= selectionStart && caretPos <= selectionEnd;
     }
 
