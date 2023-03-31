@@ -101,7 +101,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             textarea.addCaretListener(occurrences);
         }
 
-        getSmartCodePainter().addLinePainter(getTextArea().snippetManager);
+//        getSmartCodePainter().addLinePainter(getTextArea().snippetManager);
 
 //        context = new CodeContext(this, preprocService);
 //        textarea.addCaretListener(context);
