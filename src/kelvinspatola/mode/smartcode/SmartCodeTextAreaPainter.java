@@ -89,7 +89,7 @@ public class SmartCodeTextAreaPainter extends JavaTextAreaPainter {
     @Override
     public void paint(Graphics gfx) {
         super.paint(gfx);
-        ((SmartCodeTextArea) textArea).paintDropCaret(gfx, defaults.bracketHighlightColor);
+        ((SmartCodeTextArea) textArea).paintDropCaret(gfx);
     }
 
     @Override

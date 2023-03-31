@@ -7,7 +7,6 @@ import static kelvinspatola.mode.smartcode.Constants.LF;
 import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 
 import java.awt.AWTException;
-import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
@@ -26,12 +25,14 @@ import java.util.EventListener;
 import java.util.stream.Stream;
 
 import javax.swing.JPopupMenu;
+import javax.swing.Timer;
 import javax.swing.event.CaretListener;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 
 import kelvinspatola.mode.smartcode.completion.BracketCloser;
 import kelvinspatola.mode.smartcode.completion.SnippetManager;
+import kelvinspatola.mode.smartcode.ui.MultiCursorManager;
 import processing.app.Messages;
 import processing.app.Platform;
 import processing.app.Preferences;
@@ -61,6 +62,7 @@ public class SmartCodeTextArea extends JavaTextArea {
     protected GutterAreaMouseHandler gutterAreaMouseHandler;
     protected JPopupMenu gutterRightClickPopup;
     protected SnippetManager snippetManager;
+    protected MultiCursorManager multiCursorManager;
 
     protected static int tabSize;
     protected static String tabSpaces;
@@ -68,8 +70,9 @@ public class SmartCodeTextArea extends JavaTextArea {
     private boolean isDraggingText;
     private boolean mouseExited;
     private int dropCaretX, dropCaretY;
-    
+
     private final Brackets bracketHelper = new Brackets();
+    private final Timer multicursorTimer;
 
     // CONSTRUCTOR
     public SmartCodeTextArea(TextAreaDefaults defaults, SmartCodeEditor editor) {
@@ -83,10 +86,15 @@ public class SmartCodeTextArea extends JavaTextArea {
             snippetManager = new SnippetManager(editor);
             inputHandler.addKeyListener(snippetManager);
             addCaretListener(snippetManager);
-//            getSmartCodePainter().addLinePainter(snippetManager);
+            getSmartCodePainter().addLinePainter(snippetManager);
         }
         // default behaviour for the textarea in regards to TAB and ENTER key
         inputHandler.addKeyListener(editor);
+
+        multiCursorManager = new MultiCursorManager(this);
+        inputHandler.addKeyListener(multiCursorManager);
+//        addCaretListener(multiCursorManager);
+        getSmartCodePainter().addLinePainter(multiCursorManager);
 
         setInputHandler(inputHandler);
 
@@ -112,6 +120,14 @@ public class SmartCodeTextArea extends JavaTextArea {
                 getSmartCodePainter().setFontSize(getSmartCodePainter().getFontSize() - clicks);
             }
         });
+
+        multicursorTimer = new Timer(500, e -> {
+            if (hasFocus() && multiCursorManager.isActive()) {
+                multiCursorManager.blinkCursors();
+            }
+        });
+        multicursorTimer.setInitialDelay(500);
+        multicursorTimer.start();
     }
 
     class GutterAreaMouseHandler extends MouseAdapter {
@@ -300,14 +316,14 @@ public class SmartCodeTextArea extends JavaTextArea {
                     if (lastX < Editor.LEFT_GUTTER) {
                         updateDragAndDropIcon(e);
                         mouseExited = false;
-                        
+
                     } else if (!mouseExited) {
                         updateDropCaretOffset(x, y);
                     }
                 }
                 lastX = x;
 
-            } else {
+            } else if (!multiCursorManager.isActive()) { // Do not enable text selection while we're on multicursor mode
                 if (!selectWord && !selectLine) {
                     try {
                         select(getMarkPosition(), xyToOffset(x, y));
@@ -331,6 +347,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                     }
                 }
             }
+            
         }
 
         @Override
@@ -356,6 +373,14 @@ public class SmartCodeTextArea extends JavaTextArea {
                 select(getMarkPosition(), dot);
             } else {
                 setCaretPosition(dot);
+            }
+
+            if (e.getButton() == MouseEvent.BUTTON1) {
+                if (e.isAltDown()) {
+                    multiCursorManager.addCursor(line, offset, dot);
+                } else if (multiCursorManager.isActive()) {
+                    multiCursorManager.clear();
+                }
             }
         }
 
@@ -413,7 +438,7 @@ public class SmartCodeTextArea extends JavaTextArea {
             selectionAncorStart = selectionStart;
             selectionAncorEnd = selectionEnd;
         }
-    
+
         private void updateDropCaretOffset(int x, int y) {
             int line = yToLine(y);
             int xOffset = xyToOffset(x, y) - getLineStartOffset(line);
@@ -439,13 +464,13 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
         super.processKeyEvent(evt);
     }
-    
-    protected void paintDropCaret(Graphics gfx, Color color) {
+
+    protected void paintDropCaret(Graphics gfx) {
         if (isDraggingText && !mouseExited) {
             Graphics2D g2 = (Graphics2D) gfx;
             g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            g2.setColor(color);
-            g2.fillRect(dropCaretX, dropCaretY, 2, painter.getFontMetrics().getHeight()); 
+            g2.setColor(getDefaults().bracketHighlightColor);
+            g2.fillRect(dropCaretX, dropCaretY, 2, painter.getFontMetrics().getHeight());
         }
     }
 
@@ -468,6 +493,21 @@ public class SmartCodeTextArea extends JavaTextArea {
         super.updateTheme();
         tabSize = Preferences.getInteger("editor.tabs.size");
         tabSpaces = addSpaces(tabSize);
+    }
+    
+    @Override
+    public void select(int start, int end) {
+        super.select(start, end);
+        
+        if (multicursorTimer != null && multiCursorManager.isActive()) {
+            multicursorTimer.restart();            
+        }
+    }
+    
+    @Override
+    public void removeNotify() {
+        super.removeNotify();
+        multicursorTimer.stop();
     }
 
     /**
