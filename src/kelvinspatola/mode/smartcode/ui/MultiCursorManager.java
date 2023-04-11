@@ -27,6 +27,12 @@ public class MultiCursorManager implements LinePainter, KeyListener {
 
     public void addCursor(int dot) {
         if (cursors.isEmpty()) {
+            List<Cursor> list = new ArrayList<>();
+            list.add(new Cursor(lastCaretPosition));
+            cursors.put(textArea.getLineOfOffset(lastCaretPosition), list);    
+            
+            textArea.getSmartCodeEditor().stopTrackingCodeOccurences();
+            textArea.setCaretVisible(false);
             isActive = true;
         }
         
@@ -45,9 +51,34 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         textArea.setCaretPosition(lastCaretPosition);
         textArea.repaint();
     }
+    
+    public void addCursorWithKeyboard(boolean up) {
+        int currentCaret = textArea.getCaretPosition();
+        int newLine;
+        if (cursors.isEmpty()) {
+            newLine = textArea.getCaretLine() + (up ? -1 : 1);
+        } else {
+            if (up)
+                newLine = cursors.keySet().stream().mapToInt(v -> v).min().orElseThrow() - 1;
+            else
+                newLine = cursors.keySet().stream().mapToInt(v -> v).max().orElseThrow() + 1;   
+        }
+        
+        Cursor c = new Cursor(currentCaret);
+        int currentMagicCaret = c.getMagicCaretPosition();
+        int newDot = textArea.getLineStartOffset(newLine) + textArea.xToOffset(newLine, currentMagicCaret);
+        
+        addCursor(newDot);
+    } 
 
     @Override
     public boolean handlePressed(KeyEvent e) {
+        if (e.isAltDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_UP) {
+            addCursorWithKeyboard(true);
+        } else if (e.isAltDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_DOWN) {
+            addCursorWithKeyboard(false);
+        }
+        
         if (e.isAltDown()) {
             lastCaretPosition = textArea.getCaretPosition();
 
@@ -88,6 +119,8 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         
         if (cursors.isEmpty()) {
             isActive = false;
+            textArea.getSmartCodeEditor().startTrackingCodeOccurences();
+            textArea.setCaretVisible(true);
         }
         
         textArea.repaint();
@@ -144,6 +177,15 @@ public class MultiCursorManager implements LinePainter, KeyListener {
                 }
             });
         });
+        
+        // Ensure that the first/last cursor stays visible
+        if (!cursors.isEmpty()) {
+            if (goUp) {
+                textArea.scrollTo(cursors.keySet().stream().mapToInt(v -> v).min().orElseThrow(), 0);
+            } else {
+                textArea.scrollTo(cursors.keySet().stream().mapToInt(v -> v).max().orElseThrow(), 0);            
+            }            
+        }
     }
 
     private void moveHorizontally(Map<Integer, List<Cursor>> cursors, boolean left) {
@@ -220,6 +262,8 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     public void clear() {
         cursors.clear();
         isActive = false;
+        textArea.getSmartCodeEditor().startTrackingCodeOccurences();
+        textArea.setCaretVisible(true);
     }
     
     public void blinkCursors() {

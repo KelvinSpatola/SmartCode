@@ -170,7 +170,7 @@ public class SmartCodeTextArea extends JavaTextArea {
                     switch (e.getButton()) {
                     case MouseEvent.BUTTON1: // left mouse button
                         if (e.getClickCount() == 2)
-                            ((SmartCodeEditor) editor).toggleLineBookmark(line);
+                            getSmartCodeEditor().toggleLineBookmark(line);
                         break;
                     case MouseEvent.BUTTON3: // right mouse button
                         isGutterPressed = true;
@@ -446,6 +446,10 @@ public class SmartCodeTextArea extends JavaTextArea {
             painter.repaint();
         }
     }
+    
+    public void addNewCursor(boolean up) {
+        multiCursorManager.addCursorWithKeyboard(up);
+    }
 
     private void updateDragAndDropIcon(InputEvent e) {
         if (e.isControlDown()) {
@@ -528,6 +532,10 @@ public class SmartCodeTextArea extends JavaTextArea {
 
     public SmartCodeTextAreaPainter getSmartCodePainter() {
         return (SmartCodeTextAreaPainter) painter;
+    }
+    
+    public SmartCodeEditor getSmartCodeEditor() {
+        return (SmartCodeEditor) editor;
     }
 
     public int getLineStartOffset(int tabIndex, int line) {
