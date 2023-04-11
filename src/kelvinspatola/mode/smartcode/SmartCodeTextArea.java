@@ -93,9 +93,8 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         multiCursorManager = new MultiCursorManager(this);
         inputHandler.addKeyListener(multiCursorManager);
-//        addCaretListener(multiCursorManager);
         getSmartCodePainter().addLinePainter(multiCursorManager);
-
+        
         setInputHandler(inputHandler);
 
         // Remove PdeTextArea's default gutterCursorMouseAdapter listener so we
@@ -377,7 +376,7 @@ public class SmartCodeTextArea extends JavaTextArea {
 
             if (e.getButton() == MouseEvent.BUTTON1) {
                 if (e.isAltDown()) {
-                    multiCursorManager.addCursor(line, offset, dot);
+                    multiCursorManager.addCursor(dot);
                 } else if (multiCursorManager.isActive()) {
                     multiCursorManager.clear();
                 }
@@ -801,6 +800,11 @@ public class SmartCodeTextArea extends JavaTextArea {
 
     public int caretPositionInsideLine() {
         return getCaretPosition() - getLineStartOffset(getCaretLine());
+    }
+    
+    public int caretPositionInsideLineOfOffset(int offset) {
+        int line = getLineOfOffset(offset);
+        return offset - getLineStartOffset(line);
     }
 
     public int getOffsetOfPrevious(char ch, int offset) {
