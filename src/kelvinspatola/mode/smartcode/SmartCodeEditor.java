@@ -1551,6 +1551,14 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             occurrences.updateAST();
         }, millis);
     }
+    
+    public void stopTrackingCodeOccurences() {
+        occurrences.stopTracking();
+    }
+    
+    public void startTrackingCodeOccurences() {
+        occurrences.startTracking();
+    }
 
     public void timedStatusNotice(String msg, int millis) {
         statusNotice(msg);
