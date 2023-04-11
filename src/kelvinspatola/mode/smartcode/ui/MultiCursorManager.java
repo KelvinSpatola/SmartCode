@@ -16,8 +16,8 @@ import kelvinspatola.mode.smartcode.SmartCodeTextArea;
 public class MultiCursorManager implements LinePainter, KeyListener {
     private Map<Integer, List<Cursor>> cursors = new TreeMap<>();
     private SmartCodeTextArea textArea;
-    private boolean isActive;
     private int lastCaretPosition;
+    private boolean isActive;
     private boolean blink;
 
     // CONSTRUCTOR
@@ -37,31 +37,25 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         }
         
         Cursor newCursor = new Cursor(dot);
-        int line = newCursor.getLine();
-        
-        if (cursors.containsKey(line)) {
-            if (!cursors.get(line).contains(newCursor)) { // avoid duplicates (overlapping cursors)
-                cursors.get(line).add(newCursor);
-            } 
-        } else {
-            List<Cursor> list = new ArrayList<>();
-            list.add(newCursor);
-            cursors.put(line, list);
-        }       
+        int line = newCursor.getLine(); 
+        merge(cursors, line, newCursor);
         textArea.setCaretPosition(lastCaretPosition);
         textArea.repaint();
+        
+        if (getCount() == 1) { 
+            // This can only happen if we add the first cursor right on top of the caret
+            // position. Multicursor won't be activated in this situation.
+            clear();
+        }
     }
     
     public void addCursorWithKeyboard(boolean up) {
         int currentCaret = textArea.getCaretPosition();
-        int newLine;
+        int newLine = up ? -1 : 1;
         if (cursors.isEmpty()) {
-            newLine = textArea.getCaretLine() + (up ? -1 : 1);
+            newLine += textArea.getCaretLine();
         } else {
-            if (up)
-                newLine = cursors.keySet().stream().mapToInt(v -> v).min().orElseThrow() - 1;
-            else
-                newLine = cursors.keySet().stream().mapToInt(v -> v).max().orElseThrow() + 1;   
+            newLine += getTopOrBottomLine(up);   
         }
         
         Cursor c = new Cursor(currentCaret);
@@ -114,13 +108,16 @@ public class MultiCursorManager implements LinePainter, KeyListener {
             moveHorizontally(cursors, false);
         }
         
-        cursors.keySet().stream().forEach(line -> System.out.println((line + 1) + " - " + cursors.get(line).stream().map(c -> c.getOffset()).collect(Collectors.toList())));
+        cursors.keySet().stream().forEach(line -> System.out.println((line + 1) + " - " + cursors.get(line).stream().map(c -> c.dot).collect(Collectors.toList())));
+        
+//        cursors.keySet().stream().forEach(line -> cursors.get(line).stream().forEach(c -> {
+//            System.out.println("line: " + c.getLine() + " - dot: " + c.dot + " - offset: " + c.getOffset());            
+//        }));
+        System.out.println("count: " +  getCount());
         System.out.println();
         
-        if (cursors.isEmpty()) {
-            isActive = false;
-            textArea.getSmartCodeEditor().startTrackingCodeOccurences();
-            textArea.setCaretVisible(true);
+        if (getCount() < 2) {
+            clear();
         }
         
         textArea.repaint();
@@ -136,55 +133,43 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         
         while (entrySetItr.hasNext()) {
             var entry = entrySetItr.next();
+            Iterator<Cursor> cursorItr = entry.getValue().iterator();
             
             int newLine = entry.getKey() + inc;
             
-            if (newLine < 0 || newLine > lastLine) {
-                entrySetItr.remove();
-                continue;
-            }
-            
-            List<Cursor> cursorsInCurrentLine = entry.getValue();
-            Iterator<Cursor> cursorItr = cursorsInCurrentLine.iterator();
-            
-            while (cursorItr.hasNext()) {
-                Cursor c = cursorItr.next();
-                int magicCaretPosition = c.getMagicCaretPosition();
+            if (newLine < 0) {
+                while (cursorItr.hasNext()) {
+                    Cursor c = cursorItr.next();
+                    c.dot = 0;
+                    merge(temp, 0, c);
+                }
                 
-                c.dot = textArea.getLineStartOffset(newLine) + textArea.xToOffset(newLine, magicCaretPosition);
+            } else if (newLine > lastLine) {
+                int textLength = textArea.getDocumentLength();
+                while (cursorItr.hasNext()) {
+                    Cursor c = cursorItr.next();
+                    c.dot = textLength;
+                    merge(temp, lastLine, c);
+                }
 
-                if (temp.containsKey(newLine)) {
-                    temp.get(newLine).add(c);
-                } else {
-                    List<Cursor> list = new ArrayList<>();
-                    list.add(c);
-                    temp.put(newLine, list);
+            } else {
+                while (cursorItr.hasNext()) {
+                    Cursor c = cursorItr.next();
+                    int magicCaretPosition = c.getMagicCaretPosition();
+                    c.dot = textArea.getLineStartOffset(newLine) + textArea.xToOffset(newLine, magicCaretPosition);
+                    merge(temp, newLine, c);
                 }
             }
             entrySetItr.remove();
         }
         
-        temp.keySet().stream().forEach(key -> {
-            temp.get(key).stream().forEach(c -> {
-                if (cursors.containsKey(key)) {
-                    if (!cursors.get(key).contains(c)) { // avoid duplicates (overlapping cursors)
-                        cursors.get(key).add(c);
-                    }
-                } else {
-                    List<Cursor> list = new ArrayList<>();
-                    list.add(c);
-                    cursors.put(key, list);
-                }
-            });
+        temp.keySet().stream().forEach(line -> {
+            temp.get(line).stream().forEach(cursor -> merge(cursors, line, cursor));
         });
         
         // Ensure that the first/last cursor stays visible
         if (!cursors.isEmpty()) {
-            if (goUp) {
-                textArea.scrollTo(cursors.keySet().stream().mapToInt(v -> v).min().orElseThrow(), 0);
-            } else {
-                textArea.scrollTo(cursors.keySet().stream().mapToInt(v -> v).max().orElseThrow(), 0);            
-            }            
+            textArea.scrollTo(getTopOrBottomLine(goUp), 0);
         }
     }
 
@@ -201,31 +186,20 @@ public class MultiCursorManager implements LinePainter, KeyListener {
             while (cursorItr.hasNext()) {
                 Cursor c = cursorItr.next();
                 c.setMagicCaretPosition(-1);
-                int oldLine = c.getLine();
-                
+                int line = c.getLine();
                 c.dot += inc;
+                int newLine = c.getLine();  
                 
-                if (c.dot < 0 || c.dot > textLength) {
-                    cursorItr.remove();
-                    
-                    if (cursorsInCurrentLine.isEmpty()) {
-                        entrySetItr.remove();
-                    }
-                    continue;
+                if (c.dot < 0) {
+                    c.dot = 0;
+                } else if (c.dot > textLength) {
+                    c.dot = textLength;
+                } else if (line != newLine) {
+                    line = newLine;
                 }
                 
-                int newLine = c.getLine();                
-                
-                if (oldLine != newLine) {
-                    if (temp.containsKey(newLine)) {
-                        temp.get(newLine).add(c);
-                    } else {
-                        List<Cursor> list = new ArrayList<>();
-                        list.add(c);
-                        temp.put(newLine, list);
-                    }
-                    cursorItr.remove();
-                }
+                merge(temp, line, c);
+                cursorItr.remove();
                 
                 if (cursorsInCurrentLine.isEmpty()) {
                     entrySetItr.remove();
@@ -233,17 +207,27 @@ public class MultiCursorManager implements LinePainter, KeyListener {
             }
         }
         
-        temp.keySet().stream().forEach(key -> {
-            temp.get(key).stream().forEach(c -> {
-                if (cursors.containsKey(key)) {
-                    cursors.get(key).add(c);
-                } else {
-                    List<Cursor> list = new ArrayList<>();
-                    list.add(c);
-                    cursors.put(key, list);
-                }
-            });
+        temp.keySet().stream().forEach(line -> {
+            temp.get(line).stream().forEach(cursor -> merge(cursors, line, cursor));
         });
+    }
+    
+    private void merge(Map<Integer, List<Cursor>> map, int line, Cursor cursor) {
+        if (map.containsKey(line)) {
+            if (!map.get(line).contains(cursor)) { // avoid duplicates (overlapping cursors)
+                map.get(line).add(cursor);
+            }
+        } else {
+            List<Cursor> list = new ArrayList<>();
+            list.add(cursor);
+            map.put(line, list);
+        }
+    }
+    
+    private int getTopOrBottomLine(boolean up) {
+        if (up)
+            return cursors.keySet().stream().mapToInt(v -> v).min().orElseThrow();
+        return cursors.keySet().stream().mapToInt(v -> v).max().orElseThrow();
     }
     
     @Override
@@ -266,6 +250,10 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         textArea.setCaretVisible(true);
     }
     
+    public long getCount() {
+        return cursors.values().stream().flatMap(v -> v.stream()).count();
+    }
+    
     public void blinkCursors() {
         blink = !blink;
         cursors.keySet().stream().forEach(textArea.getPainter()::invalidateLine);
@@ -280,7 +268,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
             List<Cursor> cursorsInThisLine = cursors.get(line);
             if (cursorsInThisLine == null)
                 return;
-
+            
             gfx.setColor(ta.getDefaults().bracketHighlightColor);
 
             cursorsInThisLine.stream()
