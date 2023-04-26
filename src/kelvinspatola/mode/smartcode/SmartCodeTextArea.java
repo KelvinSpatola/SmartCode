@@ -20,6 +20,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EventListener;
@@ -106,10 +107,28 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         textAreaMouseHandler = new TextAreaMouseHandler();
 
+        // Remove JEditTextArea's default MouseWheelListener listener so we
+        // can add our own listener
+        removeMouseWheelListener(getMouseWheelListeners()[0]);
+        
         addMouseWheelListener(e -> {
-            if (e.isControlDown()) {
+            if (e.isControlDown()) { // zoom in/out text
                 int clicks = e.getWheelRotation();
                 getSmartCodePainter().setFontSize(getSmartCodePainter().getFontSize() - clicks);
+
+            } else if (scrollBarsInitialized) {
+                if (e.getScrollType() == MouseWheelEvent.WHEEL_UNIT_SCROLL) {
+                    int scrollAmount = e.getUnitsToScroll();
+                    
+                    if (e.isShiftDown()) {
+                        int charWidth = painter.getFontMetrics().charWidth('w'); 
+                        int val = Math.max(-charWidth, getHorizontalScrollPosition() + scrollAmount * charWidth);
+                        setHorizontalScrollPosition(val);
+                    } else {
+                        int val = getVerticalScrollPosition() + scrollAmount;
+                        setVerticalScrollPosition(val);
+                    }
+                }
             }
         });
     }
