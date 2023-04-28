@@ -19,6 +19,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.EventListener;
@@ -80,7 +81,7 @@ public class SmartCodeTextArea extends JavaTextArea {
 
         SmartCodeInputHandler inputHandler = new SmartCodeInputHandler(editor);
 
-        inputHandler.addKeyListener(new BracketCloser(editor));
+//        inputHandler.addKeyListener(new BracketCloser(editor));
 
         if (SmartCodePreferences.TEMPLATES_ENABLED) {
             snippetManager = new SnippetManager(editor);
@@ -112,13 +113,6 @@ public class SmartCodeTextArea extends JavaTextArea {
         painter.removeMouseMotionListener(painter.getMouseMotionListeners()[1]);
 
         textAreaMouseHandler = new TextAreaMouseHandler();
-
-        addMouseWheelListener(e -> {
-            if (e.isControlDown()) {
-                int clicks = e.getWheelRotation();
-                getSmartCodePainter().setFontSize(getSmartCodePainter().getFontSize() - clicks);
-            }
-        });
 
         multicursorTimer = new Timer(500, e -> {
             if (hasFocus() && multiCursorManager.isActive()) {
@@ -561,6 +555,28 @@ public class SmartCodeTextArea extends JavaTextArea {
         } catch (BadLocationException bl) {
             bl.printStackTrace();
             return null;
+        }
+    }
+    
+//    public void replaceSelectedText(String selectedText) {
+//        try {
+//            document.remove(selectionStart, selectionEnd - selectionStart);
+//            if (selectedText != null) {
+//                document.insertString(selectionStart, selectedText, null);
+//            }
+//        } catch (BadLocationException bl) {
+//            bl.printStackTrace();
+//            throw new InternalError("Cannot replace selection");
+//        }
+//    }
+    
+    public void replaceSelectedText(String text) {
+        try {
+            document.remove(0, document.getLength());
+            document.insertString(0, text, null);
+
+        } catch (BadLocationException bl) {
+            bl.printStackTrace();
         }
     }
 
