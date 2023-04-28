@@ -582,6 +582,28 @@ public class SmartCodeTextArea extends JavaTextArea {
             return null;
         }
     }
+    
+//    public void replaceSelectedText(String selectedText) {
+//        try {
+//            document.remove(selectionStart, selectionEnd - selectionStart);
+//            if (selectedText != null) {
+//                document.insertString(selectionStart, selectedText, null);
+//            }
+//        } catch (BadLocationException bl) {
+//            bl.printStackTrace();
+//            throw new InternalError("Cannot replace selection");
+//        }
+//    }
+    
+    public void replaceSelectedText(String text) {
+        try {
+            document.remove(0, document.getLength());
+            document.insertString(0, text, null);
+
+        } catch (BadLocationException bl) {
+            bl.printStackTrace();
+        }
+    }
 
     @Override
     public void paste() {

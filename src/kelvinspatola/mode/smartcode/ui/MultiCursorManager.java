@@ -3,12 +3,15 @@ package kelvinspatola.mode.smartcode.ui;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
+
+import javax.swing.text.BadLocationException;
 
 import kelvinspatola.mode.smartcode.KeyListener;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
@@ -32,8 +35,10 @@ public class MultiCursorManager implements LinePainter, KeyListener {
             cursors.put(textArea.getLineOfOffset(lastCaretPosition), list);    
             
             textArea.getSmartCodeEditor().stopTrackingCodeOccurences();
-            textArea.setCaretVisible(false);
+//            textArea.setCaretVisible(false);
             isActive = true;
+            
+            textBuffer = new StringBuilder(textArea.getText());
         }
         
         Cursor newCursor = new Cursor(dot);
@@ -67,9 +72,11 @@ public class MultiCursorManager implements LinePainter, KeyListener {
 
     @Override
     public boolean handlePressed(KeyEvent e) {
-        if (e.isAltDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_UP) {
+        int keyCode = e.getKeyCode();
+        
+        if (e.isAltDown() && e.isShiftDown() && keyCode == KeyEvent.VK_UP) {
             addCursorWithKeyboard(true);
-        } else if (e.isAltDown() && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_DOWN) {
+        } else if (e.isAltDown() && e.isShiftDown() && keyCode == KeyEvent.VK_DOWN) {
             addCursorWithKeyboard(false);
         }
         
@@ -90,31 +97,23 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         
         blink = true; // cursors should not blink when we are typing
 
-        switch (e.getKeyCode()) {
-        case KeyEvent.VK_LEFT:
-        case KeyEvent.VK_BACK_SPACE:
-            moveHorizontally(cursors, true);
-            break;   
-        case KeyEvent.VK_RIGHT:
-            moveHorizontally(cursors, false);
-            break;   
-        case KeyEvent.VK_UP:
+        if (keyCode == KeyEvent.VK_UP) {
             moveVertically(cursors, true);
-            break;   
-        case KeyEvent.VK_DOWN:
+        } else if (keyCode == KeyEvent.VK_DOWN) {
             moveVertically(cursors, false);
-            break;   
-        default:
+        } else if (keyCode == KeyEvent.VK_LEFT) {
+            moveHorizontally(cursors, true);
+        } else if (keyCode == KeyEvent.VK_RIGHT) {
             moveHorizontally(cursors, false);
         }
         
-        cursors.keySet().stream().forEach(line -> System.out.println((line + 1) + " - " + cursors.get(line).stream().map(c -> c.dot).collect(Collectors.toList())));
+//        cursors.keySet().stream().forEach(line -> System.out.println((line + 1) + " - " + cursors.get(line).stream().map(c -> c.dot).collect(Collectors.toList())));
         
 //        cursors.keySet().stream().forEach(line -> cursors.get(line).stream().forEach(c -> {
 //            System.out.println("line: " + c.getLine() + " - dot: " + c.dot + " - offset: " + c.getOffset());            
 //        }));
-        System.out.println("count: " +  getCount());
-        System.out.println();
+//        System.out.println("count: " +  getCount());
+//        System.out.println();
         
         if (getCount() < 2) {
             clear();
@@ -124,10 +123,115 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         return false;
     }
     
-    private void moveVertically(Map<Integer, List<Cursor>> cursors, boolean goUp) {
+    StringBuilder textBuffer = new StringBuilder();
+    
+    @Override
+    public boolean handleTyped(KeyEvent e) {
+        if (!isActive) 
+            return false;
+        
+        char KeyChar = e.getKeyChar();
+        
+        int key = KeyChar;
+        
+        boolean isBackspace = key == KeyEvent.VK_BACK_SPACE;
+
+        if (Character.isISOControl(KeyChar) && !isBackspace) {
+            System.out.println("ISOControl key: '" + Character.getName(KeyChar) + "'");
+            return false;
+        }
+//
+//        System.out.println("char: '" + KeyChar + "'");
+                
+        
+        var linesWithCursors = cursors.keySet();
+        int offset = 0;
+        
+        if (isBackspace) {
+            offset++;
+            for (var line : linesWithCursors) {
+                var cursorsPerLine = cursors.get(line);
+                
+                for (var cursor : cursorsPerLine) {
+                    int caret = cursor.dot - offset;
+                    
+                    textBuffer.delete(caret, caret + 1);
+                    
+                    cursor.dot = caret;
+                    offset++;
+                }
+            }
+        } else {
+            
+            for (var line : linesWithCursors) {
+                var cursorsPerLine = cursors.get(line);
+                
+                for (var cursor : cursorsPerLine) {
+                    int caret = cursor.dot + offset;
+                    
+                    textBuffer.insert(caret, KeyChar);
+                    
+                    cursor.dot = caret + 1;
+                    offset++;
+                }
+            }
+        }
+        
+        int firstLine = textArea.getFirstLine();  
+        
+        textArea.getDocument().beginCompoundEdit();
+//        textArea.selectAll();
+//        textArea.replaceSelectedText(textBuffer.toString());
+        try {
+            textArea.getDocument().replace(0, textArea.getDocument().getLength(), textBuffer.toString(), null);
+        } catch (BadLocationException e1) {
+            e1.printStackTrace();
+        }
+        textArea.getDocument().endCompoundEdit();
+        
+        Cursor rightmostCursor = cursors.values().stream()
+                .flatMap(List::stream)
+                .sorted((c1, c2) -> c2.getOffset() - c1.getOffset())
+                .findFirst()
+                .orElseThrow();
+
+        textArea.setCaretPosition(rightmostCursor.dot);
+        textArea.scrollTo(firstLine, rightmostCursor.getOffset());
+        
+
+        // OPÇÃO 1
+//        textArea.getDocument().beginCompoundEdit();
+//
+//        for (var line : linesWithCursors) {
+//            var cursorsPerLine = cursors.get(line);
+//            
+//            if (isBackspace) {
+//                for (var cursor : cursorsPerLine) {
+//                    int caret = cursor.dot - offset;
+//                    textArea.select(caret - 1, caret);
+//                    textArea.setSelectedText("");
+//                    cursor.dot = caret - 1;
+//                    offset++;
+//                }                
+//            } else {
+//                for (var cursor : cursorsPerLine) {
+//                    int caret = cursor.dot + offset;
+//                    textArea.select(caret, caret);
+//                    textArea.setSelectedText(String.valueOf(KeyChar));
+//                    cursor.dot = caret + 1;
+//                    offset++;
+//                }                                
+//            }
+//        }
+//        textArea.getDocument().endCompoundEdit();
+        
+        return true;
+    }
+    
+    private void moveVertically(Map<Integer, List<Cursor>> cursors, boolean up) {
         Map<Integer, List<Cursor>> temp = new TreeMap<>();
         var  entrySetItr = cursors.entrySet().iterator();
-        int inc = goUp ? -1 : 1;
+        int inc = up ? -1 : 1;
         int lastLine = textArea.getLineCount() - 1;
         
         
@@ -169,7 +273,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         
         // Ensure that the first/last cursor stays visible
         if (!cursors.isEmpty()) {
-            textArea.scrollTo(getTopOrBottomLine(goUp), 0);
+            textArea.scrollTo(getTopOrBottomLine(up), 0);
         }
     }
 
@@ -226,19 +330,10 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     
     private int getTopOrBottomLine(boolean up) {
         if (up)
-            return cursors.keySet().stream().mapToInt(v -> v).min().orElseThrow();
-        return cursors.keySet().stream().mapToInt(v -> v).max().orElseThrow();
+            return cursors.keySet().stream().mapToInt(v -> v).min().getAsInt();
+        return cursors.keySet().stream().mapToInt(v -> v).max().getAsInt();
     }
-    
-    @Override
-    public boolean handleTyped(KeyEvent e) {
-        return false;
-    }
-    
-    public boolean isLineSelected(int line) {
-        return cursors.containsKey(line);
-    }
-    
+  
     public boolean isActive() {
         return isActive;
     }
@@ -248,6 +343,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         isActive = false;
         textArea.getSmartCodeEditor().startTrackingCodeOccurences();
         textArea.setCaretVisible(true);
+        textBuffer = null;
     }
     
     public long getCount() {
@@ -282,7 +378,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     }
     
     class Cursor {
-        int dot;
+        public int dot;
         int magic = -1;
         
         Cursor(int dot) {
@@ -324,38 +420,5 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         }
 
     }
-    
-    
-//  public void readInput(KeyEvent e) {
-//      int key = e.getKeyChar();
-//
-//      // won't do anything if this is a not printable character (except backspace and
-//      // delete)
-//      if (key == 8 || key >= 32 && key <= 127) { // 8 -> VK_BACK_SPACE, 127 -> VK_DELETE
-//          int step = 1;
-//
-//          if (key == KeyEvent.VK_BACK_SPACE || key == KeyEvent.VK_DELETE) {
-//              tabstops.get(stopIndex).currentOffset -= step;
-//              rightBoundary -= step;
-//              return; // return here to avoid all next if statements
-//          }
-//
-//          if (SmartCodePreferences.AUTOCLOSE_BRACKETS) {
-//              if ("([{".contains(String.valueOf(e.getKeyChar()))) {
-//                  step = 2;
-//              }
-//          }
-//
-//          if (SmartCodePreferences.AUTOCLOSE_QUOTES) {
-//              if ("\"\'".contains(String.valueOf(e.getKeyChar()))) {
-//                  step = 2;
-//              }
-//          }
-//          
-//          // ver BracketCloser.class linha 90
-//
-//          tabstops.get(stopIndex).currentOffset += step;
-//          rightBoundary += step;
-//      }
-//  }
+
 }
