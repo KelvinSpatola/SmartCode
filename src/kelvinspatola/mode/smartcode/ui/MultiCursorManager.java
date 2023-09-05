@@ -22,6 +22,9 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     private int lastCaretPosition;
     private boolean isActive;
     private boolean blink;
+    
+    private int cursorCount;
+    private int topLine, bottomLine;
 
     // CONSTRUCTOR
     public MultiCursorManager(SmartCodeTextArea textarea) {
@@ -30,9 +33,16 @@ public class MultiCursorManager implements LinePainter, KeyListener {
 
     public void addCursor(int dot) {
         if (cursors.isEmpty()) {
+            Cursor source = new Cursor(lastCaretPosition);
+            int sourceLine = source.getLine();
+            
             List<Cursor> list = new ArrayList<>();
-            list.add(new Cursor(lastCaretPosition));
-            cursors.put(textArea.getLineOfOffset(lastCaretPosition), list);    
+            list.add(source);
+            cursors.put(sourceLine, list);   
+            
+            topLine = sourceLine;
+            bottomLine = sourceLine;
+            cursorCount = 1;
             
             textArea.getSmartCodeEditor().stopTrackingCodeOccurences();
 //            textArea.setCaretVisible(false);
@@ -44,6 +54,12 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         Cursor newCursor = new Cursor(dot);
         int line = newCursor.getLine(); 
         merge(cursors, line, newCursor);
+        
+        cursorCount++;
+        
+        if (line < topLine) topLine = line;
+        if (line > bottomLine) bottomLine = line;
+        
         textArea.setCaretPosition(lastCaretPosition);
         textArea.repaint();
         
@@ -54,7 +70,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
         }
     }
     
-    public void addCursorWithKeyboard(boolean up) {
+    private void addCursorWithKeyboard(boolean up) {
         int currentCaret = textArea.getCaretPosition();
         int newLine = up ? -1 : 1;
         if (cursors.isEmpty()) {
@@ -231,9 +247,11 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     private void moveVertically(Map<Integer, List<Cursor>> cursors, boolean up) {
         Map<Integer, List<Cursor>> temp = new TreeMap<>();
         var  entrySetItr = cursors.entrySet().iterator();
-        int inc = up ? -1 : 1;
         int lastLine = textArea.getLineCount() - 1;
+        int inc = up ? -1 : 1;
         
+        topLine = Math.max(0, topLine + inc);
+        bottomLine = Math.min(lastLine, bottomLine + inc);
         
         while (entrySetItr.hasNext()) {
             var entry = entrySetItr.next();
@@ -329,9 +347,12 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     }
     
     private int getTopOrBottomLine(boolean up) {
-        if (up)
-            return cursors.keySet().stream().mapToInt(v -> v).min().getAsInt();
-        return cursors.keySet().stream().mapToInt(v -> v).max().getAsInt();
+//        if (up)
+//            return cursors.keySet().stream().mapToInt(v -> v).min().getAsInt();
+//        return cursors.keySet().stream().mapToInt(v -> v).max().getAsInt();
+        if (up) 
+            return topLine;
+        return bottomLine;
     }
   
     public boolean isActive() {
@@ -340,6 +361,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     
     public void clear() {
         cursors.clear();
+        cursorCount = 0;
         isActive = false;
         textArea.getSmartCodeEditor().startTrackingCodeOccurences();
         textArea.setCaretVisible(true);
@@ -347,7 +369,9 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     }
     
     public long getCount() {
-        return cursors.values().stream().flatMap(v -> v.stream()).count();
+        long count = cursors.values().stream().flatMap(v -> v.stream()).count();
+        System.out.println("count: " + count + ", cursorCount: " + cursorCount);
+        return count;
     }
     
     public void blinkCursors() {

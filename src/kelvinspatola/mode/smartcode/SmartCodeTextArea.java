@@ -466,9 +466,9 @@ public class SmartCodeTextArea extends JavaTextArea {
         }
     }
     
-    public void addNewCursor(boolean up) {
-        multiCursorManager.addCursorWithKeyboard(up);
-    }
+//    public void addNewCursor(boolean up) {
+//        multiCursorManager.addCursorWithKeyboard(up);
+//    }
 
     private void updateDragAndDropIcon(InputEvent e) {
         if (e.isControlDown()) {
