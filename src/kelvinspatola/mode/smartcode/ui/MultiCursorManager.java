@@ -3,13 +3,11 @@ package kelvinspatola.mode.smartcode.ui;
 import java.awt.Graphics;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 import javax.swing.text.BadLocationException;
 
@@ -23,7 +21,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
     private boolean isActive;
     private boolean blink;
     
-    private int cursorCount;
+    private int cursorCount; // TODO: validar se isto faz o mesmo que o método getCount com stream
     private int topLine, bottomLine;
 
     // CONSTRUCTOR
