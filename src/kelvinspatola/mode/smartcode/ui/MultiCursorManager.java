@@ -45,7 +45,7 @@ public class MultiCursorManager implements LinePainter, KeyListener {
             cursorCount = 1;
             
             textArea.getSmartCodeEditor().stopTrackingCodeOccurences();
-//            textArea.setCaretVisible(false);
+            textArea.setCaretVisible(false);
             isActive = true;
             
             textBuffer = new StringBuilder(textArea.getText());
