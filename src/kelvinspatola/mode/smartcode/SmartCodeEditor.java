@@ -1,7 +1,18 @@
 package kelvinspatola.mode.smartcode;
 
-import static kelvinspatola.mode.smartcode.Constants.*;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_CLOSING;
+import static kelvinspatola.mode.smartcode.Constants.BLOCK_OPENING;
+import static kelvinspatola.mode.smartcode.Constants.CLOSE_BRACE;
+import static kelvinspatola.mode.smartcode.Constants.CLOSE_COMMENT;
+import static kelvinspatola.mode.smartcode.Constants.COMMENT_TEXT;
+import static kelvinspatola.mode.smartcode.Constants.INDENT;
+import static kelvinspatola.mode.smartcode.Constants.LF;
+import static kelvinspatola.mode.smartcode.Constants.OPEN_BRACE;
+import static kelvinspatola.mode.smartcode.Constants.OPEN_COMMENT;
+import static kelvinspatola.mode.smartcode.Constants.PIN_MARKER;
+import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.OCCURRENCES_HIGHLIGHT;
+import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.COLOR_DECORATOR_ENABLED;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -37,9 +48,17 @@ import javax.swing.event.MenuListener;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
-import kelvinspatola.mode.smartcode.ui.*;
+import kelvinspatola.mode.smartcode.ui.CodeOccurrences;
+import kelvinspatola.mode.smartcode.ui.ColorDecorator;
+import kelvinspatola.mode.smartcode.ui.ColorTag;
+import kelvinspatola.mode.smartcode.ui.LineBookmarks;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.Bookmark;
 import kelvinspatola.mode.smartcode.ui.LineBookmarks.BookmarkListListener;
+import kelvinspatola.mode.smartcode.ui.LineMarker;
+import kelvinspatola.mode.smartcode.ui.ShowBookmarks;
+import kelvinspatola.mode.smartcode.ui.SmartCodeMarkerColumn;
+import kelvinspatola.mode.smartcode.ui.SmartCodePreferencesFrame;
+import kelvinspatola.mode.smartcode.ui.SmartCodeTheme;
 import processing.app.Base;
 import processing.app.Language;
 import processing.app.Messages;
@@ -64,6 +83,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     private CodeOccurrences occurrences;
     private LineBookmarks lineBookmarks;
     private ShowBookmarks showBookmarks;
+    private ColorDecorator colorDecorator;
     private Timer generalTimer;
 
     protected int tabSize;
@@ -100,6 +120,12 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         if (OCCURRENCES_HIGHLIGHT) {
             textarea.addCaretListener(occurrences);
         }
+        
+        colorDecorator = new ColorDecorator();
+        if (COLOR_DECORATOR_ENABLED) {
+            
+        }
+        getSmartCodePainter().addLinePainter(colorDecorator);
 
 //        getSmartCodePainter().addLinePainter(getTextArea().snippetManager);
 
