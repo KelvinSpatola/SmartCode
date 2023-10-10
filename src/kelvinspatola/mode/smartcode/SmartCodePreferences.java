@@ -15,6 +15,7 @@ public class SmartCodePreferences {
     static public int     AUTOFORMAT_COMMENTS_LENGTH;
     static public boolean AUTOFORMAT_STRINGS;
     static public int     AUTOFORMAT_STRINGS_LENGTH;
+    static public boolean COLOR_DECORATOR_ENABLED;
     static public boolean MOVE_LINES_AUTO_INDENT;
     static public boolean TEMPLATES_ENABLED;
     
@@ -28,8 +29,9 @@ public class SmartCodePreferences {
             "SmartCode.autoformat.comments.length", // 6
             "SmartCode.autoformat.strings", // 7
             "SmartCode.autoformat.strings.length", // 8
-            "SmartCode.movelines.auto_indent", // 9
-            "SmartCode.templates.enabled" // 10
+            "SmartCode.editor.color-boxes", // 9
+            "SmartCode.movelines.auto_indent", // 10
+            "SmartCode.templates.enabled" // 11
     };
 
     static protected final Map<String, String> defaultPrefs = new HashMap<>();
@@ -43,8 +45,9 @@ public class SmartCodePreferences {
         defaultPrefs.put(attributes[6], "80"); // autoformat.comments.length
         defaultPrefs.put(attributes[7], "true"); // autoformat.strings
         defaultPrefs.put(attributes[8], "80"); // autoformat.strings.length
-        defaultPrefs.put(attributes[9], "true"); // movelines.auto_indent
-        defaultPrefs.put(attributes[10], "true"); // templates.enabled
+        defaultPrefs.put(attributes[9], "true"); // editor.color-boxes
+        defaultPrefs.put(attributes[10], "true"); // movelines.auto_indent
+        defaultPrefs.put(attributes[11], "true"); // templates.enabled
     }
 
     static public void init() {
@@ -62,8 +65,9 @@ public class SmartCodePreferences {
         AUTOFORMAT_COMMENTS_LENGTH = Preferences.getInteger(attributes[6]);
         AUTOFORMAT_STRINGS = Preferences.getBoolean(attributes[7]);
         AUTOFORMAT_STRINGS_LENGTH = Preferences.getInteger(attributes[8]);
-        MOVE_LINES_AUTO_INDENT = Preferences.getBoolean(attributes[9]);
-        TEMPLATES_ENABLED = Preferences.getBoolean(attributes[10]);
+        COLOR_DECORATOR_ENABLED = Preferences.getBoolean(attributes[9]);
+        MOVE_LINES_AUTO_INDENT = Preferences.getBoolean(attributes[10]);
+        TEMPLATES_ENABLED = Preferences.getBoolean(attributes[11]);
     }
 
     private static void checkDefaultPreferences() {

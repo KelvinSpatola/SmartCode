@@ -66,6 +66,7 @@ public class SmartCodePreferencesFrame {
     private JRadioButton stackRadio;
     private JTextField indentField;
     private JCheckBox indentMovingLinesBox;
+    private JCheckBox colorDecoratorBox;
     private int currTabSize;
     
     private JCheckBox bookmarkHighlightingBox;
@@ -265,6 +266,7 @@ public class SmartCodePreferencesFrame {
         
         indentMovingLinesBox = new JCheckBox("Automatically indent when moving text lines");
         
+        colorDecoratorBox = new JCheckBox("Enable inline color decorators boxes and color picker");
         
         int gap = 13; //Toolkit.BORDER;
                 
@@ -274,7 +276,7 @@ public class SmartCodePreferencesFrame {
                 .addGroup(gl_tabGeneral.createSequentialGroup()
                     .addContainerGap()
                     .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING)
-                        .addComponent(sep1, GroupLayout.PREFERRED_SIZE, 300, GroupLayout.PREFERRED_SIZE)
+                        .addComponent(sep1, GroupLayout.PREFERRED_SIZE, 400, GroupLayout.PREFERRED_SIZE)
                         .addComponent(formattingLabel)
                         .addGroup(gl_tabGeneral.createSequentialGroup()
                             .addGroup(gl_tabGeneral.createParallelGroup(Alignment.LEADING)
@@ -299,6 +301,7 @@ public class SmartCodePreferencesFrame {
                         .addComponent(closeBracketsBox)
                         .addComponent(autoCloseLabel)
                         .addComponent(indentMovingLinesBox)
+                        .addComponent(colorDecoratorBox)
                         .addGroup(gl_tabGeneral.createSequentialGroup()
                             .addComponent(indentLabel)
                             .addPreferredGap(ComponentPlacement.RELATED)
@@ -308,7 +311,7 @@ public class SmartCodePreferencesFrame {
                         .addComponent(indentationLabel)
                         .addGroup(gl_tabGeneral.createParallelGroup(Alignment.TRAILING)
                             .addComponent(restoreBtn)
-                            .addComponent(sep2, GroupLayout.PREFERRED_SIZE, 300, GroupLayout.PREFERRED_SIZE)))
+                            .addComponent(sep2, GroupLayout.PREFERRED_SIZE, 400, GroupLayout.PREFERRED_SIZE)))
                     .addContainerGap())
         );
         gl_tabGeneral.setVerticalGroup(
@@ -358,6 +361,7 @@ public class SmartCodePreferencesFrame {
                         .addComponent(spacesLabel))
                     .addPreferredGap(ComponentPlacement.RELATED)
                     .addComponent(indentMovingLinesBox)
+                    .addComponent(colorDecoratorBox)
                     .addPreferredGap(ComponentPlacement.UNRELATED)
                     .addComponent(restoreBtn))
         );
@@ -647,6 +651,9 @@ public class SmartCodePreferencesFrame {
         indentField.setText(String.valueOf(currTabSize));
         indentMovingLinesBox.setSelected(MOVE_LINES_AUTO_INDENT);
         
+        /* color decorator boxes */
+        colorDecoratorBox.setSelected(COLOR_DECORATOR_ENABLED);
+        
         
         // *** BOOKMARKS *** //      
         
@@ -708,6 +715,9 @@ public class SmartCodePreferencesFrame {
         int newTabSize = Integer.parseInt(indentField.getText().trim());
         Preferences.setInteger("editor.tabs.size", newTabSize);
         Preferences.setBoolean("SmartCode.movelines.auto_indent", indentMovingLinesBox.isSelected());
+        
+        /* color decorator boxes */
+        Preferences.setBoolean("SmartCode.editor.color-boxes", colorDecoratorBox.isSelected());
         
         
         // *** BOOKMARKS *** //        

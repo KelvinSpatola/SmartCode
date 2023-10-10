@@ -12,7 +12,6 @@ import static kelvinspatola.mode.smartcode.Constants.OPEN_COMMENT;
 import static kelvinspatola.mode.smartcode.Constants.PIN_MARKER;
 import static kelvinspatola.mode.smartcode.Constants.STRING_TEXT;
 import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.OCCURRENCES_HIGHLIGHT;
-import static kelvinspatola.mode.smartcode.ui.SmartCodeTheme.COLOR_DECORATOR_ENABLED;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -122,9 +121,6 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         }
         
         colorDecorator = new ColorDecorator();
-        if (COLOR_DECORATOR_ENABLED) {
-            
-        }
         getSmartCodePainter().addLinePainter(colorDecorator);
 
 //        getSmartCodePainter().addLinePainter(getTextArea().snippetManager);

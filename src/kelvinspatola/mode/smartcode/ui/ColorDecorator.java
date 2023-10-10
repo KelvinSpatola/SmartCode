@@ -6,14 +6,20 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.Set;
 
+import kelvinspatola.mode.smartcode.SmartCodePreferences;
 import kelvinspatola.mode.smartcode.SmartCodeTextArea;
 
 public class ColorDecorator implements LinePainter {
     
+    // TODO: usar LineID para identificar as linhas target
     Set<String> targetFunctions = Set.of("fill", "stroke", "tint", "background");
+    
+    
 
     @Override
     public void paintLine(Graphics gfx, int line, int y, int h, SmartCodeTextArea ta) {
+        if (!SmartCodePreferences.COLOR_DECORATOR_ENABLED)
+            return;
         
         String lineText = ta.getLineText(line);
         boolean isOk = false;

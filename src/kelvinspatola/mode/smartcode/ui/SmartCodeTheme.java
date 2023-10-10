@@ -19,7 +19,6 @@ import processing.core.PApplet;
 public class SmartCodeTheme {
     static public boolean BOOKMARKS_HIGHLIGHT;
     static public boolean OCCURRENCES_HIGHLIGHT;
-    static public boolean COLOR_DECORATOR_ENABLED;
     static private Set<String> pdeThemeAttributes = new HashSet<>();
     static private Settings settings;
     
