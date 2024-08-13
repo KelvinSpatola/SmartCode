@@ -120,8 +120,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
             textarea.addCaretListener(occurrences);
         }
         
-        colorDecorator = new ColorDecorator();
-        getSmartCodePainter().addLinePainter(colorDecorator);
+//        colorDecorator = new ColorDecorator(this);
+//        getSmartCodePainter().addLinePainter(colorDecorator);
 
 //        getSmartCodePainter().addLinePainter(getTextArea().snippetManager);
 
@@ -508,6 +508,20 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 }
             }
         }
+  /*      
+//        char keyChar = e.getKeyChar();
+        
+        if (colorDecorator.containsLine(textarea.getCaretLine())) {
+            System.out.println("is target");
+
+        } else {
+//        if (keyChar == KeyEvent.VK_SEMICOLON) {
+            colorDecorator.validateLine(textarea.getCaretLine());          
+//        }
+            
+        }
+        */
+        
         return false;
 
     }

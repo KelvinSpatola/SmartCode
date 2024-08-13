@@ -44,8 +44,9 @@ public class SmartCodeInputHandler extends PdeInputHandler {
     }
     
     void testing(SmartCodeEditor editor) {
-        int line = editor.getTextArea().getCaretLine();
-        System.out.println("depth: " + getSmartCodeEditor().getTextArea().getBlockDepth(line));
+//        int line = editor.getTextArea().getCaretLine();
+//        System.out.println("depth: " + getSmartCodeEditor().getTextArea().getBlockDepth(line));
+        editor.getSmartCodePainter().getLinePainters().stream().map(p -> p.getClass().getName()).forEach(System.out::println);
     }
     
     private Method renameMethod;
