@@ -23,14 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import javax.swing.JComponent;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.KeyStroke;
+import javax.swing.*;
 import javax.swing.event.CaretListener;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
@@ -50,6 +43,7 @@ import processing.app.SketchCode;
 import processing.app.syntax.DefaultInputHandler;
 import processing.app.syntax.JEditTextArea;
 import processing.app.syntax.PdeTextAreaDefaults;
+import processing.app.syntax.SyntaxDocument;
 import processing.app.ui.EditorException;
 import processing.app.ui.EditorState;
 import processing.app.ui.MarkerColumn;
@@ -65,6 +59,11 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     private LineBookmarks lineBookmarks;
     private ShowBookmarks showBookmarks;
     private Timer generalTimer;
+
+    private JSplitPane splitPane;
+    private SmartCodeTextArea secondaryTextArea;
+    private SketchCode secondaryTab;
+    private JPanel editorPanel;
 
     protected int tabSize;
     protected String tabSpaces;
@@ -131,6 +130,7 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
     protected void buildMarkerColumn(MarkerColumn errorColumn) {
         // hack to add a JPanel to the right-hand side of the text area
         JPanel editorPanel = (JPanel) textarea.getParent();
+        this.editorPanel = editorPanel;
         // remove the original errorColumn and textarea objects
         editorPanel.removeAll();
         // creating a new BorderLayout
@@ -239,6 +239,8 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
         menu.addSeparator(); // ---------------------------------------------
         createItem(menu, "Visit GitHub page", null,
                 () -> Platform.openURL("https://github.com/KelvinSpatola/SmartCode"));
+
+        createItem(menu, "Toggle Split View", null, this::toggleSplitView);
 
         menu.addMenuListener(new MenuAdapter() {
             @Override
@@ -1569,5 +1571,72 @@ public class SmartCodeEditor extends JavaEditor implements KeyListener {
                 generalTimer.cancel(); // Terminate the timer thread
             }
         }, millis);
+    }
+
+    public void toggleSplitView() {
+        if (splitPane != null) {
+            // Disable split view
+            JPanel editorPanel = this.editorPanel;
+            editorPanel.remove(splitPane);
+            editorPanel.setLayout(new BorderLayout());
+            editorPanel.add(errorColumn, BorderLayout.EAST);
+            textarea.setBounds(0, 0, errorColumn.getX() - 1, textarea.getHeight());
+            editorPanel.add(textarea);
+            splitPane = null;
+            secondaryTextArea = null;
+            secondaryTab = null;
+            repaint();
+            statusNotice("Split view disabled");
+        } else {
+            // Enable split view
+            if (sketch.getCodeCount() < 2) {
+                statusNotice("Need at least 2 tabs to enable split view");
+                return;
+            }
+
+            // Show dialog to choose secondary tab
+            String[] tabNames = new String[sketch.getCodeCount()];
+            for (int i = 0; i < sketch.getCodeCount(); i++) {
+                tabNames[i] = sketch.getCode(i).getPrettyName();
+            }
+
+            String selected = (String) JOptionPane.showInputDialog(this, "Choose tab for split view:",
+                    "Split View", JOptionPane.QUESTION_MESSAGE, null, tabNames, tabNames[0]);
+
+            if (selected == null) return;
+
+            int selectedIndex = -1;
+            for (int i = 0; i < tabNames.length; i++) {
+                if (tabNames[i].equals(selected)) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+
+            if (selectedIndex == sketch.getCurrentCodeIndex()) {
+                statusNotice("Cannot split with the same tab");
+                return;
+            }
+
+            secondaryTab = sketch.getCode(selectedIndex);
+            secondaryTextArea = new SmartCodeTextArea(new PdeTextAreaDefaults(), this);
+            secondaryTextArea.setDocument((SyntaxDocument) secondaryTab.getDocument());
+            secondaryTextArea.setEditable(true);
+
+            // Create split pane
+            splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, textarea, secondaryTextArea);
+            splitPane.setResizeWeight(0.5);
+            splitPane.setDividerLocation(0.5);
+
+            // Replace layout
+            JPanel editorPanel = this.editorPanel;
+            editorPanel.removeAll();
+            editorPanel.setLayout(new BorderLayout());
+            editorPanel.add(splitPane, BorderLayout.CENTER);
+            editorPanel.add(errorColumn, BorderLayout.EAST);
+
+            repaint();
+            statusNotice("Split view enabled with " + selected);
+        }
     }
 }
